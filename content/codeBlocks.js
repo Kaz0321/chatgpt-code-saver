@@ -1,4 +1,7 @@
 const BUTTON_FEEDBACK_TIMEOUT_MS = 1500;
+const CGPT_CODE_WRAPPER_CLASS = "cgpt-code-wrapper";
+const CGPT_CODE_COLLAPSED_CLASS = "cgpt-code-wrapper--collapsed";
+let cgptCodeBlockStylesInjected = false;
 const FALLBACK_VIEW_SETTINGS = {
   compactLineCount: 1,
   collapsedLineCount: 12,
@@ -11,6 +14,7 @@ const CGPT_VIEW_MODE = {
 
 function decorateCodeBlocks(root = document) {
   if (!root || typeof root.querySelectorAll !== "function") return;
+  ensureCodeBlockStyles();
   const pres = root.querySelectorAll("pre code");
   pres.forEach((code) => {
     tryDecorateSingleCodeBlock(code);
@@ -103,6 +107,7 @@ function wrapPreWithRelativeContainer(pre) {
   const wrapper = document.createElement("div");
   wrapper.style.position = "relative";
   wrapper.dataset.cgptCodeWrapper = "1";
+  wrapper.classList.add(CGPT_CODE_WRAPPER_CLASS);
   if (pre.parentNode) {
     pre.parentNode.insertBefore(wrapper, pre);
   }
@@ -368,6 +373,7 @@ function setPreViewMode(pre, mode) {
   if (mode === CGPT_VIEW_MODE.EXPANDED) {
     collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
     collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
+    setCollapsedVisualState(collapsibleEl, false);
   } else {
     const lineCount =
       mode === CGPT_VIEW_MODE.COMPACT
@@ -378,6 +384,7 @@ function setPreViewMode(pre, mode) {
     const targetHeight = normalizedLines * lineHeight;
     collapsibleEl.style.maxHeight = `${targetHeight}px`;
     collapsibleEl.style.overflow = "hidden";
+    setCollapsedVisualState(collapsibleEl, true);
   }
   updateViewButtonStates(pre);
 }
@@ -452,4 +459,44 @@ function tryDecorateFromTextNode(node) {
   const code = elementParent.closest("code");
   if (!code) return;
   tryDecorateSingleCodeBlock(code);
+}
+
+function setCollapsedVisualState(element, isCollapsed) {
+  if (!element || !element.classList) return;
+  element.classList.add(CGPT_CODE_WRAPPER_CLASS);
+  element.classList.toggle(CGPT_CODE_COLLAPSED_CLASS, Boolean(isCollapsed));
+}
+
+function ensureCodeBlockStyles() {
+  if (cgptCodeBlockStylesInjected) return;
+  const style = document.createElement("style");
+  style.dataset.cgptCodeStyles = "1";
+  style.textContent = `
+.${CGPT_CODE_WRAPPER_CLASS} {
+  position: relative;
+}
+.${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS}::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
+  background: linear-gradient(180deg, rgba(32, 33, 35, 0) 0%, rgba(32, 33, 35, 0.85) 100%);
+  pointer-events: none;
+}
+.${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS}::after {
+  content: "…";
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  font-size: 20px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+`;
+  (document.head || document.documentElement).appendChild(style);
+  cgptCodeBlockStylesInjected = true;
 }
