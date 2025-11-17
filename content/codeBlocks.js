@@ -1,5 +1,13 @@
-const CODE_COLLAPSED_MAX_HEIGHT_PX = 320;
 const BUTTON_FEEDBACK_TIMEOUT_MS = 1500;
+const FALLBACK_VIEW_SETTINGS = {
+  compactLineCount: 1,
+  collapsedLineCount: 12,
+};
+const CGPT_VIEW_MODE = {
+  COMPACT: "compact",
+  COLLAPSED: "collapsed",
+  EXPANDED: "expanded",
+};
 
 function decorateCodeBlocks(root = document) {
   if (!root || typeof root.querySelectorAll !== "function") return;
@@ -33,21 +41,27 @@ function tryDecorateSingleCodeBlock(code) {
   });
   buttonContainer.appendChild(copyBtn);
 
+  const shrinkBtn = createShrinkButtonElement();
   const collapseBtn = createCollapseButtonElement();
   const expandBtn = createExpandButtonElement();
+  shrinkBtn.addEventListener("click", () => {
+    handleShrinkButtonClick(pre);
+  });
   collapseBtn.addEventListener("click", () => {
-    handleCollapseButtonClick(pre, collapseBtn, expandBtn);
+    handleCollapseButtonClick(pre);
   });
   expandBtn.addEventListener("click", () => {
-    handleExpandButtonClick(pre, collapseBtn, expandBtn);
+    handleExpandButtonClick(pre);
   });
+  buttonContainer.appendChild(shrinkBtn);
   buttonContainer.appendChild(collapseBtn);
   buttonContainer.appendChild(expandBtn);
 
   wrapper.appendChild(buttonContainer);
 
   ensureCollapsibleState(pre);
-  updateCollapseButtonStates(pre, collapseBtn, expandBtn);
+  pre.cgptViewButtons = { shrinkBtn, collapseBtn, expandBtn };
+  setPreViewMode(pre, CGPT_VIEW_MODE.COMPACT);
 }
 
 function parseCodeBlockMetadata(code) {
@@ -134,7 +148,7 @@ function createBaseButtonElement(placement = "overlay") {
 
 function createSaveButtonElement(hasMetadata = true) {
   const button = createBaseButtonElement("overlay");
-  button.textContent = hasMetadata ? "Save" : "Save...";
+  button.textContent = hasMetadata ? "保存" : "保存(指定)";
   button.title = hasMetadata
     ? "コードを保存"
     : "保存先のファイル名を指定してコードを保存";
@@ -144,16 +158,24 @@ function createSaveButtonElement(hasMetadata = true) {
 
 function createCopyButtonElement() {
   const button = createBaseButtonElement("overlay");
-  button.textContent = "Copy";
+  button.textContent = "コピー";
   button.title = "コードをコピー";
   applyButtonVariant(button, "neutral");
+  return button;
+}
+
+function createShrinkButtonElement() {
+  const button = createBaseButtonElement("overlay");
+  button.textContent = "縮小";
+  button.title = "1行表示に縮小";
+  applyButtonVariant(button, "muted");
   return button;
 }
 
 function createCollapseButtonElement() {
   const button = createBaseButtonElement("overlay");
   button.textContent = "折りたたみ";
-  button.title = "コードブロックを折りたたみ";
+  button.title = "設定行数で折りたたみ";
   applyButtonVariant(button, "accent");
   return button;
 }
@@ -161,17 +183,18 @@ function createCollapseButtonElement() {
 function createExpandButtonElement() {
   const button = createBaseButtonElement("overlay");
   button.textContent = "展開";
-  button.title = "コードブロックを展開";
+  button.title = "全行を展開";
   applyButtonVariant(button, "accent");
   return button;
 }
 
 function applyButtonVariant(button, variant) {
   const palette = {
-    primary: "rgba(15, 157, 88, 0.95)",
-    warning: "rgba(202, 138, 4, 0.95)",
+    primary: "rgba(16, 185, 129, 0.95)",
+    warning: "rgba(251, 191, 36, 0.95)",
     neutral: "rgba(55, 65, 81, 0.9)",
-    accent: "rgba(66, 133, 244, 0.95)",
+    muted: "rgba(75, 85, 99, 0.9)",
+    accent: "rgba(59, 130, 246, 0.95)",
   };
   const color = palette[variant] || palette.neutral;
   button.style.background = color;
@@ -214,7 +237,7 @@ function triggerApplyCode(button, filePath, content) {
         return;
       }
 
-      flashButtonText(button, "Saved!");
+      flashButtonText(button, "保存済");
       if (typeof showToast === "function") {
         showToast(`保存しました: ${filePath}`, "success");
       }
@@ -228,7 +251,7 @@ function handleCopyButtonClick(button, code) {
   if (!textToCopy) return;
 
   const onSuccess = () => {
-    flashButtonText(button, "Copied!");
+    flashButtonText(button, "コピー済");
     if (typeof showToast === "function") {
       showToast("コードをコピーしました", "success");
     }
@@ -273,38 +296,39 @@ function flashButtonText(button, text) {
   }, BUTTON_FEEDBACK_TIMEOUT_MS);
 }
 
-function handleCollapseButtonClick(pre, collapseBtn, expandBtn) {
-  if (!ensureCollapsibleState(pre)) return;
-  setPreCollapsed(pre, true);
-  updateCollapseButtonStates(pre, collapseBtn, expandBtn);
+function handleShrinkButtonClick(pre) {
+  setPreViewMode(pre, CGPT_VIEW_MODE.COMPACT);
 }
 
-function handleExpandButtonClick(pre, collapseBtn, expandBtn) {
-  if (!ensureCollapsibleState(pre)) return;
-  setPreCollapsed(pre, false);
-  updateCollapseButtonStates(pre, collapseBtn, expandBtn);
+function handleCollapseButtonClick(pre) {
+  setPreViewMode(pre, CGPT_VIEW_MODE.COLLAPSED);
 }
 
-function updateCollapseButtonStates(pre, collapseBtn, expandBtn) {
-  const collapsible = pre.dataset.cgptCollapsibleApplied === "1";
-  if (!collapseBtn || !expandBtn) return;
-  if (!collapsible) {
-    collapseBtn.disabled = true;
-    expandBtn.disabled = true;
-    collapseBtn.title = "折りたたみ対象ではありません";
-    expandBtn.title = "折りたたみ対象ではありません";
-    return;
-  }
-  const collapsed = isPreCollapsed(pre);
-  collapseBtn.disabled = collapsed;
-  expandBtn.disabled = !collapsed;
+function handleExpandButtonClick(pre) {
+  setPreViewMode(pre, CGPT_VIEW_MODE.EXPANDED);
+}
+
+function updateViewButtonStates(pre) {
+  const buttons = pre && pre.cgptViewButtons;
+  if (!buttons) return;
+  const mode = getPreViewMode(pre);
+  const disabledStates = {
+    shrinkBtn: mode === CGPT_VIEW_MODE.COMPACT,
+    collapseBtn: mode === CGPT_VIEW_MODE.COLLAPSED,
+    expandBtn: mode === CGPT_VIEW_MODE.EXPANDED,
+  };
+  Object.keys(buttons).forEach((key) => {
+    const btn = buttons[key];
+    if (btn) {
+      btn.disabled = Boolean(disabledStates[key]);
+    }
+  });
 }
 
 function ensureCollapsibleState(pre) {
   if (!pre) return false;
   if (pre.dataset.cgptCollapsibleApplied !== "1") {
     rememberOriginalPreStyles(pre);
-    setPreCollapsed(pre, false);
     pre.dataset.cgptCollapsibleApplied = "1";
   }
   return true;
@@ -327,21 +351,67 @@ function rememberOriginalPreStyles(pre) {
   }
 }
 
-function isPreCollapsed(pre) {
-  return pre.dataset.cgptCollapsed === "1";
+function getPreViewMode(pre) {
+  if (!pre) return CGPT_VIEW_MODE.EXPANDED;
+  return pre.dataset.cgptViewMode || CGPT_VIEW_MODE.EXPANDED;
 }
 
-function setPreCollapsed(pre, collapsed) {
+function setPreViewMode(pre, mode) {
+  if (!pre || !ensureCollapsibleState(pre)) return;
   const collapsibleEl = getCollapsibleElement(pre);
   if (!collapsibleEl) return;
-  pre.dataset.cgptCollapsed = collapsed ? "1" : "0";
-  if (collapsed) {
-    collapsibleEl.style.maxHeight = `${CODE_COLLAPSED_MAX_HEIGHT_PX}px`;
-    collapsibleEl.style.overflow = "hidden";
-  } else {
+  const viewSettings =
+    typeof cgptGetViewSettings === "function"
+      ? cgptGetViewSettings()
+      : FALLBACK_VIEW_SETTINGS;
+  pre.dataset.cgptViewMode = mode;
+  if (mode === CGPT_VIEW_MODE.EXPANDED) {
     collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
     collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
+  } else {
+    const lineCount =
+      mode === CGPT_VIEW_MODE.COMPACT
+        ? viewSettings.compactLineCount
+        : viewSettings.collapsedLineCount;
+    const normalizedLines = Math.max(1, Number(lineCount) || 1);
+    const lineHeight = getCodeLineHeight(pre);
+    const targetHeight = normalizedLines * lineHeight;
+    collapsibleEl.style.maxHeight = `${targetHeight}px`;
+    collapsibleEl.style.overflow = "hidden";
   }
+  updateViewButtonStates(pre);
+}
+
+function getCodeLineHeight(pre) {
+  const code = pre.querySelector("code") || pre;
+  const style = window.getComputedStyle ? window.getComputedStyle(code) : null;
+  if (!style) {
+    return 18;
+  }
+  let lineHeight = parseFloat(style.lineHeight);
+  if (!Number.isFinite(lineHeight)) {
+    const fontSize = parseFloat(style.fontSize) || 14;
+    lineHeight = fontSize * 1.4;
+  }
+  return lineHeight || 18;
+}
+
+function getDecoratedPreElements() {
+  return Array.from(document.querySelectorAll("pre[data-cgpt-code-helper-applied='1']"));
+}
+
+function cgptApplyViewModeToAll(mode) {
+  getDecoratedPreElements().forEach((pre) => {
+    setPreViewMode(pre, mode);
+  });
+}
+
+function cgptReapplyViewMode(mode) {
+  getDecoratedPreElements().forEach((pre) => {
+    if (getPreViewMode(pre) === mode) {
+      setPreViewMode(pre, mode);
+    }
+  });
 }
 
 function setupMutationObserver() {

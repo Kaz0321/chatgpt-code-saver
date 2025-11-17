@@ -10,58 +10,53 @@ function createFloatingPanel() {
   panel.style.background = "rgba(32, 33, 35, 0.95)";
   panel.style.border = "1px solid rgba(255,255,255,0.1)";
   panel.style.borderRadius = "8px";
-  panel.style.padding = "8px";
+  panel.style.padding = "12px";
   panel.style.fontSize = "12px";
   panel.style.color = "#fff";
   panel.style.display = "flex";
   panel.style.flexDirection = "column";
-  panel.style.gap = "4px";
+  panel.style.gap = "8px";
   panel.style.backdropFilter = "blur(8px)";
   panel.style.maxWidth = "280px";
 
   const title = document.createElement("div");
-  title.textContent = "ChatGPT Helper";
+  title.textContent = "コードヘルパー";
   title.style.fontWeight = "bold";
-  title.style.marginBottom = "4px";
+  title.style.fontSize = "13px";
   panel.appendChild(title);
 
-  const row = document.createElement("div");
-  row.style.display = "flex";
-  row.style.gap = "4px";
-  row.style.alignItems = "center";
+  const templateSection = document.createElement("div");
+  templateSection.appendChild(createSectionLabel("テンプレート"));
 
-  const label = document.createElement("span");
-  label.textContent = "テンプレ:";
-  label.style.fontSize = "11px";
-  row.appendChild(label);
+  const templateRow = document.createElement("div");
+  templateRow.style.display = "flex";
+  templateRow.style.gap = "4px";
+  templateRow.style.alignItems = "center";
+
+  const templateLabel = document.createElement("span");
+  templateLabel.textContent = "選択";
+  templateLabel.style.fontSize = "11px";
+  templateLabel.style.minWidth = "32px";
+  templateRow.appendChild(templateLabel);
 
   const select = document.createElement("select");
   select.style.flex = "1";
   select.style.fontSize = "11px";
   select.style.padding = "2px 4px";
   select.style.borderRadius = "4px";
-  select.style.border = "1px solid rgba(255,255,255,0.3)";
+  select.style.border = "1px solid rgba(255,255,255,0.2)";
   select.style.background = "#343541";
   select.style.color = "#fff";
-  row.appendChild(select);
+  templateRow.appendChild(select);
 
   rebuildTemplateSelect(select);
-
   select.addEventListener("change", () => {
     cgptSetSelectedTemplateId(select.value);
   });
 
-  panel.appendChild(row);
+  templateSection.appendChild(templateRow);
 
-  const insertBtn = document.createElement("button");
-  insertBtn.textContent = "選択テンプレ貼り付け";
-  insertBtn.style.fontSize = "11px";
-  insertBtn.style.padding = "4px 6px";
-  insertBtn.style.borderRadius = "4px";
-  insertBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-  insertBtn.style.background = "rgba(66, 133, 244, 0.9)";
-  insertBtn.style.color = "#fff";
-  insertBtn.style.cursor = "pointer";
+  const insertBtn = createPanelButton("テンプレ貼り付け", "primary");
   insertBtn.addEventListener("click", () => {
     const tpl = getSelectedTemplate();
     if (!tpl) {
@@ -70,22 +65,11 @@ function createFloatingPanel() {
     }
     insertTemplateToInput(tpl.content);
   });
-  panel.appendChild(insertBtn);
+  templateSection.appendChild(insertBtn);
 
-  const manageRow = document.createElement("div");
-  manageRow.style.display = "flex";
-  manageRow.style.gap = "4px";
-
-  const editBtn = document.createElement("button");
-  editBtn.textContent = "編集";
+  const manageRow = createButtonRow();
+  const editBtn = createPanelButton("編集", "muted");
   editBtn.style.flex = "1";
-  editBtn.style.fontSize = "11px";
-  editBtn.style.padding = "4px 6px";
-  editBtn.style.borderRadius = "4px";
-  editBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-  editBtn.style.background = "rgba(90, 90, 90, 0.9)";
-  editBtn.style.color = "#fff";
-  editBtn.style.cursor = "pointer";
   editBtn.addEventListener("click", () => {
     const tpl = getSelectedTemplate();
     if (!tpl) {
@@ -98,34 +82,70 @@ function createFloatingPanel() {
   });
   manageRow.appendChild(editBtn);
 
-  const addBtn = document.createElement("button");
-  addBtn.textContent = "追加";
+  const addBtn = createPanelButton("追加", "success");
   addBtn.style.flex = "1";
-  addBtn.style.fontSize = "11px";
-  addBtn.style.padding = "4px 6px";
-  addBtn.style.borderRadius = "4px";
-  addBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-  addBtn.style.background = "rgba(16, 163, 127, 0.9)";
-  addBtn.style.color = "#fff";
-  addBtn.style.cursor = "pointer";
   addBtn.addEventListener("click", () => {
     openTemplateEditor("new", null, () => {
       rebuildTemplateSelect(select);
     });
   });
   manageRow.appendChild(addBtn);
+  templateSection.appendChild(manageRow);
+  panel.appendChild(templateSection);
 
-  panel.appendChild(manageRow);
+  const viewSection = document.createElement("div");
+  viewSection.appendChild(createSectionLabel("コード表示"));
+  const settings = getViewSettingsForPanel();
 
-  const chatLogBtn = document.createElement("button");
-  chatLogBtn.textContent = "チャットログ";
-  chatLogBtn.style.fontSize = "11px";
-  chatLogBtn.style.padding = "4px 6px";
-  chatLogBtn.style.borderRadius = "4px";
-  chatLogBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-  chatLogBtn.style.background = "rgba(99, 102, 241, 0.9)";
-  chatLogBtn.style.color = "#fff";
-  chatLogBtn.style.cursor = "pointer";
+  const compactRow = createLineCountRow("縮小行数", settings.compactLineCount, (value) => {
+    if (typeof cgptUpdateViewSettings === "function") {
+      cgptUpdateViewSettings({ compactLineCount: value }, () => {
+        if (typeof cgptReapplyViewMode === "function") {
+          cgptReapplyViewMode("compact");
+        }
+      });
+    }
+  });
+  viewSection.appendChild(compactRow);
+
+  const collapsedRow = createLineCountRow("折りたたみ行数", settings.collapsedLineCount, (value) => {
+    if (typeof cgptUpdateViewSettings === "function") {
+      cgptUpdateViewSettings({ collapsedLineCount: value }, () => {
+        if (typeof cgptReapplyViewMode === "function") {
+          cgptReapplyViewMode("collapsed");
+        }
+      });
+    }
+  });
+  viewSection.appendChild(collapsedRow);
+
+  const viewButtons = createButtonRow();
+  const shrinkAllBtn = createPanelButton("全て縮小", "muted");
+  shrinkAllBtn.addEventListener("click", () => {
+    applyViewModeToAll("compact");
+  });
+  viewButtons.appendChild(shrinkAllBtn);
+
+  const collapseAllBtn = createPanelButton("全て折りたたみ", "accent");
+  collapseAllBtn.addEventListener("click", () => {
+    applyViewModeToAll("collapsed");
+  });
+  viewButtons.appendChild(collapseAllBtn);
+
+  const expandAllBtn = createPanelButton("全て展開", "secondary");
+  expandAllBtn.addEventListener("click", () => {
+    applyViewModeToAll("expanded");
+  });
+  viewButtons.appendChild(expandAllBtn);
+  viewSection.appendChild(viewButtons);
+  panel.appendChild(viewSection);
+
+  const logSection = document.createElement("div");
+  logSection.appendChild(createSectionLabel("履歴・ログ"));
+  const logButtons = createButtonRow();
+
+  const chatLogBtn = createPanelButton("チャットログ", "accent");
+  chatLogBtn.style.flex = "1";
   chatLogBtn.addEventListener("click", () => {
     if (typeof openChatLogModal === "function") {
       openChatLogModal();
@@ -133,21 +153,109 @@ function createFloatingPanel() {
       alert("チャットログビューを開けませんでした。");
     }
   });
-  panel.appendChild(chatLogBtn);
+  logButtons.appendChild(chatLogBtn);
 
-  const logBtn = document.createElement("button");
-  logBtn.textContent = "保存ログ";
-  logBtn.style.fontSize = "11px";
-  logBtn.style.padding = "4px 6px";
-  logBtn.style.borderRadius = "4px";
-  logBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-  logBtn.style.background = "rgba(55, 65, 81, 0.9)";
-  logBtn.style.color = "#fff";
-  logBtn.style.cursor = "pointer";
-  logBtn.addEventListener("click", () => {
+  const historyBtn = createPanelButton("保存ログ", "secondary");
+  historyBtn.style.flex = "1";
+  historyBtn.addEventListener("click", () => {
     openLogViewer();
   });
-  panel.appendChild(logBtn);
+  logButtons.appendChild(historyBtn);
+  logSection.appendChild(logButtons);
+  panel.appendChild(logSection);
 
   document.body.appendChild(panel);
+}
+
+function createSectionLabel(text) {
+  const label = document.createElement("div");
+  label.textContent = text;
+  label.style.fontSize = "11px";
+  label.style.fontWeight = "bold";
+  label.style.marginBottom = "2px";
+  label.style.color = "rgba(255,255,255,0.8)";
+  return label;
+}
+
+function createPanelButton(text, variant = "secondary") {
+  const button = document.createElement("button");
+  button.textContent = text;
+  button.style.fontSize = "11px";
+  button.style.padding = "4px 6px";
+  button.style.borderRadius = "4px";
+  button.style.border = "1px solid rgba(255,255,255,0.2)";
+  button.style.cursor = "pointer";
+  button.style.flexShrink = "0";
+  applyPanelButtonVariant(button, variant);
+  return button;
+}
+
+function applyPanelButtonVariant(button, variant) {
+  const palette = {
+    primary: "rgba(59, 130, 246, 0.95)",
+    accent: "rgba(129, 140, 248, 0.95)",
+    success: "rgba(16, 185, 129, 0.95)",
+    secondary: "rgba(55, 65, 81, 0.9)",
+    muted: "rgba(75, 85, 99, 0.9)",
+  };
+  const color = palette[variant] || palette.secondary;
+  button.style.background = color;
+  button.style.color = "#fff";
+}
+
+function createButtonRow() {
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.gap = "4px";
+  row.style.width = "100%";
+  return row;
+}
+
+function createLineCountRow(labelText, initialValue, onCommit) {
+  const row = document.createElement("label");
+  row.style.display = "flex";
+  row.style.alignItems = "center";
+  row.style.gap = "8px";
+  row.style.fontSize = "11px";
+  row.style.color = "rgba(255,255,255,0.8)";
+
+  const span = document.createElement("span");
+  span.textContent = labelText;
+  span.style.flex = "1";
+  row.appendChild(span);
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "1";
+  input.max = "200";
+  input.value = `${initialValue}`;
+  input.style.width = "64px";
+  input.style.borderRadius = "4px";
+  input.style.border = "1px solid rgba(255,255,255,0.2)";
+  input.style.background = "#1f2937";
+  input.style.color = "#fff";
+  input.style.padding = "2px 4px";
+
+  const commitValue = () => {
+    const parsed = Math.max(1, Math.min(200, Number.parseInt(input.value, 10) || 1));
+    input.value = `${parsed}`;
+    onCommit(parsed);
+  };
+  input.addEventListener("change", commitValue);
+  input.addEventListener("blur", commitValue);
+  row.appendChild(input);
+  return row;
+}
+
+function getViewSettingsForPanel() {
+  if (typeof cgptGetViewSettings === "function") {
+    return cgptGetViewSettings();
+  }
+  return { compactLineCount: 1, collapsedLineCount: 12 };
+}
+
+function applyViewModeToAll(mode) {
+  if (typeof cgptApplyViewModeToAll === "function") {
+    cgptApplyViewModeToAll(mode);
+  }
 }

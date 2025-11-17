@@ -25,6 +25,7 @@
       ],
       "js": [
         "content/state.js",
+        "content/viewSettings.js",
         "content/toast.js",
         "content/reloadNotifier.js",
         "content/chatInput.js",
