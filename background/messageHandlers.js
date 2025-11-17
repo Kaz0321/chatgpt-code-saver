@@ -2,6 +2,22 @@ const cgptMessageHandlers = {
   applyCodeBlock(message, _sender, sendResponse) {
     return cgptHandleApplyCodeBlock(message, sendResponse);
   },
+  chooseProjectFolder(_message, _sender, sendResponse) {
+    cgptPromptProjectFolderSelection((result) => {
+      if (!result.ok) {
+        sendResponse(result);
+        return;
+      }
+      cgptSetProjectFolderPath(result.folderPath, () => {
+        if (chrome.runtime.lastError) {
+          sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+        } else {
+          sendResponse({ ok: true, folderPath: result.folderPath });
+        }
+      });
+    });
+    return true;
+  },
   getTemplates(_message, _sender, sendResponse) {
     cgptGetTemplates((templates) => {
       sendResponse({ ok: true, templates });

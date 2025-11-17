@@ -128,9 +128,10 @@ function cgptTriggerApplyCode(button, filePath, content) {
         return;
       }
 
+      const savedPath = res.filePath || normalizedFilePath;
       cgptFlashButtonText(button, "保存済");
       if (typeof showToast === "function") {
-        showToast(`保存しました: ${normalizedFilePath}`, "success");
+        showToast(`保存しました: ${savedPath}`, "success");
       }
     }
   );

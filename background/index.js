@@ -1,8 +1,10 @@
 importScripts(
   "../shared/filePathValidation.js",
+  "../shared/projectFolderSettings.js",
   "./logStore.js",
   "./templateStore.js",
   "./applyCode.js",
+  "./projectFolderSelector.js",
   "./messageHandlers.js",
   "./reloadState.js"
 );
