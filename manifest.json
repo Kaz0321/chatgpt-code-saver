@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "gpt-code-saver-extension",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "ChatGPTのコードブロックをローカルの拡張ソースに保存し、複数テンプレートを貼り付け・編集できるヘルパー。",
   "permissions": [
     "downloads",
@@ -26,6 +26,7 @@
       "js": [
         "content/state.js",
         "content/viewSettings.js",
+        "shared/filePathValidation.js",
         "content/toast.js",
         "content/reloadNotifier.js",
         "content/chatInput.js",
@@ -35,6 +36,9 @@
         "content/chatLogTracker.js",
         "content/chatLogModal.js",
         "content/panel.js",
+        "content/codeBlockMetadata.js",
+        "content/codeBlockViewMode.js",
+        "content/codeBlockButtons.js",
         "content/codeBlocks.js",
         "content/init.js"
       ],

@@ -1,6 +1,6 @@
 # gpt-code-saver-extension
 
-Chrome 拡張「gpt-code-saver-extension」のソースです。ChatGPT が生成したコードブロックの 1 行目に `// file: path/to/file.ext` または `# file: path/to/file.ext` を記述すると、ボタン 1 つでローカル プロジェクトに直接保存できます。さらに、ChatGPT 入力欄に貼り付けるテンプレートの管理・貼り付け・編集 UI や、チャット履歴の収集・参照 UI も提供します。v0.0.2 ではテンプレート状態管理とバックグラウンド メッセージ処理を単一責務のモジュールに分割し、保守性を高めました。
+Chrome 拡張「gpt-code-saver-extension」のソースです。ChatGPT が生成したコードブロックの 1 行目に `// file: path/to/file.ext` または `# file: path/to/file.ext` を記述すると、ボタン 1 つでローカル プロジェクトに直接保存できます。さらに、ChatGPT 入力欄に貼り付けるテンプレートの管理・貼り付け・編集 UI や、チャット履歴の収集・参照 UI も提供します。v0.0.3 ではコードブロック装飾ロジック・ビュー切替・保存ボタン処理を責務ごとにファイル分割し、背景とコンテンツの双方から共有できるファイルパスバリデータを導入しました。
 
 ## 主な機能
 - ✅ **コードブロックの自動保存** – `Apply to project` ボタンで `chrome.downloads` API を利用し、指定したファイルパスに上書き保存します。
@@ -44,6 +44,9 @@ manifest.json (MV3)
 │  ├─ logStore.js       … chrome.storage.local でログの追加・取得・削除。
 │  ├─ templateStore.js  … chrome.storage.sync でテンプレートを取得・保存。
 │  └─ messageHandlers.js … type ごとの runtime メッセージハンドラを集約。
+│  └─ reloadState.js    … 拡張の再読込状態を管理し、初回起動で更新。
+├─ shared/
+│  └─ filePathValidation.js … 背景・コンテンツ共通のファイルパス検証ロジック。
 └─ content/
    ├─ init.js           … 初期化エントリ。テンプレ読込→UI生成→コード監視。
    ├─ state.js          … テンプレ配列/選択 ID を集約管理するアクセサ群。
@@ -51,7 +54,10 @@ manifest.json (MV3)
    ├─ templateStore.js  … テンプレの同期、貼り付けコマンドの調停役。
    ├─ templateEditor.js … モーダル UI と CRUD 操作。
    ├─ panel.js          … 画面右下のフローティング パネル。
-   ├─ codeBlocks.js     … `pre code` を装飾し、保存ボタンを付与。
+   ├─ codeBlockMetadata.js … コードブロック先頭の `file:` メタデータを解析。
+   ├─ codeBlockViewMode.js … ラップ要素生成、行数制御、ビュー切替処理。
+   ├─ codeBlockButtons.js … 保存/コピー/表示切替ボタン生成とハンドラ群。
+   ├─ codeBlocks.js     … `pre code` 装飾のエントリ。各責務モジュールを連携。
    ├─ logModal.js       … 保存ログのモーダル表示＋ファイルオープン。
    ├─ chatLogTracker.js … ユーザー／アシスタント発話とコードブロックを追跡。
    ├─ chatLogModal.js   … チャット履歴と対応コードブロックを一覧化。
