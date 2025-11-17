@@ -149,22 +149,5 @@ function createFloatingPanel() {
   });
   panel.appendChild(logBtn);
 
-  const reloadBtn = document.createElement("button");
-  reloadBtn.textContent = "この拡張をリロード";
-  reloadBtn.style.fontSize = "11px";
-  reloadBtn.style.padding = "4px 6px";
-  reloadBtn.style.borderRadius = "4px";
-  reloadBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-  reloadBtn.style.background = "rgba(244, 180, 0, 0.9)";
-  reloadBtn.style.color = "#000";
-  reloadBtn.style.cursor = "pointer";
-  reloadBtn.style.marginTop = "4px";
-  reloadBtn.addEventListener("click", () => {
-    if (confirm("ChatGPT Code Apply Helper 拡張をリロードしますか？")) {
-      chrome.runtime.sendMessage({ type: "reloadExtension" });
-    }
-  });
-  panel.appendChild(reloadBtn);
-
   document.body.appendChild(panel);
 }

@@ -2,11 +2,6 @@ const cgptMessageHandlers = {
   applyCodeBlock(message, _sender, sendResponse) {
     return cgptHandleApplyCodeBlock(message, sendResponse);
   },
-  reloadExtension(_message, _sender, sendResponse) {
-    chrome.runtime.reload();
-    sendResponse({ ok: true });
-    return false;
-  },
   getTemplates(_message, _sender, sendResponse) {
     cgptGetTemplates((templates) => {
       sendResponse({ ok: true, templates });
