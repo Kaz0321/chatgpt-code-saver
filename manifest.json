@@ -5,6 +5,7 @@
   "description": "ChatGPTのコードブロックをローカルの拡張ソースに保存し、複数テンプレートを貼り付け・編集できるヘルパー。",
   "permissions": [
     "downloads",
+    "downloads.open",
     "scripting",
     "activeTab",
     "storage"
