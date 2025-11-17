@@ -14,7 +14,7 @@
     "https://chat.openai.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background/index.js"
   },
   "content_scripts": [
     {
@@ -23,7 +23,15 @@
         "https://chat.openai.com/*"
       ],
       "js": [
-        "contentScript.js"
+        "content/state.js",
+        "content/toast.js",
+        "content/reloadNotifier.js",
+        "content/templateStore.js",
+        "content/templateEditor.js",
+        "content/logModal.js",
+        "content/panel.js",
+        "content/codeBlocks.js",
+        "content/init.js"
       ],
       "run_at": "document_idle"
     }
