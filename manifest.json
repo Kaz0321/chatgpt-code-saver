@@ -29,6 +29,8 @@
         "content/templateStore.js",
         "content/templateEditor.js",
         "content/logModal.js",
+        "content/chatLogTracker.js",
+        "content/chatLogModal.js",
         "content/panel.js",
         "content/codeBlocks.js",
         "content/init.js"

@@ -117,6 +117,24 @@ function createFloatingPanel() {
 
   panel.appendChild(manageRow);
 
+  const chatLogBtn = document.createElement("button");
+  chatLogBtn.textContent = "チャットログ";
+  chatLogBtn.style.fontSize = "11px";
+  chatLogBtn.style.padding = "4px 6px";
+  chatLogBtn.style.borderRadius = "4px";
+  chatLogBtn.style.border = "1px solid rgba(255,255,255,0.3)";
+  chatLogBtn.style.background = "rgba(99, 102, 241, 0.9)";
+  chatLogBtn.style.color = "#fff";
+  chatLogBtn.style.cursor = "pointer";
+  chatLogBtn.addEventListener("click", () => {
+    if (typeof openChatLogModal === "function") {
+      openChatLogModal();
+    } else {
+      alert("チャットログビューを開けませんでした。");
+    }
+  });
+  panel.appendChild(chatLogBtn);
+
   const logBtn = document.createElement("button");
   logBtn.textContent = "保存ログ";
   logBtn.style.fontSize = "11px";

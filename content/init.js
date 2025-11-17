@@ -3,6 +3,9 @@ function init() {
 
   loadTemplatesFromStorage(() => {
     createFloatingPanel();
+    if (typeof initChatLogTracker === "function") {
+      initChatLogTracker();
+    }
     decorateCodeBlocks(document);
     setupMutationObserver();
   });
