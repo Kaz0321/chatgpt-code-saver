@@ -212,11 +212,13 @@ function getHelperPanelTitle() {
     typeof chrome.runtime.getManifest === "function"
       ? chrome.runtime.getManifest()
       : null;
+  const extensionName =
+    manifest && manifest.name ? manifest.name : "gpt-code-saver-extension";
   const version = manifest && manifest.version ? manifest.version : "";
   if (!version) {
-    return "コードヘルパー";
+    return extensionName;
   }
-  return `コードヘルパー v${version}`;
+  return `${extensionName} ${version}`;
 }
 
 function createProjectFolderSection() {
