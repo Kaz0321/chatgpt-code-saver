@@ -118,7 +118,7 @@ function createFloatingPanel() {
   panel.appendChild(manageRow);
 
   const logBtn = document.createElement("button");
-  logBtn.textContent = "ログ";
+  logBtn.textContent = "保存ログ";
   logBtn.style.fontSize = "11px";
   logBtn.style.padding = "4px 6px";
   logBtn.style.borderRadius = "4px";

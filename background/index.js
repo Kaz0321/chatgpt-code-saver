@@ -67,4 +67,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     return true;
   }
+
+  if (message.type === "openDownloadedFile") {
+    const downloadId = message.downloadId;
+    if (typeof downloadId !== "number") {
+      sendResponse({ ok: false, error: "invalid_download_id" });
+      return;
+    }
+    chrome.downloads.open(downloadId);
+    if (chrome.runtime.lastError) {
+      sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+    } else {
+      sendResponse({ ok: true });
+    }
+    return;
+  }
 });
