@@ -21,47 +21,54 @@ function tryDecorateSingleCodeBlock(code) {
   if (!code) return;
   const pre = code.closest("pre");
   if (!pre) return;
-  if (pre.dataset.cgptCodeHelperApplied === "1") return;
 
   const metadata = parseCodeBlockMetadata(code);
-  const wrapper = wrapPreWithRelativeContainer(pre);
-  pre.dataset.cgptCodeHelperApplied = "1";
+  const isAlreadyDecorated = pre.dataset.cgptCodeHelperApplied === "1";
 
-  const buttonContainer = createButtonContainer();
+  if (!isAlreadyDecorated) {
+    const wrapper = wrapPreWithRelativeContainer(pre);
+    pre.dataset.cgptCodeHelperApplied = "1";
 
-  const saveBtn = createSaveButtonElement(Boolean(metadata));
-  saveBtn.addEventListener("click", () => {
-    handleSaveButtonClick(saveBtn, code);
-  });
-  buttonContainer.appendChild(saveBtn);
+    const buttonContainer = createButtonContainer();
 
-  const copyBtn = createCopyButtonElement();
-  copyBtn.addEventListener("click", () => {
-    handleCopyButtonClick(copyBtn, code);
-  });
-  buttonContainer.appendChild(copyBtn);
+    const saveBtn = createSaveButtonElement(Boolean(metadata));
+    saveBtn.dataset.cgptButtonRole = "save";
+    pre.cgptSaveButton = saveBtn;
+    saveBtn.addEventListener("click", () => {
+      handleSaveButtonClick(saveBtn, code);
+    });
+    buttonContainer.appendChild(saveBtn);
 
-  const shrinkBtn = createShrinkButtonElement();
-  const collapseBtn = createCollapseButtonElement();
-  const expandBtn = createExpandButtonElement();
-  shrinkBtn.addEventListener("click", () => {
-    handleShrinkButtonClick(pre);
-  });
-  collapseBtn.addEventListener("click", () => {
-    handleCollapseButtonClick(pre);
-  });
-  expandBtn.addEventListener("click", () => {
-    handleExpandButtonClick(pre);
-  });
-  buttonContainer.appendChild(shrinkBtn);
-  buttonContainer.appendChild(collapseBtn);
-  buttonContainer.appendChild(expandBtn);
+    const copyBtn = createCopyButtonElement();
+    copyBtn.addEventListener("click", () => {
+      handleCopyButtonClick(copyBtn, code);
+    });
+    buttonContainer.appendChild(copyBtn);
 
-  wrapper.appendChild(buttonContainer);
+    const shrinkBtn = createShrinkButtonElement();
+    const collapseBtn = createCollapseButtonElement();
+    const expandBtn = createExpandButtonElement();
+    shrinkBtn.addEventListener("click", () => {
+      handleShrinkButtonClick(pre);
+    });
+    collapseBtn.addEventListener("click", () => {
+      handleCollapseButtonClick(pre);
+    });
+    expandBtn.addEventListener("click", () => {
+      handleExpandButtonClick(pre);
+    });
+    buttonContainer.appendChild(shrinkBtn);
+    buttonContainer.appendChild(collapseBtn);
+    buttonContainer.appendChild(expandBtn);
 
-  ensureCollapsibleState(pre);
-  pre.cgptViewButtons = { shrinkBtn, collapseBtn, expandBtn };
-  setPreViewMode(pre, CGPT_VIEW_MODE.COMPACT);
+    wrapper.appendChild(buttonContainer);
+
+    ensureCollapsibleState(pre);
+    pre.cgptViewButtons = { shrinkBtn, collapseBtn, expandBtn };
+    setPreViewMode(pre, CGPT_VIEW_MODE.COMPACT);
+  }
+
+  refreshSaveButtonState(pre, code, metadata);
 }
 
 function parseCodeBlockMetadata(code) {
@@ -199,6 +206,31 @@ function applyButtonVariant(button, variant) {
   const color = palette[variant] || palette.neutral;
   button.style.background = color;
   button.style.color = "#fff";
+}
+
+function refreshSaveButtonState(pre, code, metadataOverride) {
+  if (!pre || !code) return;
+  let saveButton = pre.cgptSaveButton;
+  if (!saveButton) {
+    saveButton = pre.querySelector("button[data-cgpt-button-role='save']");
+    if (!saveButton) {
+      return;
+    }
+    pre.cgptSaveButton = saveButton;
+  }
+
+  const metadata =
+    metadataOverride !== undefined ? metadataOverride : parseCodeBlockMetadata(code);
+  const hasMetadata = Boolean(metadata);
+  const label = hasMetadata ? "保存" : "保存(指定)";
+  const title = hasMetadata
+    ? "コードを保存"
+    : "保存先のファイル名を指定してコードを保存";
+
+  saveButton.textContent = label;
+  saveButton.title = title;
+  applyButtonVariant(saveButton, hasMetadata ? "primary" : "warning");
+  pre.dataset.cgptHasMetadata = hasMetadata ? "1" : "0";
 }
 
 function handleSaveButtonClick(button, code) {
