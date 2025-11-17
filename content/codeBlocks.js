@@ -138,7 +138,9 @@ function setupMutationObserver() {
 
 function tryDecorateFromTextNode(node) {
   if (!node || node.nodeType !== Node.TEXT_NODE) return;
-  const parent = node.parentElement;
-  if (!parent || parent.tagName !== "CODE") return;
-  tryDecorateSingleCodeBlock(parent);
+  const elementParent = node.parentElement;
+  if (!elementParent) return;
+  const code = elementParent.closest("code");
+  if (!code) return;
+  tryDecorateSingleCodeBlock(code);
 }
