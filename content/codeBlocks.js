@@ -21,15 +21,20 @@ function tryDecorateSingleCodeBlock(code) {
   const wrapper = wrapPreWithRelativeContainer(pre);
   pre.dataset.cgptCodeHelperApplied = "1";
 
-  const saveBtn = createSaveButtonElement();
+  const toolbar = findCodeBlockToolbar(pre);
+  const buttonPlacement = toolbar ? "toolbar" : "overlay";
+  const saveBtn = createSaveButtonElement(buttonPlacement);
   saveBtn.addEventListener("click", () => {
     handleSaveButtonClick(saveBtn, code);
-    wrapper.appendChild(saveBtn);
-
-    applyCollapsibleFeature(pre, code, wrapper);
   });
 
-  wrapper.appendChild(saveBtn);
+  if (toolbar) {
+    toolbar.appendChild(saveBtn);
+  } else {
+    wrapper.appendChild(saveBtn);
+  }
+
+  applyCollapsibleFeature(pre, code, wrapper);
 }
 
 function parseCodeBlockMetadata(code) {
@@ -58,23 +63,68 @@ function wrapPreWithRelativeContainer(pre) {
   return wrapper;
 }
 
-function createSaveButtonElement() {
+function findCodeBlockToolbar(pre) {
+  if (!pre) return null;
+  const parent = pre.parentElement;
+  const candidates = [];
+  if (pre.previousElementSibling) {
+    candidates.push(pre.previousElementSibling);
+  }
+  if (parent && parent.previousElementSibling) {
+    candidates.push(parent.previousElementSibling);
+  }
+  if (parent && parent.parentElement && parent.parentElement.previousElementSibling) {
+    candidates.push(parent.parentElement.previousElementSibling);
+  }
+  for (const candidate of candidates) {
+    if (isToolbarCandidate(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function isToolbarCandidate(element) {
+  if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
+  if (element.querySelector("button")) return true;
+  const role = element.getAttribute("role") || "";
+  if (role.toLowerCase() === "toolbar") return true;
+  return false;
+}
+
+function createSaveButtonElement(placement = "overlay") {
   const button = document.createElement("button");
   button.textContent = "Save";
-  button.style.position = "absolute";
-  button.style.top = "8px";
-  button.style.right = "52px";
+  styleSaveButton(button, placement);
+  button.title = "コードを保存";
+  return button;
+}
+
+function styleSaveButton(button, placement) {
   button.style.fontSize = "11px";
   button.style.padding = "2px 10px";
   button.style.borderRadius = "4px";
   button.style.border = "1px solid rgba(255,255,255,0.4)";
-  button.style.background = "rgba(15, 157, 88, 0.95)";
-  button.style.color = "#fff";
   button.style.cursor = "pointer";
-  button.style.zIndex = "2";
   button.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-  button.title = "コードを保存";
-  return button;
+  button.style.transition = "opacity 0.2s ease";
+
+  if (placement === "toolbar") {
+    button.style.position = "relative";
+    button.style.top = "auto";
+    button.style.right = "auto";
+    button.style.marginLeft = "8px";
+    button.style.background = "rgba(22, 163, 74, 0.25)";
+    button.style.color = "#4ade80";
+    button.style.zIndex = "1";
+  } else {
+    button.style.position = "absolute";
+    button.style.top = "8px";
+    button.style.right = "52px";
+    button.style.background = "rgba(15, 157, 88, 0.95)";
+    button.style.color = "#fff";
+    button.style.zIndex = "2";
+  }
 }
 
 function createCollapseToggleButton() {
