@@ -104,6 +104,12 @@ function openLogViewer() {
     } else {
       logs.forEach((entry) => {
         const line = document.createElement("div");
+        line.style.display = "flex";
+        line.style.alignItems = "center";
+        line.style.gap = "8px";
+
+        const info = document.createElement("div");
+        info.style.flex = "1";
 
         const time = entry.time || "";
         const d = time ? new Date(time) : null;
@@ -116,10 +122,39 @@ function openLogViewer() {
 
         const statusLabel = ok ? "[OK]" : "[ERROR]";
 
-        line.textContent = `${timeStr} ${statusLabel} (${kind}) ${filePath}${
+        info.textContent = `${timeStr} ${statusLabel} (${kind}) ${filePath}${
           error ? " - " + error : ""
         }`;
-        line.style.color = ok ? "#a7f3d0" : "#fecaca";
+        info.style.color = ok ? "#a7f3d0" : "#fecaca";
+        line.appendChild(info);
+
+        if (ok && typeof entry.downloadId === "number") {
+          const openBtn = document.createElement("button");
+          openBtn.textContent = "開く";
+          openBtn.style.fontSize = "10px";
+          openBtn.style.padding = "2px 6px";
+          openBtn.style.borderRadius = "4px";
+          openBtn.style.border = "1px solid rgba(255,255,255,0.3)";
+          openBtn.style.background = "rgba(59,130,246,0.2)";
+          openBtn.style.color = "#bfdbfe";
+          openBtn.style.cursor = "pointer";
+          openBtn.addEventListener("click", () => {
+            openBtn.disabled = true;
+            chrome.runtime.sendMessage(
+              { type: "openDownloadedFile", downloadId: entry.downloadId },
+              (resOpen) => {
+                openBtn.disabled = false;
+                if (!resOpen || !resOpen.ok) {
+                  const errMsg =
+                    (resOpen && resOpen.error) || "ファイルを開けませんでした";
+                  showToast(errMsg, "error");
+                }
+              }
+            );
+          });
+          line.appendChild(openBtn);
+        }
+
         list.appendChild(line);
       });
     }
