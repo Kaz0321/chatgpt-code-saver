@@ -1,3 +1,6 @@
+const CODE_COLLAPSE_LINE_THRESHOLD = 30;
+const CODE_COLLAPSED_MAX_HEIGHT_PX = 320;
+
 function decorateCodeBlocks(root = document) {
   const pres = root.querySelectorAll("pre code");
   pres.forEach((code) => {
@@ -17,6 +20,8 @@ function decorateCodeBlocks(root = document) {
     });
 
     wrapper.appendChild(saveBtn);
+
+    applyCollapsibleFeature(pre, code, wrapper);
   });
 }
 
@@ -65,6 +70,23 @@ function createSaveButtonElement() {
   return button;
 }
 
+function createCollapseToggleButton() {
+  const button = document.createElement("button");
+  button.style.position = "absolute";
+  button.style.top = "8px";
+  button.style.right = "8px";
+  button.style.fontSize = "11px";
+  button.style.padding = "2px 10px";
+  button.style.borderRadius = "4px";
+  button.style.border = "1px solid rgba(255,255,255,0.4)";
+  button.style.background = "rgba(66, 133, 244, 0.95)";
+  button.style.color = "#fff";
+  button.style.cursor = "pointer";
+  button.style.zIndex = "2";
+  button.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+  return button;
+}
+
 function handleSaveButtonClick(button, code) {
   const parsed = parseCodeBlockMetadata(code);
   if (!parsed) {
@@ -97,6 +119,66 @@ function handleSaveButtonClick(button, code) {
       }
     }
   );
+}
+
+function applyCollapsibleFeature(pre, code, wrapper) {
+  if (!shouldCollapseCodeBlock(code)) return;
+  if (pre.dataset.cgptCollapsibleApplied === "1") return;
+
+  rememberOriginalPreStyles(pre);
+  const toggleButton = createCollapseToggleButton();
+  const updateLabel = () => {
+    toggleButton.textContent = isPreCollapsed(pre) ? "展開" : "折りたたみ";
+    toggleButton.title = isPreCollapsed(pre)
+      ? "コードブロックを展開"
+      : "コードブロックを折りたたみ";
+  };
+
+  toggleButton.addEventListener("click", () => {
+    const collapsed = isPreCollapsed(pre);
+    setPreCollapsed(pre, !collapsed);
+    updateLabel();
+  });
+
+  setPreCollapsed(pre, true);
+  updateLabel();
+  wrapper.appendChild(toggleButton);
+  pre.dataset.cgptCollapsibleApplied = "1";
+}
+
+function shouldCollapseCodeBlock(code) {
+  const lines = getCodeLineCount(code);
+  return lines > CODE_COLLAPSE_LINE_THRESHOLD;
+}
+
+function getCodeLineCount(code) {
+  const text = (code && code.innerText) || "";
+  if (!text) return 0;
+  return text.replace(/\r\n/g, "\n").split("\n").length;
+}
+
+function rememberOriginalPreStyles(pre) {
+  if (pre.dataset.cgptOriginalOverflow === undefined) {
+    pre.dataset.cgptOriginalOverflow = pre.style.overflow || "";
+  }
+  if (pre.dataset.cgptOriginalMaxHeight === undefined) {
+    pre.dataset.cgptOriginalMaxHeight = pre.style.maxHeight || "";
+  }
+}
+
+function isPreCollapsed(pre) {
+  return pre.dataset.cgptCollapsed === "1";
+}
+
+function setPreCollapsed(pre, collapsed) {
+  pre.dataset.cgptCollapsed = collapsed ? "1" : "0";
+  if (collapsed) {
+    pre.style.maxHeight = `${CODE_COLLAPSED_MAX_HEIGHT_PX}px`;
+    pre.style.overflow = "hidden";
+  } else {
+    pre.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
+    pre.style.overflow = pre.dataset.cgptOriginalOverflow || "";
+  }
 }
 
 function setupMutationObserver() {
