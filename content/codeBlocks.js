@@ -2,27 +2,34 @@ const CODE_COLLAPSE_LINE_THRESHOLD = 30;
 const CODE_COLLAPSED_MAX_HEIGHT_PX = 320;
 
 function decorateCodeBlocks(root = document) {
+  if (!root || typeof root.querySelectorAll !== "function") return;
   const pres = root.querySelectorAll("pre code");
   pres.forEach((code) => {
-    const pre = code.closest("pre");
-    if (!pre) return;
-    if (pre.dataset.cgptCodeHelperApplied === "1") return;
+    tryDecorateSingleCodeBlock(code);
+  });
+}
 
-    const parsed = parseCodeBlockMetadata(code);
-    if (!parsed) return;
+function tryDecorateSingleCodeBlock(code) {
+  if (!code) return;
+  const pre = code.closest("pre");
+  if (!pre) return;
+  if (pre.dataset.cgptCodeHelperApplied === "1") return;
 
-    const wrapper = wrapPreWithRelativeContainer(pre);
-    pre.dataset.cgptCodeHelperApplied = "1";
+  const parsed = parseCodeBlockMetadata(code);
+  if (!parsed) return;
 
-    const saveBtn = createSaveButtonElement();
-    saveBtn.addEventListener("click", () => {
-      handleSaveButtonClick(saveBtn, code);
-    });
+  const wrapper = wrapPreWithRelativeContainer(pre);
+  pre.dataset.cgptCodeHelperApplied = "1";
 
+  const saveBtn = createSaveButtonElement();
+  saveBtn.addEventListener("click", () => {
+    handleSaveButtonClick(saveBtn, code);
     wrapper.appendChild(saveBtn);
 
     applyCollapsibleFeature(pre, code, wrapper);
   });
+
+  wrapper.appendChild(saveBtn);
 }
 
 function parseCodeBlockMetadata(code) {
@@ -184,24 +191,39 @@ function setPreCollapsed(pre, collapsed) {
 function setupMutationObserver() {
   const observer = new MutationObserver((mutations) => {
     for (const m of mutations) {
-      if (m.addedNodes && m.addedNodes.length > 0) {
+      if (m.type === "childList" && m.addedNodes && m.addedNodes.length > 0) {
         m.addedNodes.forEach((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
+          if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.DOCUMENT_NODE) {
             decorateCodeBlocks(node);
             if (typeof captureChatLogsFromNode === "function") {
               captureChatLogsFromNode(node);
             }
           } else if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+            decorateCodeBlocks(node);
             if (typeof captureChatLogsFromNode === "function") {
               captureChatLogsFromNode(node);
             }
+          } else if (node.nodeType === Node.TEXT_NODE) {
+            tryDecorateFromTextNode(node);
           }
         });
+      } else if (m.type === "characterData") {
+        tryDecorateFromTextNode(m.target);
       }
     }
   });
   observer.observe(document.body, {
     childList: true,
     subtree: true,
+    characterData: true,
   });
+}
+
+function tryDecorateFromTextNode(node) {
+  if (!node || node.nodeType !== Node.TEXT_NODE) return;
+  const elementParent = node.parentElement;
+  if (!elementParent) return;
+  const code = elementParent.closest("code");
+  if (!code) return;
+  tryDecorateSingleCodeBlock(code);
 }
