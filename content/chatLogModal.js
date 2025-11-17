@@ -160,12 +160,27 @@ function openChatLogModal() {
           blockHeaderRow.style.alignItems = "center";
           blockHeaderRow.style.gap = "8px";
 
-          const fileLabel = document.createElement("div");
-          fileLabel.textContent = block.filePath;
-          fileLabel.style.fontSize = "12px";
-          fileLabel.style.color = "#facc15";
-          fileLabel.style.flex = "1";
-          blockHeaderRow.appendChild(fileLabel);
+          const fileInfoWrapper = document.createElement("div");
+          fileInfoWrapper.style.flex = "1";
+          fileInfoWrapper.style.display = "flex";
+          fileInfoWrapper.style.flexDirection = "column";
+          fileInfoWrapper.style.gap = "2px";
+
+          const fileNameLabel = document.createElement("div");
+          fileNameLabel.textContent = block.fileName || block.filePath;
+          fileNameLabel.style.fontSize = "12px";
+          fileNameLabel.style.color = "#facc15";
+          fileNameLabel.style.fontWeight = "bold";
+          fileInfoWrapper.appendChild(fileNameLabel);
+
+          const filePathLabel = document.createElement("div");
+          filePathLabel.textContent = block.filePath;
+          filePathLabel.style.fontSize = "11px";
+          filePathLabel.style.color = "#fef3c7";
+          filePathLabel.style.opacity = "0.9";
+          fileInfoWrapper.appendChild(filePathLabel);
+
+          blockHeaderRow.appendChild(fileInfoWrapper);
 
           const downloadBtn = document.createElement("button");
           downloadBtn.textContent = "ダウンロード";
@@ -198,6 +213,75 @@ function openChatLogModal() {
           blockWrapper.appendChild(codePre);
 
           card.appendChild(blockWrapper);
+        });
+      }
+
+      const assistantUrls = collectAssistantUrlsForEntry(
+        entry,
+        orderedUsers[index + 1],
+        allEntries
+      );
+      if (assistantUrls.length > 0) {
+        const urlHeader = document.createElement("div");
+        urlHeader.textContent = `提供されたリンク (${assistantUrls.length})`;
+        urlHeader.style.fontSize = "12px";
+        urlHeader.style.color = "#7dd3fc";
+        card.appendChild(urlHeader);
+
+        assistantUrls.forEach((link) => {
+          const urlWrapper = document.createElement("div");
+          urlWrapper.style.border = "1px solid #1f2937";
+          urlWrapper.style.borderRadius = "6px";
+          urlWrapper.style.background = "#0f172a";
+          urlWrapper.style.padding = "6px";
+          urlWrapper.style.display = "flex";
+          urlWrapper.style.flexDirection = "column";
+          urlWrapper.style.gap = "6px";
+
+          const urlHeaderRow = document.createElement("div");
+          urlHeaderRow.style.display = "flex";
+          urlHeaderRow.style.justifyContent = "space-between";
+          urlHeaderRow.style.alignItems = "center";
+          urlHeaderRow.style.gap = "8px";
+
+          const urlLabelWrapper = document.createElement("div");
+          urlLabelWrapper.style.flex = "1";
+          urlLabelWrapper.style.display = "flex";
+          urlLabelWrapper.style.flexDirection = "column";
+          urlLabelWrapper.style.gap = "2px";
+
+          const urlDisplayText = document.createElement("div");
+          urlDisplayText.textContent = link.text || link.url;
+          urlDisplayText.style.fontSize = "12px";
+          urlDisplayText.style.color = "#bae6fd";
+          urlDisplayText.style.fontWeight = "bold";
+          urlLabelWrapper.appendChild(urlDisplayText);
+
+          const urlValue = document.createElement("div");
+          urlValue.textContent = link.url;
+          urlValue.style.fontSize = "11px";
+          urlValue.style.color = "#e0f2fe";
+          urlValue.style.opacity = "0.9";
+          urlLabelWrapper.appendChild(urlValue);
+
+          urlHeaderRow.appendChild(urlLabelWrapper);
+
+          const openBtn = document.createElement("button");
+          openBtn.textContent = "リンクを開く";
+          openBtn.style.fontSize = "11px";
+          openBtn.style.padding = "2px 8px";
+          openBtn.style.borderRadius = "4px";
+          openBtn.style.border = "1px solid rgba(255,255,255,0.3)";
+          openBtn.style.background = "rgba(59,130,246,0.2)";
+          openBtn.style.color = "#bfdbfe";
+          openBtn.style.cursor = "pointer";
+          openBtn.addEventListener("click", () => {
+            window.open(link.url, "_blank", "noopener,noreferrer");
+          });
+          urlHeaderRow.appendChild(openBtn);
+
+          urlWrapper.appendChild(urlHeaderRow);
+          card.appendChild(urlWrapper);
         });
       }
 
@@ -239,6 +323,25 @@ function collectAssistantBlocksForEntry(entry, nextEntry, allEntries) {
   return blocks;
 }
 
+function collectAssistantUrlsForEntry(entry, nextEntry, allEntries) {
+  const urls = [];
+  const seen = new Set();
+  const startOrder = entry.order;
+  const endOrder = nextEntry ? nextEntry.order : Infinity;
+  allEntries
+    .filter((e) => e.role === "assistant" && e.order > startOrder && e.order < endOrder)
+    .forEach((assistantEntry) => {
+      if (!assistantEntry.element) return;
+      extractStandaloneUrlsFromElement(assistantEntry.element).forEach((link) => {
+        const key = `${link.url}|${link.text}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        urls.push(link);
+      });
+    });
+  return urls;
+}
+
 function extractFormattedCodeBlocksFromElement(element) {
   const results = [];
   if (!element) return results;
@@ -254,9 +357,30 @@ function extractFormattedCodeBlocksFromElement(element) {
     const filePath = match[1].trim();
     if (!filePath) return;
     const content = lines.slice(1).join("\n");
-    results.push({ filePath, content });
+    results.push({ filePath, fileName: deriveFileName(filePath), content });
   });
   return results;
+}
+
+function extractStandaloneUrlsFromElement(element) {
+  const results = [];
+  if (!element) return results;
+  const anchors = element.querySelectorAll("a[href]");
+  anchors.forEach((anchor) => {
+    if (anchor.closest("pre")) return;
+    const href = anchor.getAttribute("href") || "";
+    if (!/^https?:\/\//i.test(href)) return;
+    const text = (anchor.textContent || "").trim();
+    results.push({ url: href, text });
+  });
+  return results;
+}
+
+function deriveFileName(filePath) {
+  if (!filePath) return "";
+  const normalized = filePath.replace(/\\/g, "/");
+  const parts = normalized.split("/");
+  return parts[parts.length - 1] || filePath;
 }
 
 function triggerChatLogDownload(filePath, content, onDone) {
