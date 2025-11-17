@@ -48,7 +48,7 @@ function createFloatingPanel() {
   rebuildTemplateSelect(select);
 
   select.addEventListener("change", () => {
-    selectedTemplateId = select.value;
+    cgptSetSelectedTemplateId(select.value);
   });
 
   panel.appendChild(row);
