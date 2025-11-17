@@ -59,3 +59,7 @@ function cgptHandleRuntimeMessage(message, sender, sendResponse) {
   }
   return handler(message, sender, sendResponse);
 }
+
+function cgptRegisterRuntimeMessageHandler() {
+  chrome.runtime.onMessage.addListener(cgptHandleRuntimeMessage);
+}
