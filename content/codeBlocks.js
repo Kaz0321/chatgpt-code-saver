@@ -53,16 +53,35 @@ function tryDecorateSingleCodeBlock(code) {
 function parseCodeBlockMetadata(code) {
   if (!code) return null;
   const text = code.innerText || "";
-  const normalized = text.replace(/\r\n/g, "\n");
+  const normalized = text.replace(/^\ufeff/, "").replace(/\r\n/g, "\n");
   const lines = normalized.split("\n");
   if (!lines.length) return null;
-  const first = lines[0].trim();
-  const match =
-    first.match(/^\/\/\s*file:\s*(.+)$/i) || first.match(/^#\s*file:\s*(.+)$/i);
-  if (!match) return null;
-  const filePath = match[1].trim();
-  if (!filePath) return null;
-  const content = lines.slice(1).join("\n");
+
+  let metadataLineIndex = -1;
+  let filePath = "";
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmedLine = lines[i].replace(/^\ufeff/, "").trim();
+    if (!trimmedLine) {
+      continue;
+    }
+    const match =
+      trimmedLine.match(/^\/\/\s*file:\s*(.+)$/i) ||
+      trimmedLine.match(/^#\s*file:\s*(.+)$/i);
+    if (!match) {
+      break;
+    }
+    filePath = match[1].trim();
+    if (!filePath) {
+      break;
+    }
+    metadataLineIndex = i;
+    break;
+  }
+
+  if (metadataLineIndex === -1 || !filePath) return null;
+
+  const content = lines.slice(metadataLineIndex + 1).join("\n");
   return { filePath, content };
 }
 
