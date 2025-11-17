@@ -88,11 +88,21 @@ function parseCodeBlockMetadata(code) {
 function wrapPreWithRelativeContainer(pre) {
   const wrapper = document.createElement("div");
   wrapper.style.position = "relative";
+  wrapper.dataset.cgptCodeWrapper = "1";
   if (pre.parentNode) {
     pre.parentNode.insertBefore(wrapper, pre);
   }
   wrapper.appendChild(pre);
   return wrapper;
+}
+
+function getCollapsibleElement(pre) {
+  if (!pre) return null;
+  const parent = pre.parentElement;
+  if (parent && parent.dataset.cgptCodeWrapper === "1") {
+    return parent;
+  }
+  return pre;
 }
 
 function createButtonContainer(placement = "overlay") {
@@ -307,11 +317,13 @@ function getNormalizedCodeText(code) {
 }
 
 function rememberOriginalPreStyles(pre) {
+  const collapsibleEl = getCollapsibleElement(pre);
+  if (!collapsibleEl) return;
   if (pre.dataset.cgptOriginalOverflow === undefined) {
-    pre.dataset.cgptOriginalOverflow = pre.style.overflow || "";
+    pre.dataset.cgptOriginalOverflow = collapsibleEl.style.overflow || "";
   }
   if (pre.dataset.cgptOriginalMaxHeight === undefined) {
-    pre.dataset.cgptOriginalMaxHeight = pre.style.maxHeight || "";
+    pre.dataset.cgptOriginalMaxHeight = collapsibleEl.style.maxHeight || "";
   }
 }
 
@@ -320,13 +332,15 @@ function isPreCollapsed(pre) {
 }
 
 function setPreCollapsed(pre, collapsed) {
+  const collapsibleEl = getCollapsibleElement(pre);
+  if (!collapsibleEl) return;
   pre.dataset.cgptCollapsed = collapsed ? "1" : "0";
   if (collapsed) {
-    pre.style.maxHeight = `${CODE_COLLAPSED_MAX_HEIGHT_PX}px`;
-    pre.style.overflow = "hidden";
+    collapsibleEl.style.maxHeight = `${CODE_COLLAPSED_MAX_HEIGHT_PX}px`;
+    collapsibleEl.style.overflow = "hidden";
   } else {
-    pre.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
-    pre.style.overflow = pre.dataset.cgptOriginalOverflow || "";
+    collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
+    collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
   }
 }
 
