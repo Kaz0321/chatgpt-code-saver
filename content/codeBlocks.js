@@ -223,8 +223,20 @@ function handleSaveButtonClick(button, code) {
 
 function triggerApplyCode(button, filePath, content) {
   if (!filePath) return;
+  const validation = validateFilePathInput(filePath);
+  if (!validation.ok) {
+    const errMsg = validation.error || "ファイルパスが不正です";
+    if (typeof showToast === "function") {
+      showToast(errMsg, "error");
+    } else {
+      alert(errMsg);
+    }
+    return;
+  }
+
+  const normalizedFilePath = validation.filePath;
   chrome.runtime.sendMessage(
-    { type: "applyCodeBlock", filePath, content },
+    { type: "applyCodeBlock", filePath: normalizedFilePath, content },
     (res) => {
       if (!res || !res.ok) {
         const errorMessage =
@@ -239,7 +251,7 @@ function triggerApplyCode(button, filePath, content) {
 
       flashButtonText(button, "保存済");
       if (typeof showToast === "function") {
-        showToast(`保存しました: ${filePath}`, "success");
+        showToast(`保存しました: ${normalizedFilePath}`, "success");
       }
     }
   );
@@ -398,6 +410,39 @@ function getCodeLineHeight(pre) {
 
 function getDecoratedPreElements() {
   return Array.from(document.querySelectorAll("pre[data-cgpt-code-helper-applied='1']"));
+}
+
+function validateFilePathInput(rawFilePath) {
+  if (typeof rawFilePath !== "string") {
+    return { ok: false, error: "ファイルパスが指定されていません" };
+  }
+
+  const trimmed = rawFilePath.trim();
+  if (!trimmed) {
+    return { ok: false, error: "ファイルパスが空です" };
+  }
+
+  if (/^[\\/]/.test(trimmed)) {
+    return {
+      ok: false,
+      error: "ファイルパスの先頭に / または \\ は使用できません",
+    };
+  }
+
+  const invalidCharPattern = /[<>:"|?*\x00]/;
+  if (invalidCharPattern.test(trimmed)) {
+    return {
+      ok: false,
+      error: "ファイルパスに使用できない文字が含まれています",
+    };
+  }
+
+  const segments = trimmed.split(/[\\/]+/);
+  if (segments.some((segment) => segment === "..")) {
+    return { ok: false, error: "ファイルパスに .. は使用できません" };
+  }
+
+  return { ok: true, filePath: trimmed };
 }
 
 function cgptApplyViewModeToAll(mode) {
