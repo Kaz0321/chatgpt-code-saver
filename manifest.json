@@ -27,6 +27,7 @@
         "content/state.js",
         "content/viewSettings.js",
         "shared/filePathValidation.js",
+        "shared/projectFolderSettings.js",
         "content/toast.js",
         "content/reloadNotifier.js",
         "content/chatInput.js",

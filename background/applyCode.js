@@ -30,51 +30,54 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
 
   const normalizedFilePath = validation.filePath;
 
-  const encoded = encodeURIComponent(content);
-  const url = "data:text/plain;charset=utf-8," + encoded;
+  cgptGetProjectFolderPath((folderPath) => {
+    const targetPath = cgptBuildFullFilePath(folderPath, normalizedFilePath);
+    const encoded = encodeURIComponent(content);
+    const url = "data:text/plain;charset=utf-8," + encoded;
 
-  chrome.downloads.download(
-    {
-      url,
-      filename: normalizedFilePath,
-      conflictAction: "overwrite",
-      saveAs: false,
-    },
-    (downloadId) => {
-      if (chrome.runtime.lastError) {
-        const err = chrome.runtime.lastError.message || "unknown error";
-        console.error("downloads.download error:", chrome.runtime.lastError);
-        cgptAppendLog(
-          {
-            time: new Date().toISOString(),
-            kind: "apply",
-            ok: false,
-            filePath: normalizedFilePath,
-            error: err,
-            downloadId: null,
-          },
-          () => {
-            sendResponse({ ok: false, error: err });
-          }
-        );
-      } else {
-        console.log("Downloaded and overwrote:", filePath, "id:", downloadId);
-        cgptAppendLog(
-          {
-            time: new Date().toISOString(),
-            kind: "apply",
-            ok: true,
-            filePath: normalizedFilePath,
-            error: "",
-            downloadId,
-          },
-          () => {
-            sendResponse({ ok: true, downloadId });
-          }
-        );
+    chrome.downloads.download(
+      {
+        url,
+        filename: targetPath,
+        conflictAction: "overwrite",
+        saveAs: false,
+      },
+      (downloadId) => {
+        if (chrome.runtime.lastError) {
+          const err = chrome.runtime.lastError.message || "unknown error";
+          console.error("downloads.download error:", chrome.runtime.lastError);
+          cgptAppendLog(
+            {
+              time: new Date().toISOString(),
+              kind: "apply",
+              ok: false,
+              filePath: targetPath,
+              error: err,
+              downloadId: null,
+            },
+            () => {
+              sendResponse({ ok: false, error: err });
+            }
+          );
+        } else {
+          console.log("Downloaded and overwrote:", targetPath, "id:", downloadId);
+          cgptAppendLog(
+            {
+              time: new Date().toISOString(),
+              kind: "apply",
+              ok: true,
+              filePath: targetPath,
+              error: "",
+              downloadId,
+            },
+            () => {
+              sendResponse({ ok: true, downloadId, filePath: targetPath });
+            }
+          );
+        }
       }
-    }
-  );
+    );
+  });
 
   return true;
 }
