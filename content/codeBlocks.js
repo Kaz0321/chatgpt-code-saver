@@ -80,6 +80,13 @@ function setupMutationObserver() {
         m.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) {
             decorateCodeBlocks(node);
+            if (typeof captureChatLogsFromNode === "function") {
+              captureChatLogsFromNode(node);
+            }
+          } else if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+            if (typeof captureChatLogsFromNode === "function") {
+              captureChatLogsFromNode(node);
+            }
           }
         });
       }
