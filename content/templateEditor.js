@@ -3,6 +3,7 @@ function openTemplateEditor(mode, templateId, onSave) {
 
   let targetTemplate = null;
   if (mode === "edit") {
+    const templates = cgptGetTemplates();
     targetTemplate = templates.find((t) => t.id === templateId);
     if (!targetTemplate) {
       alert("テンプレートが見つかりません。");
@@ -102,11 +103,17 @@ function openTemplateEditor(mode, templateId, onSave) {
     deleteBtn.style.cursor = "pointer";
     deleteBtn.addEventListener("click", () => {
       if (confirm("このテンプレートを削除しますか？")) {
-        templates = templates.filter((t) => t.id !== templateId);
+        const templates = cgptGetTemplates().filter(
+          (t) => t.id !== templateId
+        );
+        cgptSetTemplates(templates);
         if (templates.length === 0) {
           ensureDefaultTemplates();
         }
-        selectedTemplateId = templates[0].id;
+        const updatedTemplates = cgptGetTemplates();
+        if (updatedTemplates.length > 0) {
+          cgptSetSelectedTemplateId(updatedTemplates[0].id);
+        }
         saveTemplatesToStorage();
         if (typeof onSave === "function") onSave();
         document.body.removeChild(overlay);
@@ -155,12 +162,13 @@ function openTemplateEditor(mode, templateId, onSave) {
     if (mode === "edit" && targetTemplate) {
       targetTemplate.title = newTitle;
       targetTemplate.content = newContent;
-      selectedTemplateId = targetTemplate.id;
+      cgptSetSelectedTemplateId(targetTemplate.id);
     } else if (mode === "new") {
-      const id = generateId();
+      const id = cgptGenerateTemplateId();
       const newTpl = { id: id, title: newTitle, content: newContent };
-      templates.push(newTpl);
-      selectedTemplateId = id;
+      const templates = [...cgptGetTemplates(), newTpl];
+      cgptSetTemplates(templates);
+      cgptSetSelectedTemplateId(id);
     }
 
     ensureDefaultTemplates();
