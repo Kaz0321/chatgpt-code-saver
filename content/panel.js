@@ -267,7 +267,12 @@ function commitProjectFolderInput(input) {
     }
     return;
   }
-  cgptSetProjectFolderPath(validation.folderPath, (result) => {
+  persistProjectFolderSelection(input, validation.folderPath);
+}
+
+function persistProjectFolderSelection(input, normalizedPath) {
+  if (!input) return;
+  cgptSetProjectFolderPath(normalizedPath || "", (result) => {
     if (!result || !result.ok) {
       const errMsg = (result && result.error) || "フォルダの保存に失敗しました";
       if (typeof showToast === "function") {
@@ -275,10 +280,10 @@ function commitProjectFolderInput(input) {
       }
       return;
     }
-    input.value = validation.folderPath;
+    input.value = normalizedPath || "";
     if (typeof showToast === "function") {
-      const message = validation.folderPath
-        ? `プロジェクトフォルダを保存しました: ${validation.folderPath}`
+      const message = normalizedPath
+        ? `プロジェクトフォルダを保存しました: ${normalizedPath}`
         : "プロジェクトフォルダ設定をクリアしました";
       showToast(message, "success");
     }
@@ -311,13 +316,8 @@ function requestProjectFolderSelection(input, button) {
       }
       return;
     }
-    input.value = response.folderPath || "";
-    if (typeof showToast === "function") {
-      const message = response.folderPath
-        ? `プロジェクトフォルダを更新しました: ${response.folderPath}`
-        : "プロジェクトフォルダ設定をクリアしました";
-      showToast(message, "success");
-    }
+    const normalizedPath = cgptNormalizeProjectFolderPath(response.folderPath || "");
+    persistProjectFolderSelection(input, normalizedPath);
   });
 }
 
