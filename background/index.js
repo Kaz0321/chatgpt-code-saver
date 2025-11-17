@@ -1,8 +1,4 @@
-importScripts(
-  "./background/logStore.js",
-  "./background/templateStore.js",
-  "./background/applyCode.js"
-);
+importScripts("./logStore.js", "./templateStore.js", "./applyCode.js");
 
 const CGPT_RELOAD_STATE_KEY = {
   lastReloadedAt: "lastReloadedAt",
