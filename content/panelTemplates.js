@@ -1,6 +1,6 @@
 function createTemplateSection() {
   const templateSection = document.createElement("div");
-  templateSection.appendChild(createSectionLabel("テンプレート"));
+  templateSection.appendChild(createSectionLabel("Templates"));
 
   const templateRow = document.createElement("div");
   templateRow.style.display = "flex";
@@ -8,7 +8,7 @@ function createTemplateSection() {
   templateRow.style.alignItems = "flex-start";
 
   const templateLabel = document.createElement("span");
-  templateLabel.textContent = "選択";
+  templateLabel.textContent = "Select";
   templateLabel.style.fontSize = "11px";
   templateLabel.style.minWidth = "32px";
   templateRow.appendChild(templateLabel);
@@ -50,7 +50,7 @@ function createTemplateActionRow(refreshTemplateList) {
   editBtn.addEventListener("click", () => {
     const tpl = getSelectedTemplate();
     if (!tpl) {
-      alert("テンプレートがありません。");
+      alert("No templates available.");
       return;
     }
     openTemplateEditor("edit", tpl.id, () => {
@@ -73,7 +73,7 @@ function createTemplateActionRow(refreshTemplateList) {
   insertBtn.addEventListener("click", () => {
     const tpl = getSelectedTemplate();
     if (!tpl) {
-      alert("テンプレートがありません。");
+      alert("No templates available.");
       return;
     }
     insertTemplateToInput(tpl.content);

@@ -6,7 +6,7 @@ function openTemplateEditor(mode, templateId, onSave) {
     const templates = cgptGetTemplates();
     targetTemplate = templates.find((t) => t.id === templateId);
     if (!targetTemplate) {
-      alert("テンプレートが見つかりません。");
+      alert("Template not found.");
       return;
     }
   }
@@ -38,12 +38,12 @@ function openTemplateEditor(mode, templateId, onSave) {
   dialog.style.boxShadow = "0 4px 12px rgba(0,0,0,0.5)";
 
   const title = document.createElement("div");
-  title.textContent = mode === "edit" ? "テンプレート編集" : "テンプレート追加";
+  title.textContent = mode === "edit" ? "Edit Template" : "Add Template";
   title.style.fontWeight = "bold";
   dialog.appendChild(title);
 
   const titleLabel = document.createElement("div");
-  titleLabel.textContent = "タイトル";
+  titleLabel.textContent = "Title";
   titleLabel.style.fontSize = "11px";
   dialog.appendChild(titleLabel);
 
@@ -61,7 +61,7 @@ function openTemplateEditor(mode, templateId, onSave) {
   dialog.appendChild(titleInput);
 
   const textareaLabel = document.createElement("div");
-  textareaLabel.textContent = "内容";
+  textareaLabel.textContent = "Content";
   textareaLabel.style.fontSize = "11px";
   dialog.appendChild(textareaLabel);
 
@@ -94,7 +94,7 @@ function openTemplateEditor(mode, templateId, onSave) {
 
   if (mode === "edit") {
     const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "削除";
+    deleteBtn.textContent = "Delete";
     deleteBtn.style.padding = "4px 10px";
     deleteBtn.style.borderRadius = "4px";
     deleteBtn.style.border = "1px solid rgba(255,255,255,0.3)";
@@ -102,7 +102,7 @@ function openTemplateEditor(mode, templateId, onSave) {
     deleteBtn.style.color = "#fff";
     deleteBtn.style.cursor = "pointer";
     deleteBtn.addEventListener("click", () => {
-      if (confirm("このテンプレートを削除しますか？")) {
+      if (confirm("Delete this template?")) {
         const templates = cgptGetTemplates().filter(
           (t) => t.id !== templateId
         );
@@ -117,7 +117,7 @@ function openTemplateEditor(mode, templateId, onSave) {
         saveTemplatesToStorage();
         if (typeof onSave === "function") onSave();
         document.body.removeChild(overlay);
-        showToast("テンプレートを削除しました。", "success");
+        showToast("Template deleted.", "success");
       }
     });
     leftButtons.appendChild(deleteBtn);
@@ -130,7 +130,7 @@ function openTemplateEditor(mode, templateId, onSave) {
   rightButtons.style.gap = "8px";
 
   const cancelBtn = document.createElement("button");
-  cancelBtn.textContent = "キャンセル";
+  cancelBtn.textContent = "Cancel";
   cancelBtn.style.padding = "4px 10px";
   cancelBtn.style.borderRadius = "4px";
   cancelBtn.style.border = "1px solid rgba(255,255,255,0.3)";
@@ -155,7 +155,7 @@ function openTemplateEditor(mode, templateId, onSave) {
     const newContent = textarea.value;
 
     if (!newTitle) {
-      alert("タイトルを入力してください。");
+      alert("Please enter a title.");
       return;
     }
 
@@ -175,7 +175,7 @@ function openTemplateEditor(mode, templateId, onSave) {
     saveTemplatesToStorage();
     if (typeof onSave === "function") onSave();
     document.body.removeChild(overlay);
-    showToast("テンプレートを保存しました。", "success");
+    showToast("Template saved.", "success");
   });
   rightButtons.appendChild(saveBtn);
 

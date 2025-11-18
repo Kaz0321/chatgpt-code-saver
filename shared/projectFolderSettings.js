@@ -1,8 +1,8 @@
 const CGPT_PROJECT_FOLDER_STORAGE_KEY = "cgptProjectFolderPath";
 const CGPT_PROJECT_FOLDER_ERROR_MESSAGES = {
-  invalid: "フォルダパスが無効です",
-  invalidChar: "フォルダパスに使用できない文字が含まれています",
-  parentTraversal: "フォルダパスに .. は使用できません",
+  invalid: "Folder path is invalid.",
+  invalidChar: "Folder path contains unsupported characters.",
+  parentTraversal: "Folder path cannot include .. segments.",
 };
 const cgptProjectFolderChangeHandlers = new Set();
 

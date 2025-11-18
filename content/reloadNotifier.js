@@ -16,7 +16,7 @@ function checkAndNotifyReloaded() {
           timeStr = d.toLocaleString();
         }
 
-        showToast(`ChatGPT Helper 拡張がリロードされました (${timeStr})`, "success");
+        showToast(`ChatGPT Helper reloaded (${timeStr})`, "success");
 
         chrome.storage.local.set({
           lastReloadedNotifiedAt: lastReloadedAt,

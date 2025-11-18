@@ -128,7 +128,7 @@ function cgptTriggerApplyCode(button, filePath, content, options = {}) {
   if (!filePath) return;
   const validation = cgptValidateFilePath(filePath);
   if (!validation.ok) {
-    const errMsg = validation.error || "ファイルパスが不正です";
+    const errMsg = validation.error || "File path is invalid.";
     if (typeof showToast === "function") {
       showToast(errMsg, "error");
     } else {

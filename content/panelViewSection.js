@@ -1,40 +1,74 @@
 function createViewSection() {
   const viewSection = document.createElement("div");
-  viewSection.appendChild(createSectionLabel("コード表示"));
+  viewSection.appendChild(createSectionLabel("Code View"));
   const settings = getViewSettingsForPanel();
 
-  const compactRow = createLineCountRow("縮小行数", settings.compactLineCount, (value) => {
-    if (typeof cgptUpdateViewSettings === "function") {
-      cgptUpdateViewSettings({ compactLineCount: value }, () => {
-        if (typeof cgptReapplyViewMode === "function") {
-          cgptReapplyViewMode("compact");
+  const viewButtons = document.createElement("div");
+  viewButtons.style.display = "flex";
+  viewButtons.style.flexDirection = "column";
+  viewButtons.style.gap = "6px";
+
+  viewButtons.appendChild(
+    createViewModeRow({
+      label: "Compact All",
+      mode: "compact",
+      initialLineCount: settings.compactLineCount,
+      onLineCountCommit: (value) => {
+        if (typeof cgptUpdateViewSettings === "function") {
+          cgptUpdateViewSettings({ compactLineCount: value }, () => {
+            if (typeof cgptReapplyViewMode === "function") {
+              cgptReapplyViewMode("compact");
+            }
+          });
         }
-      });
-    }
-  });
-  viewSection.appendChild(compactRow);
-
-  const collapsedRow = createLineCountRow(
-    "折りたたみ行数",
-    settings.collapsedLineCount,
-    (value) => {
-      if (typeof cgptUpdateViewSettings === "function") {
-        cgptUpdateViewSettings({ collapsedLineCount: value }, () => {
-          if (typeof cgptReapplyViewMode === "function") {
-            cgptReapplyViewMode("collapsed");
-          }
-        });
-      }
-    }
+      },
+    })
   );
-  viewSection.appendChild(collapsedRow);
 
-  const viewButtons = createButtonRow();
-  viewButtons.appendChild(createViewModeButton("Compact All", "compact"));
-  viewButtons.appendChild(createViewModeButton("Collapse All", "collapsed"));
-  viewButtons.appendChild(createViewModeButton("Expand All", "expanded"));
+  viewButtons.appendChild(
+    createViewModeRow({
+      label: "Collapse All",
+      mode: "collapsed",
+      initialLineCount: settings.collapsedLineCount,
+      onLineCountCommit: (value) => {
+        if (typeof cgptUpdateViewSettings === "function") {
+          cgptUpdateViewSettings({ collapsedLineCount: value }, () => {
+            if (typeof cgptReapplyViewMode === "function") {
+              cgptReapplyViewMode("collapsed");
+            }
+          });
+        }
+      },
+    })
+  );
+
+  viewButtons.appendChild(
+    createViewModeRow({
+      label: "Expand All",
+      mode: "expanded",
+    })
+  );
+
   viewSection.appendChild(viewButtons);
   return viewSection;
+}
+
+function createViewModeRow({ label, mode, initialLineCount, onLineCountCommit }) {
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.alignItems = "center";
+  row.style.gap = "8px";
+
+  const button = createViewModeButton(label, mode);
+  button.style.flex = "1";
+  row.appendChild(button);
+
+  if (typeof initialLineCount === "number" && typeof onLineCountCommit === "function") {
+    const controls = createLineCountControls(initialLineCount, onLineCountCommit);
+    row.appendChild(controls);
+  }
+
+  return row;
 }
 
 function createViewModeButton(label, mode) {

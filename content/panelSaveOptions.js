@@ -1,6 +1,6 @@
 function createSaveOptionsSection() {
   const section = document.createElement("div");
-  section.appendChild(createSectionLabel("保存オプション"));
+  section.appendChild(createSectionLabel("Save Options"));
 
   const checkboxRow = document.createElement("label");
   checkboxRow.style.display = "flex";
@@ -14,7 +14,7 @@ function createSaveOptionsSection() {
   checkbox.checked = getStripFirstLineDefault();
 
   const text = document.createElement("span");
-  text.textContent = "保存時に1行目の file: 行を削除";
+  text.textContent = "Remove the first file: line when saving";
   text.style.flex = "1";
 
   checkbox.addEventListener("change", () => {
@@ -25,8 +25,8 @@ function createSaveOptionsSection() {
     cgptUpdateSaveOptions({ stripFirstLineMetadata: nextValue }, () => {
       if (typeof showToast === "function") {
         const message = nextValue
-          ? "保存時に1行目の file: 行を取り除きます"
-          : "保存時の1行目を保持します";
+          ? "The first file: line will be removed on save."
+          : "The first line will be kept when saving.";
         showToast(message, "success");
       }
     });

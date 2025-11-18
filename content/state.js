@@ -1,9 +1,8 @@
 // Shared state for the content scripts
-const DEFAULT_TEMPLATE_CONTENT = `【コード出力ルール】
-- 1行目に "// file: /Volumes/data/Users/soneky/Downloads/chatgpt-code-apply-helper/ファイル名.ext" または "# file: 相対/パス/ファ
-イル名.ext" を書いてください。
-- 2行目以降をファイル内容として扱ってください。
-- 1ファイルにつき1つのコードブロックを使ってください。
+const DEFAULT_TEMPLATE_CONTENT = `// Code output rules
+// - Add "// file: relative/path.ext" or "# file: relative/path.ext" on the first line.
+// - Treat every line after the first as file content.
+// - Use one code block per file.
 `;
 
 const cgptTemplateState = {

@@ -1,20 +1,21 @@
 function createLogSection() {
   const logSection = document.createElement("div");
-  logSection.appendChild(createSectionLabel("履歴・ログ"));
+  logSection.appendChild(createSectionLabel("Logs"));
   const logButtons = createButtonRow();
+  const logButtonVariant = "accent";
 
-  const chatLogBtn = createPanelButton("Chat Log", "accent");
+  const chatLogBtn = createPanelButton("Chat Log", logButtonVariant);
   chatLogBtn.style.flex = "1";
   chatLogBtn.addEventListener("click", () => {
     if (typeof openChatLogModal === "function") {
       openChatLogModal();
     } else {
-      alert("チャットログビューを開けませんでした。");
+      alert("Unable to open the chat log viewer.");
     }
   });
   logButtons.appendChild(chatLogBtn);
 
-  const historyBtn = createPanelButton("Save Log", "secondary");
+  const historyBtn = createPanelButton("Save Log", logButtonVariant);
   historyBtn.style.flex = "1";
   historyBtn.addEventListener("click", () => {
     openLogViewer();
