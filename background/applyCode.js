@@ -1,3 +1,48 @@
+const CGPT_KNOWN_MIME_TYPES = {
+  js: "text/javascript",
+  mjs: "text/javascript",
+  cjs: "text/javascript",
+  ts: "text/plain",
+  tsx: "text/plain",
+  jsx: "text/plain",
+  json: "application/json",
+  css: "text/css",
+  scss: "text/x-scss",
+  sass: "text/x-sass",
+  less: "text/css",
+  html: "text/html",
+  htm: "text/html",
+  md: "text/markdown",
+  markdown: "text/markdown",
+  py: "text/x-python",
+  rb: "text/x-ruby",
+  php: "application/x-httpd-php",
+  go: "text/plain",
+  java: "text/x-java-source",
+  kt: "text/plain",
+  swift: "text/plain",
+  rs: "text/plain",
+  cs: "text/plain",
+  cpp: "text/x-c++src",
+  c: "text/x-csrc",
+  h: "text/plain",
+  hpp: "text/plain",
+  json5: "application/json",
+  yaml: "text/yaml",
+  yml: "text/yaml",
+  toml: "application/toml",
+  ini: "text/plain",
+  sh: "text/x-shellscript",
+  bash: "text/x-shellscript",
+  zsh: "text/x-shellscript",
+  bat: "text/plain",
+  ps1: "text/plain",
+  sql: "application/sql",
+  xml: "application/xml",
+  svg: "image/svg+xml",
+  txt: "text/plain",
+};
+
 function cgptResolveDownloadAbsolutePath(downloadId, callback) {
   if (!chrome || !chrome.downloads || typeof chrome.downloads.search !== "function") {
     callback({ ok: false, error: "downloads_api_unavailable" });
@@ -16,6 +61,18 @@ function cgptResolveDownloadAbsolutePath(downloadId, callback) {
     }
     callback({ ok: true, path: filename });
   });
+}
+
+function cgptInferMimeTypeFromPath(filePath) {
+  if (!filePath || typeof filePath !== "string") {
+    return "text/plain";
+  }
+  const lastDotIndex = filePath.lastIndexOf(".");
+  if (lastDotIndex === -1 || lastDotIndex === filePath.length - 1) {
+    return "text/plain";
+  }
+  const ext = filePath.slice(lastDotIndex + 1).toLowerCase();
+  return CGPT_KNOWN_MIME_TYPES[ext] || "text/plain";
 }
 
 function cgptHandleApplyCodeBlock(message, sendResponse) {
@@ -65,7 +122,8 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
     const targetPath = cgptBuildFullFilePath(folderPath, normalizedFilePath);
     absoluteFilePath = targetPath || "";
     const encoded = encodeURIComponent(content);
-    const url = "data:text/plain;charset=utf-8," + encoded;
+    const mimeType = cgptInferMimeTypeFromPath(relativeFilePath);
+    const url = `data:${mimeType};charset=utf-8,${encoded}`;
 
     chrome.downloads.download(
       {
