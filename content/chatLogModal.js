@@ -176,10 +176,25 @@ function openChatLogModal() {
           fileInfoWrapper.style.gap = "2px";
 
           const fileNameLabel = document.createElement("div");
-          fileNameLabel.textContent = block.fileName || block.filePath;
-          fileNameLabel.style.fontSize = "12px";
-          fileNameLabel.style.color = "#facc15";
-          fileNameLabel.style.fontWeight = "bold";
+          fileNameLabel.style.display = "flex";
+          fileNameLabel.style.flexWrap = "wrap";
+          fileNameLabel.style.alignItems = "baseline";
+          fileNameLabel.style.columnGap = "6px";
+
+          const fileNameText = document.createElement("span");
+          fileNameText.textContent = block.fileName || block.filePath;
+          fileNameText.style.fontSize = "12px";
+          fileNameText.style.color = "#facc15";
+          fileNameText.style.fontWeight = "bold";
+          fileNameLabel.appendChild(fileNameText);
+
+          const metaInfoText = document.createElement("span");
+          metaInfoText.textContent = buildCodeMetaInfoText(block && block.content);
+          metaInfoText.style.fontSize = "11px";
+          metaInfoText.style.color = "#fef3c7";
+          metaInfoText.style.opacity = "0.85";
+          fileNameLabel.appendChild(metaInfoText);
+
           fileInfoWrapper.appendChild(fileNameLabel);
 
           const filePathLabel = document.createElement("div");
@@ -212,9 +227,6 @@ function openChatLogModal() {
           blockHeaderRow.appendChild(blockActionWrapper);
 
           blockWrapper.appendChild(blockHeaderRow);
-
-          const blockMeta = createCodeMetaInfoElement(block);
-          blockWrapper.appendChild(blockMeta);
 
           card.appendChild(blockWrapper);
         });
@@ -621,20 +633,6 @@ function handleBlockSave(button, block, saveAs) {
       setChatLogButtonDisabled(button, false);
     },
   });
-}
-
-function createCodeMetaInfoElement(block) {
-  const meta = document.createElement("div");
-  meta.style.fontSize = "11px";
-  meta.style.color = "#d1d5db";
-  meta.style.background = "rgba(3, 7, 18, 0.6)";
-  meta.style.border = "1px dashed #27272a";
-  meta.style.borderRadius = "4px";
-  meta.style.padding = "6px";
-  meta.style.whiteSpace = "normal";
-  meta.style.lineHeight = "1.4";
-  meta.textContent = buildCodeMetaInfoText(block && block.content);
-  return meta;
 }
 
 function buildCodeMetaInfoText(content) {
