@@ -58,19 +58,8 @@ function createFloatingPanel() {
 
   templateSection.appendChild(templateRow);
 
-  const insertBtn = createPanelButton("テンプレ貼り付け", "primary");
-  insertBtn.addEventListener("click", () => {
-    const tpl = getSelectedTemplate();
-    if (!tpl) {
-      alert("テンプレートがありません。");
-      return;
-    }
-    insertTemplateToInput(tpl.content);
-  });
-  templateSection.appendChild(insertBtn);
-
   const manageRow = createButtonRow();
-  const editBtn = createPanelButton("編集", "muted");
+  const editBtn = createPanelButton("編集", "success");
   editBtn.style.flex = "1";
   editBtn.addEventListener("click", () => {
     const tpl = getSelectedTemplate();
@@ -92,6 +81,18 @@ function createFloatingPanel() {
     });
   });
   manageRow.appendChild(addBtn);
+
+  const insertBtn = createPanelButton("貼付け", "accent");
+  insertBtn.style.flex = "1";
+  insertBtn.addEventListener("click", () => {
+    const tpl = getSelectedTemplate();
+    if (!tpl) {
+      alert("テンプレートがありません。");
+      return;
+    }
+    insertTemplateToInput(tpl.content);
+  });
+  manageRow.appendChild(insertBtn);
   templateSection.appendChild(manageRow);
   panel.appendChild(templateSection);
 
