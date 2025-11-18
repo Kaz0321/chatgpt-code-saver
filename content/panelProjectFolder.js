@@ -25,7 +25,7 @@ function createProjectFolderSection() {
   }
 
   const buttons = createButtonRow();
-  const saveBtn = createPanelButton("Save", "success");
+  const saveBtn = createPanelButton("Set Folder", "success");
   saveBtn.style.flex = "1";
   saveBtn.addEventListener("click", () => {
     commitProjectFolderInput(input);
