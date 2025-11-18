@@ -65,6 +65,17 @@ function cgptCreateCopyButtonElement() {
   return button;
 }
 
+function cgptCreateDownloadButtonElement(hasMetadata = true) {
+  const button = cgptCreateBaseButtonElement("overlay");
+  button.textContent = "ダウンロード";
+  button.title = hasMetadata
+    ? "ファイルをダウンロード"
+    : "コードブロックの先頭で file: を指定するとダウンロードできます";
+  cgptApplyButtonVariant(button, hasMetadata ? "accent" : "muted");
+  cgptSetButtonDisabled(button, !hasMetadata);
+  return button;
+}
+
 function cgptCreateShrinkButtonElement() {
   const button = cgptCreateBaseButtonElement("overlay");
   button.textContent = "縮小";
@@ -93,7 +104,8 @@ function cgptHandleSaveButtonClick(button, code, pre) {
   const parsed = cgptParseCodeBlockMetadata(code);
   if (!parsed) {
     if (pre) {
-      cgptRefreshSaveButtonState(pre, code);
+      const metadata = cgptRefreshSaveButtonState(pre, code);
+      cgptRefreshDownloadButtonState(pre, code, metadata);
     }
     const errMsg = "コードブロックの先頭に // file: path/to/file の形式で保存先を指定してください";
     if (typeof showToast === "function") {
@@ -110,6 +122,48 @@ function cgptHandleSaveButtonClick(button, code, pre) {
 
 function cgptHandleSaveAsButtonClick(button, code, pre) {
   const parsed = cgptParseCodeBlockMetadata(code);
+  const defaultPath = parsed && parsed.filePath ? parsed.filePath : "";
+  const userInput = prompt("保存するファイル名（パス）を入力してください", defaultPath);
+  if (!userInput) {
+    if (pre) {
+      const metadata = cgptRefreshSaveButtonState(pre, code);
+      cgptRefreshDownloadButtonState(pre, code, metadata);
+    }
+    return;
+  }
+  const filePath = userInput.trim();
+  if (!filePath) {
+    return;
+  }
+  const content = parsed && parsed.content ? parsed.content : cgptGetNormalizedCodeText(code);
+  cgptTriggerApplyCode(button, filePath, content);
+}
+
+function cgptHandleDownloadButtonClick(button, code, pre) {
+  const parsed = cgptParseCodeBlockMetadata(code);
+  if (!parsed) {
+    if (pre) {
+      const metadata = cgptRefreshSaveButtonState(pre, code);
+      cgptRefreshDownloadButtonState(pre, code, metadata);
+    }
+    const errMsg = "コードブロックの先頭で file: を指定するとダウンロードできます";
+    if (typeof showToast === "function") {
+      showToast(errMsg, "error");
+    } else {
+      alert(errMsg);
+    }
+    return;
+  }
+
+  const { filePath, content } = parsed;
+  cgptTriggerApplyCode(button, filePath, content, {
+    successButtonText: "DL済",
+    successToastBuilder: (savedPath) => `ダウンロードを開始しました: ${savedPath}`,
+  });
+}
+
+function cgptTriggerApplyCode(button, filePath, content, options = {}) {
+  const { successButtonText = "保存済", successToastBuilder } = options;
   const suggestedPath = cgptGetSuggestedRelativeFilePath(parsed);
   const content = cgptGetContentForSave(parsed, code);
   cgptTriggerApplyCode(button, suggestedPath, content, { saveAs: true });
@@ -149,9 +203,15 @@ function cgptTriggerApplyCode(button, filePath, content, options = {}) {
       }
 
       const savedPath = res.filePath || normalizedFilePath;
-      cgptFlashButtonText(button, "保存済");
+      if (successButtonText) {
+        cgptFlashButtonText(button, successButtonText);
+      }
       if (typeof showToast === "function") {
-        showToast(`保存しました: ${savedPath}`, "success");
+        const toastMessage =
+          typeof successToastBuilder === "function"
+            ? successToastBuilder(savedPath)
+            : successToastBuilder || `保存しました: ${savedPath}`;
+        showToast(toastMessage, "success");
       }
     }
   );
@@ -285,6 +345,28 @@ function cgptRefreshSaveButtonState(pre, code, metadataOverride) {
   cgptSetButtonDisabled(saveButton, !hasMetadata);
   pre.dataset.cgptHasMetadata = hasMetadata ? "1" : "0";
   pre.dataset.cgptFilePath = hasMetadata && metadata.filePath ? metadata.filePath : "";
+  return metadata;
+}
+
+function cgptRefreshDownloadButtonState(pre, code, metadataOverride) {
+  if (!pre || !code) return null;
+  let downloadButton = pre.cgptDownloadButton;
+  if (!downloadButton) {
+    downloadButton = pre.querySelector("button[data-cgpt-button-role='download']");
+    if (!downloadButton) {
+      return null;
+    }
+    pre.cgptDownloadButton = downloadButton;
+  }
+
+  const metadata =
+    metadataOverride !== undefined ? metadataOverride : cgptParseCodeBlockMetadata(code);
+  const hasMetadata = Boolean(metadata);
+  downloadButton.title = hasMetadata
+    ? "ファイルをダウンロード"
+    : "コードブロックの先頭で file: を指定するとダウンロードできます";
+  cgptApplyButtonVariant(downloadButton, hasMetadata ? "accent" : "muted");
+  cgptSetButtonDisabled(downloadButton, !hasMetadata);
   return metadata;
 }
 
