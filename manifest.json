@@ -24,6 +24,7 @@
         "https://chat.openai.com/*"
       ],
       "js": [
+        "content/defaultTemplate.js",
         "content/state.js",
         "content/viewSettings.js",
         "content/saveOptions.js",

@@ -157,4 +157,4 @@ classDiagram
 ## 開発メモ
 - 依存する npm パッケージやビルドはありません。必要に応じて `content/` や `background/` の JS ファイルを直接編集してください。
 - デバッグ時は DevTools > Sources > Service Workers で `background/index.js` を確認し、`chrome.runtime.sendMessage` のレスポンスを追跡します。
-- 既定テンプレート文言は `content/state.js` の `DEFAULT_TEMPLATE_CONTENT` で定義されています。`cgptSetTemplates`/`cgptSetSelectedTemplateId` アクセサを経由することで状態破壊的な変更を避け、単一責務を保ちながら拡張できます。
+- 既定テンプレート文言は `content/defaultTemplate.js` の `DEFAULT_TEMPLATE_CONTENT` / `cgptGetDefaultTemplateContent` で定義・取得でき、`cgptCreateDefaultTemplate` でテンプレート オブジェクトを生成します。`cgptSetTemplates`/`cgptSetSelectedTemplateId` アクセサを経由することで状態破壊的な変更を避け、単一責務を保ちながら拡張できます。
