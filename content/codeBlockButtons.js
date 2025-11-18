@@ -42,9 +42,18 @@ function cgptApplyButtonVariant(button, variant) {
 
 function cgptCreateSaveButtonElement(hasMetadata = true) {
   const button = cgptCreateBaseButtonElement("overlay");
-  button.textContent = hasMetadata ? "保存" : "保存(指定)";
-  button.title = hasMetadata ? "コードを保存" : "保存先のファイル名を指定してコードを保存";
-  cgptApplyButtonVariant(button, hasMetadata ? "primary" : "warning");
+  button.textContent = "保存";
+  button.title = "コードを保存";
+  cgptApplyButtonVariant(button, hasMetadata ? "primary" : "muted");
+  cgptSetButtonDisabled(button, !hasMetadata);
+  return button;
+}
+
+function cgptCreateSaveAsButtonElement() {
+  const button = cgptCreateBaseButtonElement("overlay");
+  button.textContent = "保存(指定)";
+  button.title = "保存先のファイル名を指定してコードを保存";
+  cgptApplyButtonVariant(button, "warning");
   return button;
 }
 
@@ -80,23 +89,40 @@ function cgptCreateExpandButtonElement() {
   return button;
 }
 
-function cgptHandleSaveButtonClick(button, code) {
+function cgptHandleSaveButtonClick(button, code, pre) {
   const parsed = cgptParseCodeBlockMetadata(code);
   if (!parsed) {
-    const userInput = prompt("保存するファイル名（パス）を入力してください", "");
-    if (!userInput) {
-      return;
+    if (pre) {
+      cgptRefreshSaveButtonState(pre, code);
     }
-    const filePath = userInput.trim();
-    if (!filePath) {
-      return;
+    const errMsg = "コードブロックの先頭に // file: path/to/file の形式で保存先を指定してください";
+    if (typeof showToast === "function") {
+      showToast(errMsg, "error");
+    } else {
+      alert(errMsg);
     }
-    const content = cgptGetNormalizedCodeText(code);
-    cgptTriggerApplyCode(button, filePath, content);
     return;
   }
 
   const { filePath, content } = parsed;
+  cgptTriggerApplyCode(button, filePath, content);
+}
+
+function cgptHandleSaveAsButtonClick(button, code, pre) {
+  const parsed = cgptParseCodeBlockMetadata(code);
+  const defaultPath = parsed && parsed.filePath ? parsed.filePath : "";
+  const userInput = prompt("保存するファイル名（パス）を入力してください", defaultPath);
+  if (!userInput) {
+    if (pre) {
+      cgptRefreshSaveButtonState(pre, code);
+    }
+    return;
+  }
+  const filePath = userInput.trim();
+  if (!filePath) {
+    return;
+  }
+  const content = parsed && parsed.content ? parsed.content : cgptGetNormalizedCodeText(code);
   cgptTriggerApplyCode(button, filePath, content);
 }
 
@@ -201,12 +227,12 @@ function cgptHandleExpandButtonClick(pre) {
 }
 
 function cgptRefreshSaveButtonState(pre, code, metadataOverride) {
-  if (!pre || !code) return;
+  if (!pre || !code) return null;
   let saveButton = pre.cgptSaveButton;
   if (!saveButton) {
     saveButton = pre.querySelector("button[data-cgpt-button-role='save']");
     if (!saveButton) {
-      return;
+      return null;
     }
     pre.cgptSaveButton = saveButton;
   }
@@ -214,13 +240,21 @@ function cgptRefreshSaveButtonState(pre, code, metadataOverride) {
   const metadata =
     metadataOverride !== undefined ? metadataOverride : cgptParseCodeBlockMetadata(code);
   const hasMetadata = Boolean(metadata);
-  const label = hasMetadata ? "保存" : "保存(指定)";
-  const title = hasMetadata ? "コードを保存" : "保存先のファイル名を指定してコードを保存";
-
-  saveButton.textContent = label;
-  saveButton.title = title;
-  cgptApplyButtonVariant(saveButton, hasMetadata ? "primary" : "warning");
+  saveButton.title = hasMetadata
+    ? "コードを保存"
+    : "コードブロックの先頭で file: を指定すると保存できます";
+  cgptApplyButtonVariant(saveButton, hasMetadata ? "primary" : "muted");
+  cgptSetButtonDisabled(saveButton, !hasMetadata);
   pre.dataset.cgptHasMetadata = hasMetadata ? "1" : "0";
+  pre.dataset.cgptFilePath = hasMetadata && metadata.filePath ? metadata.filePath : "";
+  return metadata;
+}
+
+function cgptSetButtonDisabled(button, disabled) {
+  if (!button) return;
+  button.disabled = disabled;
+  button.style.opacity = disabled ? "0.5" : "1";
+  button.style.cursor = disabled ? "not-allowed" : "pointer";
 }
 
 function cgptCalculateButtonOverlayOffset(container) {

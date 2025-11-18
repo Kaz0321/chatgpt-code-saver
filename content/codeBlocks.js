@@ -25,9 +25,17 @@ function tryDecorateSingleCodeBlock(code) {
     saveBtn.dataset.cgptButtonRole = "save";
     pre.cgptSaveButton = saveBtn;
     saveBtn.addEventListener("click", () => {
-      cgptHandleSaveButtonClick(saveBtn, code);
+      cgptHandleSaveButtonClick(saveBtn, code, pre);
     });
     buttonContainer.appendChild(saveBtn);
+
+    const saveAsBtn = cgptCreateSaveAsButtonElement();
+    saveAsBtn.dataset.cgptButtonRole = "save-as";
+    pre.cgptSaveAsButton = saveAsBtn;
+    saveAsBtn.addEventListener("click", () => {
+      cgptHandleSaveAsButtonClick(saveAsBtn, code, pre);
+    });
+    buttonContainer.appendChild(saveAsBtn);
 
     const copyBtn = cgptCreateCopyButtonElement();
     copyBtn.addEventListener("click", () => {
@@ -52,6 +60,10 @@ function tryDecorateSingleCodeBlock(code) {
     buttonContainer.appendChild(expandBtn);
 
     wrapper.appendChild(buttonContainer);
+    buttonContainer.addEventListener("mouseenter", () => {
+      cgptRefreshSaveButtonState(pre, code);
+    });
+
     pre.cgptButtonContainer = buttonContainer;
     if (typeof cgptCalculateButtonOverlayOffset === "function") {
       pre.cgptButtonOverlayOffset = cgptCalculateButtonOverlayOffset(buttonContainer);
