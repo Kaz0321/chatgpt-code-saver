@@ -4,31 +4,16 @@ function cgptParseCodeBlockMetadata(code) {
   const lines = text.split("\n");
   if (!lines.length) return null;
 
-  let metadataLineIndex = -1;
-  let filePath = "";
+  const firstLine = lines[0].replace(/^\ufeff/, "");
+  const match =
+    firstLine.trim().match(/^\/\/\s*file:\s*(.+)$/i) ||
+    firstLine.trim().match(/^#\s*file:\s*(.+)$/i);
+  if (!match) return null;
 
-  for (let i = 0; i < lines.length; i++) {
-    const trimmedLine = lines[i].replace(/^\ufeff/, "").trim();
-    if (!trimmedLine) {
-      continue;
-    }
-    const match =
-      trimmedLine.match(/^\/\/\s*file:\s*(.+)$/i) ||
-      trimmedLine.match(/^#\s*file:\s*(.+)$/i);
-    if (!match) {
-      break;
-    }
-    filePath = match[1].trim();
-    if (!filePath) {
-      break;
-    }
-    metadataLineIndex = i;
-    break;
-  }
+  const filePath = match[1].trim();
+  if (!filePath) return null;
 
-  if (metadataLineIndex === -1 || !filePath) return null;
-
-  const content = lines.slice(metadataLineIndex + 1).join("\n");
+  const content = lines.slice(1).join("\n");
   return { filePath, content };
 }
 
