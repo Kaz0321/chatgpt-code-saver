@@ -143,7 +143,7 @@ function openTemplateEditor(mode, templateId, onSave) {
   rightButtons.appendChild(cancelBtn);
 
   const saveBtn = document.createElement("button");
-  saveBtn.textContent = "保存";
+  saveBtn.textContent = "Save";
   saveBtn.style.padding = "4px 10px";
   saveBtn.style.borderRadius = "4px";
   saveBtn.style.border = "1px solid rgba(255,255,255,0.3)";

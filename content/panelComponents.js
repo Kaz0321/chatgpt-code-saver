@@ -59,7 +59,6 @@ function createPanelButton(text, variant = "secondary") {
   button.style.fontSize = "11px";
   button.style.padding = "4px 6px";
   button.style.borderRadius = "4px";
-  button.style.border = "1px solid rgba(255,255,255,0.2)";
   button.style.cursor = "pointer";
   button.style.flexShrink = "0";
   applyPanelButtonVariant(button, variant);
@@ -67,15 +66,20 @@ function createPanelButton(text, variant = "secondary") {
 }
 
 function applyPanelButtonVariant(button, variant) {
+  if (typeof cgptApplySharedButtonVariant === "function") {
+    cgptApplySharedButtonVariant(button, variant);
+    return;
+  }
   const palette = {
-    primary: "rgba(59, 130, 246, 0.95)",
-    accent: "rgba(129, 140, 248, 0.95)",
-    success: "rgba(16, 185, 129, 0.95)",
-    secondary: "rgba(55, 65, 81, 0.9)",
-    muted: "rgba(75, 85, 99, 0.9)",
+    primary: "rgba(37, 99, 235, 1)",
+    accent: "rgba(124, 58, 237, 1)",
+    success: "rgba(16, 185, 129, 1)",
+    secondary: "rgba(75, 85, 99, 1)",
+    muted: "rgba(55, 65, 81, 1)",
   };
   const color = palette[variant] || palette.secondary;
   button.style.background = color;
+  button.style.border = "1px solid rgba(255,255,255,0.2)";
   button.style.color = "#fff";
 }
 

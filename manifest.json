@@ -29,6 +29,7 @@
         "content/saveOptions.js",
         "shared/filePathValidation.js",
         "shared/projectFolderSettings.js",
+        "shared/uiStyles.js",
         "content/toast.js",
         "content/reloadNotifier.js",
         "content/chatInput.js",

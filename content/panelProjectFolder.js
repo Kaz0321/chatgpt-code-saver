@@ -25,14 +25,14 @@ function createProjectFolderSection() {
   }
 
   const buttons = createButtonRow();
-  const selectBtn = createPanelButton("フォルダ選択", "accent");
+  const selectBtn = createPanelButton("Choose Folder", "accent");
   selectBtn.style.flex = "1";
   selectBtn.addEventListener("click", () => {
     requestProjectFolderSelection(input, selectBtn);
   });
   buttons.appendChild(selectBtn);
 
-  const saveBtn = createPanelButton("保存", "success");
+  const saveBtn = createPanelButton("Save", "success");
   saveBtn.style.flex = "1";
   saveBtn.addEventListener("click", () => {
     commitProjectFolderInput(input);
@@ -86,7 +86,7 @@ function requestProjectFolderSelection(input, button) {
   const originalText = button ? button.textContent : "";
   if (button) {
     button.disabled = true;
-    button.textContent = "選択中...";
+    button.textContent = "Selecting...";
   }
 
   chrome.runtime.sendMessage({ type: "chooseProjectFolder" }, (response) => {
