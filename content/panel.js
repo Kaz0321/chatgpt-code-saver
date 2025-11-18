@@ -123,22 +123,13 @@ function createFloatingPanel() {
   viewSection.appendChild(collapsedRow);
 
   const viewButtons = createButtonRow();
-  const shrinkAllBtn = createPanelButton("全て縮小", "muted");
-  shrinkAllBtn.addEventListener("click", () => {
-    applyViewModeToAll("compact");
-  });
+  const shrinkAllBtn = createViewModeButton("全て縮小", "compact");
   viewButtons.appendChild(shrinkAllBtn);
 
-  const collapseAllBtn = createPanelButton("全て折りたたみ", "accent");
-  collapseAllBtn.addEventListener("click", () => {
-    applyViewModeToAll("collapsed");
-  });
+  const collapseAllBtn = createViewModeButton("全て折りたたみ", "collapsed");
   viewButtons.appendChild(collapseAllBtn);
 
-  const expandAllBtn = createPanelButton("全て展開", "secondary");
-  expandAllBtn.addEventListener("click", () => {
-    applyViewModeToAll("expanded");
-  });
+  const expandAllBtn = createViewModeButton("全て展開", "expanded");
   viewButtons.appendChild(expandAllBtn);
   viewSection.appendChild(viewButtons);
   panel.appendChild(viewSection);
@@ -190,6 +181,20 @@ function createPanelButton(text, variant = "secondary") {
   button.style.cursor = "pointer";
   button.style.flexShrink = "0";
   applyPanelButtonVariant(button, variant);
+  return button;
+}
+
+function createViewModeButton(label, mode) {
+  const variants = {
+    compact: "muted",
+    collapsed: "accent",
+    expanded: "accent",
+  };
+  const variant = variants[mode] || "secondary";
+  const button = createPanelButton(label, variant);
+  button.addEventListener("click", () => {
+    applyViewModeToAll(mode);
+  });
   return button;
 }
 
