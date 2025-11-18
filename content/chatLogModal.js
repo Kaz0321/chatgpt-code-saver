@@ -144,8 +144,11 @@ function openChatLogModal() {
         blockHeaderActions.style.display = "flex";
         blockHeaderActions.style.gap = "6px";
 
-        const batchDownloadBtn = createBatchDownloadButton(assistantBlocks);
-        blockHeaderActions.appendChild(batchDownloadBtn);
+        const batchSaveBtn = createBatchSaveAllButton(assistantBlocks);
+        blockHeaderActions.appendChild(batchSaveBtn);
+
+        const batchSaveAsBtn = createBatchSaveAsAllButton(assistantBlocks);
+        blockHeaderActions.appendChild(batchSaveAsBtn);
 
         blockHeader.appendChild(blockHeaderActions);
         card.appendChild(blockHeader);
@@ -412,8 +415,19 @@ function triggerChatLogDownload(filePath, content, options = {}) {
   );
 }
 
-function createBatchDownloadButton(blocks) {
-  const button = createChatLogButton("Download All", "success", "sm");
+function createBatchSaveAllButton(blocks) {
+  return createBatchSaveButton(blocks, {
+    label: "Save All",
+    pendingLabel: "Saving...",
+    saveAs: false,
+  });
+}
+
+function createBatchSaveAsAllButton(blocks) {
+  if (!Array.isArray(blocks)) {
+    return createChatLogButton("Save As All", "secondary", "sm");
+  }
+  const button = createChatLogButton("Save As All", "secondary", "sm");
   setChatLogButtonDisabled(button, !blocks.length);
 
   if (!blocks.length) {
@@ -422,19 +436,88 @@ function createBatchDownloadButton(blocks) {
 
   button.addEventListener("click", async () => {
     if (button.disabled) return;
-    setChatLogButtonDisabled(button, true);
-    const originalText = button.textContent;
-    button.textContent = "Downloading...";
 
-    try {
-      await downloadCodeBlocksSequentially(blocks);
-    } finally {
-      button.textContent = originalText;
-      setChatLogButtonDisabled(button, false);
+    const selection = await requestBatchFolderSelection(button);
+    if (!selection.ok) {
+      if (selection.error && typeof showToast === "function") {
+        showToast(selection.error, "error");
+      }
+      return;
     }
+
+    await handleBatchSave(button, blocks, {
+      pendingLabel: "Saving...",
+      saveAs: false,
+    });
   });
 
   return button;
+}
+
+function requestBatchFolderSelection(button) {
+  return new Promise((resolve) => {
+    const canSendRuntimeMessage =
+      typeof chrome !== "undefined" &&
+      chrome.runtime &&
+      typeof chrome.runtime.sendMessage === "function";
+    if (!canSendRuntimeMessage) {
+      resolve({ ok: false, error: "フォルダ選択を開始できませんでした" });
+      return;
+    }
+
+    const originalText = button ? button.textContent : "";
+    if (button) {
+      setChatLogButtonDisabled(button, true);
+      button.textContent = "Selecting...";
+    }
+
+    chrome.runtime.sendMessage({ type: "chooseProjectFolder" }, (response) => {
+      if (button) {
+        button.textContent = originalText;
+        setChatLogButtonDisabled(button, false);
+      }
+
+      if (chrome.runtime && chrome.runtime.lastError) {
+        resolve({ ok: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      if (!response || !response.ok) {
+        resolve({ ok: false, error: (response && response.error) || "フォルダ選択に失敗しました" });
+        return;
+      }
+
+      resolve({ ok: true, folderPath: response.folderPath || "" });
+    });
+  });
+}
+
+function createBatchSaveButton(blocks, options = {}) {
+  const { label = "Save All", variant = "success", pendingLabel = "Saving...", saveAs = false } = options;
+  const button = createChatLogButton(label, variant, "sm");
+  setChatLogButtonDisabled(button, !blocks || !blocks.length);
+
+  if (!blocks || !blocks.length) {
+    return button;
+  }
+
+  button.addEventListener("click", async () => {
+    if (button.disabled) return;
+    await handleBatchSave(button, blocks, { pendingLabel, saveAs });
+  });
+
+  return button;
+}
+
+async function handleBatchSave(button, blocks, options = {}) {
+  const originalText = button.textContent;
+  setChatLogButtonDisabled(button, true);
+  button.textContent = options.pendingLabel || "Saving...";
+  try {
+    await downloadCodeBlocksSequentially(blocks, { saveAs: Boolean(options.saveAs) });
+  } finally {
+    button.textContent = originalText;
+    setChatLogButtonDisabled(button, false);
+  }
 }
 
 function createChatLogButton(label, variant = "secondary", size = "md") {
@@ -468,15 +551,19 @@ function setChatLogButtonDisabled(button, disabled) {
   button.style.cursor = disabled ? "not-allowed" : "pointer";
 }
 
-function downloadCodeBlocksSequentially(blocks) {
-  return blocks.reduce((promise, block) => {
-    return promise.then(() => createBlockDownloadPromise(block));
+function downloadCodeBlocksSequentially(blocks, options = {}) {
+  const normalizedBlocks = Array.isArray(blocks) ? blocks : [];
+  return normalizedBlocks.reduce((promise, block) => {
+    return promise.then(() => createBlockDownloadPromise(block, options));
   }, Promise.resolve());
 }
 
-function createBlockDownloadPromise(block) {
+function createBlockDownloadPromise(block, options = {}) {
   return new Promise((resolve) => {
-    triggerChatLogDownload(block.filePath, block.content, { onDone: resolve });
+    triggerChatLogDownload(block.filePath, block.content, {
+      saveAs: Boolean(options.saveAs),
+      onDone: resolve,
+    });
   });
 }
 
