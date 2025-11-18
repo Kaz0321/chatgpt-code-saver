@@ -1,3 +1,23 @@
+function cgptResolveDownloadAbsolutePath(downloadId, callback) {
+  if (!chrome || !chrome.downloads || typeof chrome.downloads.search !== "function") {
+    callback({ ok: false, error: "downloads_api_unavailable" });
+    return;
+  }
+  chrome.downloads.search({ id: downloadId }, (items) => {
+    if (chrome.runtime && chrome.runtime.lastError) {
+      callback({ ok: false, error: chrome.runtime.lastError.message });
+      return;
+    }
+    const item = items && items.length ? items[0] : null;
+    const filename = item && item.filename ? item.filename : "";
+    if (!filename) {
+      callback({ ok: false, error: "download_path_unavailable" });
+      return;
+    }
+    callback({ ok: true, path: filename });
+  });
+}
+
 function cgptHandleApplyCodeBlock(message, sendResponse) {
   const filePath = message.filePath;
   const content = message.content;
@@ -74,21 +94,30 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
           );
         } else {
           console.log("Downloaded and overwrote:", targetPath, "id:", downloadId);
-          cgptAppendLog(
-            {
-              time: new Date().toISOString(),
-              kind: "apply",
-              ok: true,
-              filePath: targetPath,
-              filePathRelative: relativeFilePath,
-              filePathAbsolute: absoluteFilePath,
-              error: "",
-              downloadId,
-            },
-            () => {
-              sendResponse({ ok: true, downloadId, filePath: targetPath });
-            }
-          );
+          cgptResolveDownloadAbsolutePath(downloadId, (resolved) => {
+            const finalAbsolutePath =
+              (resolved && resolved.ok && resolved.path) || absoluteFilePath || targetPath || "";
+            cgptAppendLog(
+              {
+                time: new Date().toISOString(),
+                kind: "apply",
+                ok: true,
+                filePath: targetPath,
+                filePathRelative: relativeFilePath,
+                filePathAbsolute: finalAbsolutePath,
+                error: "",
+                downloadId,
+              },
+              () => {
+                sendResponse({
+                  ok: true,
+                  downloadId,
+                  filePath: targetPath,
+                  filePathAbsolute: finalAbsolutePath,
+                });
+              }
+            );
+          });
         }
       }
     );
