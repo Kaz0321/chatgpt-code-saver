@@ -1,6 +1,5 @@
 const DEFAULT_VIEW_SETTINGS = {
   compactLineCount: 1,
-  collapsedLineCount: 12,
 };
 
 let cgptViewSettings = { ...DEFAULT_VIEW_SETTINGS };
@@ -9,12 +8,13 @@ function cgptGetViewSettings() {
   return { ...cgptViewSettings };
 }
 
-function cgptNormalizeLineCount(value, fallback) {
+function cgptNormalizeLineCount(value, fallback, minValue = 1) {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  if (!Number.isFinite(parsed)) {
     return fallback;
   }
-  return Math.min(parsed, 200);
+  const normalized = Math.max(parsed, minValue);
+  return Math.min(normalized, 200);
 }
 
 function cgptMergeViewSettings(nextSettings) {
@@ -24,13 +24,8 @@ function cgptMergeViewSettings(nextSettings) {
   if (typeof nextSettings.compactLineCount !== "undefined") {
     cgptViewSettings.compactLineCount = cgptNormalizeLineCount(
       nextSettings.compactLineCount,
-      DEFAULT_VIEW_SETTINGS.compactLineCount
-    );
-  }
-  if (typeof nextSettings.collapsedLineCount !== "undefined") {
-    cgptViewSettings.collapsedLineCount = cgptNormalizeLineCount(
-      nextSettings.collapsedLineCount,
-      DEFAULT_VIEW_SETTINGS.collapsedLineCount
+      DEFAULT_VIEW_SETTINGS.compactLineCount,
+      0
     );
   }
 }
