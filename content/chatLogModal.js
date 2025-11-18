@@ -1,3 +1,6 @@
+const CHAT_LOG_PREVIEW_LINE_LIMIT = 1;
+const CHAT_LOG_CODE_PREVIEW_LINE_LIMIT = 1;
+
 function openChatLogModal() {
   if (document.getElementById("cgpt-helper-chatlog-modal")) return;
   if (typeof getChatLogEntries !== "function") {
@@ -133,7 +136,11 @@ function openChatLogModal() {
       messageBody.style.fontSize = "13px";
       messageBody.style.lineHeight = "1.5";
       messageBody.style.color = "#f3f4f6";
-      messageBody.textContent = entry.text || "(テキストなし)";
+      const messageText = entry.text || "(テキストなし)";
+      messageBody.textContent = createSingleLinePreview(
+        messageText,
+        CHAT_LOG_PREVIEW_LINE_LIMIT
+      );
       card.appendChild(messageBody);
 
       const assistantBlocks = collectAssistantBlocksForEntry(entry, orderedUsers[index + 1], allEntries);
@@ -182,6 +189,25 @@ function openChatLogModal() {
 
           blockHeaderRow.appendChild(fileInfoWrapper);
 
+          const blockActionWrapper = document.createElement("div");
+          blockActionWrapper.style.display = "flex";
+          blockActionWrapper.style.gap = "6px";
+
+          const jumpBtn = document.createElement("button");
+          jumpBtn.textContent = "ジャンプ";
+          jumpBtn.style.fontSize = "11px";
+          jumpBtn.style.padding = "2px 8px";
+          jumpBtn.style.borderRadius = "4px";
+          jumpBtn.style.border = "1px solid rgba(255,255,255,0.3)";
+          jumpBtn.style.background = "rgba(59,130,246,0.2)";
+          jumpBtn.style.color = "#bfdbfe";
+          jumpBtn.style.cursor = "pointer";
+          jumpBtn.addEventListener("click", () => {
+            closeModal();
+            cgptJumpToCodeBlock(block.element);
+          });
+          blockActionWrapper.appendChild(jumpBtn);
+
           const downloadBtn = document.createElement("button");
           downloadBtn.textContent = "ダウンロード";
           downloadBtn.style.fontSize = "11px";
@@ -197,7 +223,9 @@ function openChatLogModal() {
               downloadBtn.disabled = false;
             });
           });
-          blockHeaderRow.appendChild(downloadBtn);
+          blockActionWrapper.appendChild(downloadBtn);
+
+          blockHeaderRow.appendChild(blockActionWrapper);
 
           blockWrapper.appendChild(blockHeaderRow);
 
@@ -209,7 +237,13 @@ function openChatLogModal() {
           codePre.style.padding = "8px";
           codePre.style.borderRadius = "4px";
           codePre.style.overflowX = "auto";
-          codePre.textContent = block.content;
+          const codeContent = block.content || "";
+          const codePreview = createCodeSingleLinePreview(
+            codeContent,
+            CHAT_LOG_CODE_PREVIEW_LINE_LIMIT
+          );
+          codePre.textContent = codePreview;
+          codePre.title = codeContent;
           blockWrapper.appendChild(codePre);
 
           card.appendChild(blockWrapper);
@@ -300,6 +334,47 @@ function openChatLogModal() {
   });
 }
 
+function createSingleLinePreview(text, lineLimit = 1) {
+  if (!text) return "";
+  if (!lineLimit || lineLimit <= 0) return text;
+  const normalized = normalizeLineEndings(text);
+  const lines = normalized.split("\n");
+  const firstLine = lines[0] || "";
+  const hasMore = lines.length > lineLimit;
+  return hasMore ? `${firstLine.trimEnd()}...` : firstLine;
+}
+
+function createCodeSingleLinePreview(text, lineLimit = 1) {
+  if (!text) return "";
+  if (!lineLimit || lineLimit <= 0) return text;
+  const normalized = normalizeLineEndings(text);
+  const lines = normalized.split("\n");
+  if (!lines.length) return "";
+
+  const firstLine = lines[0];
+  const shouldSkipFirstLine = isLikelyFileNameLine(firstLine);
+  const previewIndex = shouldSkipFirstLine && lines.length > 1 ? 1 : 0;
+  const previewLine = lines[previewIndex] || "";
+  const hasMore = lines.length > previewIndex + lineLimit;
+  return hasMore ? `${previewLine.trimEnd()}...` : previewLine;
+}
+
+function isLikelyFileNameLine(line) {
+  if (!line) return false;
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  if (/^\/\/\s*file:/i.test(trimmed) || /^#\s*file:/i.test(trimmed)) {
+    return true;
+  }
+  const filePattern = /^[\w.\-\\/]+$/;
+  const hasExtension = /\.[A-Za-z0-9]+$/.test(trimmed);
+  return filePattern.test(trimmed) && hasExtension;
+}
+
+function normalizeLineEndings(text) {
+  return String(text).replace(/\r\n/g, "\n");
+}
+
 function formatChatLogTimestamp(ts) {
   const date = new Date(ts);
   if (!isNaN(date.getTime())) {
@@ -357,7 +432,8 @@ function extractFormattedCodeBlocksFromElement(element) {
     const filePath = match[1].trim();
     if (!filePath) return;
     const content = lines.slice(1).join("\n");
-    results.push({ filePath, fileName: deriveFileName(filePath), content });
+    const blockElement = codeEl.closest("pre") || codeEl;
+    results.push({ filePath, fileName: deriveFileName(filePath), content, element: blockElement });
   });
   return results;
 }
@@ -401,4 +477,15 @@ function triggerChatLogDownload(filePath, content, onDone) {
       }
     }
   );
+}
+
+function cgptJumpToCodeBlock(targetElement) {
+  if (!targetElement) return;
+  if (typeof highlightChatMessageElement === "function") {
+    highlightChatMessageElement(targetElement);
+    return;
+  }
+  if (typeof targetElement.scrollIntoView === "function") {
+    targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }

@@ -43,6 +43,14 @@ function tryDecorateSingleCodeBlock(code) {
     });
     buttonContainer.appendChild(copyBtn);
 
+    const downloadBtn = cgptCreateDownloadButtonElement(Boolean(metadata));
+    downloadBtn.dataset.cgptButtonRole = "download";
+    pre.cgptDownloadButton = downloadBtn;
+    downloadBtn.addEventListener("click", () => {
+      cgptHandleDownloadButtonClick(downloadBtn, code, pre);
+    });
+    buttonContainer.appendChild(downloadBtn);
+
     const shrinkBtn = cgptCreateShrinkButtonElement();
     const collapseBtn = cgptCreateCollapseButtonElement();
     const expandBtn = cgptCreateExpandButtonElement();
@@ -61,7 +69,8 @@ function tryDecorateSingleCodeBlock(code) {
 
     wrapper.appendChild(buttonContainer);
     buttonContainer.addEventListener("mouseenter", () => {
-      cgptRefreshSaveButtonState(pre, code);
+      const latestMetadata = cgptRefreshSaveButtonState(pre, code);
+      cgptRefreshDownloadButtonState(pre, code, latestMetadata);
     });
 
     pre.cgptButtonContainer = buttonContainer;
@@ -74,7 +83,8 @@ function tryDecorateSingleCodeBlock(code) {
     cgptSetPreViewMode(pre, CGPT_VIEW_MODE.COMPACT);
   }
 
-  cgptRefreshSaveButtonState(pre, code, metadata);
+  const resolvedMetadata = cgptRefreshSaveButtonState(pre, code, metadata);
+  cgptRefreshDownloadButtonState(pre, code, resolvedMetadata);
 }
 
 function setupMutationObserver() {
