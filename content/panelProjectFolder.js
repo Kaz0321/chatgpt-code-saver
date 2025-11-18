@@ -93,7 +93,7 @@ function requestProjectFolderSelection(input, button) {
     button.textContent = "Selecting...";
   }
 
-  chrome.runtime.sendMessage({ type: "chooseProjectFolder" }, (response) => {
+  chrome.runtime.sendMessage({ type: "pickDownloadFolder" }, (response) => {
     if (button) {
       button.disabled = false;
       button.textContent = originalText;
@@ -105,8 +105,15 @@ function requestProjectFolderSelection(input, button) {
       );
       return;
     }
-    if (!response || !response.ok) {
-      const errMsg = (response && response.error) || "フォルダ選択に失敗しました";
+    if (!response) {
+      handleProjectFolderSelectionError("フォルダ選択に失敗しました", input);
+      return;
+    }
+    if (!response.ok) {
+      if (response.error === "folder_picker_canceled") {
+        return;
+      }
+      const errMsg = response.error || "フォルダ選択に失敗しました";
       handleProjectFolderSelectionError(errMsg, input);
       return;
     }

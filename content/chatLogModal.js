@@ -395,10 +395,10 @@ function deriveFileName(filePath) {
 }
 
 function triggerChatLogDownload(filePath, content, options = {}) {
-  const { onDone, saveAs = false } = options || {};
+  const { onDone, saveAs = false, overrideFolderPath = "" } = options || {};
   const callback = typeof onDone === "function" ? onDone : () => {};
   chrome.runtime.sendMessage(
-    { type: "applyCodeBlock", filePath, content, saveAs },
+    { type: "applyCodeBlock", filePath, content, saveAs, overrideFolderPath },
     (res) => {
       callback();
       if (!res || !res.ok) {
@@ -419,80 +419,24 @@ function createBatchSaveAllButton(blocks) {
   return createBatchSaveButton(blocks, {
     label: "Save All",
     pendingLabel: "Saving...",
-    saveAs: false,
   });
 }
 
 function createBatchSaveAsAllButton(blocks) {
-  if (!Array.isArray(blocks)) {
-    return createChatLogButton("Save As All", "secondary", "sm");
-  }
   const button = createChatLogButton("Save As All", "secondary", "sm");
-  setChatLogButtonDisabled(button, !blocks.length);
-
-  if (!blocks.length) {
+  setChatLogButtonDisabled(button, !blocks || !blocks.length);
+  if (!blocks || !blocks.length) {
     return button;
   }
-
-  button.addEventListener("click", async () => {
+  button.addEventListener("click", () => {
     if (button.disabled) return;
-
-    const selection = await requestBatchFolderSelection(button);
-    if (!selection.ok) {
-      if (selection.error && typeof showToast === "function") {
-        showToast(selection.error, "error");
-      }
-      return;
-    }
-
-    await handleBatchSave(button, blocks, {
-      pendingLabel: "Saving...",
-      saveAs: false,
-    });
+    handleBatchSaveAsAll(button, blocks);
   });
-
   return button;
 }
 
-function requestBatchFolderSelection(button) {
-  return new Promise((resolve) => {
-    const canSendRuntimeMessage =
-      typeof chrome !== "undefined" &&
-      chrome.runtime &&
-      typeof chrome.runtime.sendMessage === "function";
-    if (!canSendRuntimeMessage) {
-      resolve({ ok: false, error: "フォルダ選択を開始できませんでした" });
-      return;
-    }
-
-    const originalText = button ? button.textContent : "";
-    if (button) {
-      setChatLogButtonDisabled(button, true);
-      button.textContent = "Selecting...";
-    }
-
-    chrome.runtime.sendMessage({ type: "chooseProjectFolder" }, (response) => {
-      if (button) {
-        button.textContent = originalText;
-        setChatLogButtonDisabled(button, false);
-      }
-
-      if (chrome.runtime && chrome.runtime.lastError) {
-        resolve({ ok: false, error: chrome.runtime.lastError.message });
-        return;
-      }
-      if (!response || !response.ok) {
-        resolve({ ok: false, error: (response && response.error) || "フォルダ選択に失敗しました" });
-        return;
-      }
-
-      resolve({ ok: true, folderPath: response.folderPath || "" });
-    });
-  });
-}
-
 function createBatchSaveButton(blocks, options = {}) {
-  const { label = "Save All", variant = "success", pendingLabel = "Saving...", saveAs = false } = options;
+  const { label = "Save All", variant = "success", pendingLabel = "Saving..." } = options;
   const button = createChatLogButton(label, variant, "sm");
   setChatLogButtonDisabled(button, !blocks || !blocks.length);
 
@@ -502,7 +446,7 @@ function createBatchSaveButton(blocks, options = {}) {
 
   button.addEventListener("click", async () => {
     if (button.disabled) return;
-    await handleBatchSave(button, blocks, { pendingLabel, saveAs });
+    await handleBatchSave(button, blocks, { pendingLabel });
   });
 
   return button;
@@ -513,7 +457,34 @@ async function handleBatchSave(button, blocks, options = {}) {
   setChatLogButtonDisabled(button, true);
   button.textContent = options.pendingLabel || "Saving...";
   try {
-    await downloadCodeBlocksSequentially(blocks, { saveAs: Boolean(options.saveAs) });
+    await downloadCodeBlocksSequentially(blocks);
+  } finally {
+    button.textContent = originalText;
+    setChatLogButtonDisabled(button, false);
+  }
+}
+
+async function handleBatchSaveAsAll(button, blocks) {
+  const originalText = button.textContent;
+  setChatLogButtonDisabled(button, true);
+  button.textContent = "Selecting...";
+  try {
+    const folderPath = await promptUserForDownloadFolder();
+    if (!folderPath) {
+      return;
+    }
+    button.textContent = "Saving...";
+    await downloadCodeBlocksSequentially(blocks, {
+      overrideFolderPath: folderPath,
+    });
+    if (typeof showToast === "function") {
+      showToast(`保存先: ${folderPath}`, "success");
+    }
+  } catch (error) {
+    const message = (error && error.message) || "フォルダの指定に失敗しました";
+    if (typeof showToast === "function") {
+      showToast(message, "error");
+    }
   } finally {
     button.textContent = originalText;
     setChatLogButtonDisabled(button, false);
@@ -562,7 +533,41 @@ function createBlockDownloadPromise(block, options = {}) {
   return new Promise((resolve) => {
     triggerChatLogDownload(block.filePath, block.content, {
       saveAs: Boolean(options.saveAs),
+      overrideFolderPath: options.overrideFolderPath,
       onDone: resolve,
+    });
+  });
+}
+
+function promptUserForDownloadFolder() {
+  return new Promise((resolve, reject) => {
+    const canSendRuntimeMessage =
+      typeof chrome !== "undefined" &&
+      chrome.runtime &&
+      typeof chrome.runtime.sendMessage === "function";
+    if (!canSendRuntimeMessage) {
+      reject(new Error("フォルダ選択を開始できませんでした"));
+      return;
+    }
+
+    chrome.runtime.sendMessage({ type: "pickDownloadFolder" }, (response) => {
+      if (chrome.runtime && chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+      if (!response) {
+        reject(new Error("フォルダの指定に失敗しました"));
+        return;
+      }
+      if (!response.ok) {
+        if (response.error === "folder_picker_canceled") {
+          resolve("");
+          return;
+        }
+        reject(new Error(response.error || "フォルダの指定に失敗しました"));
+        return;
+      }
+      resolve(response.folderPath || "");
     });
   });
 }
