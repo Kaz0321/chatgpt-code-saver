@@ -1,6 +1,4 @@
 const CHAT_LOG_PREVIEW_LINE_LIMIT = 1;
-const CHAT_LOG_CODE_PREVIEW_LINE_LIMIT = 60;
-const CHAT_LOG_CODE_PREVIEW_MAX_HEIGHT = 200;
 
 function openChatLogModal() {
   if (document.getElementById("cgpt-helper-chatlog-modal")) return;
@@ -193,6 +191,13 @@ function openChatLogModal() {
           const blockActionWrapper = document.createElement("div");
           blockActionWrapper.style.display = "flex";
           blockActionWrapper.style.gap = "6px";
+          blockActionWrapper.style.flexWrap = "wrap";
+
+          const saveBtn = createBlockSaveButton(block);
+          blockActionWrapper.appendChild(saveBtn);
+
+          const saveAsBtn = createBlockSaveAsButton(block);
+          blockActionWrapper.appendChild(saveAsBtn);
 
           const jumpBtn = createChatLogButton("Jump", "accent", "sm");
           jumpBtn.addEventListener("click", () => {
@@ -205,8 +210,8 @@ function openChatLogModal() {
 
           blockWrapper.appendChild(blockHeaderRow);
 
-          const codePreview = createCodePreviewElement(block);
-          blockWrapper.appendChild(codePreview);
+          const blockMeta = createCodeMetaInfoElement(block);
+          blockWrapper.appendChild(blockMeta);
 
           card.appendChild(blockWrapper);
         });
@@ -386,10 +391,11 @@ function deriveFileName(filePath) {
   return parts[parts.length - 1] || filePath;
 }
 
-function triggerChatLogDownload(filePath, content, onDone) {
+function triggerChatLogDownload(filePath, content, options = {}) {
+  const { onDone, saveAs = false } = options || {};
   const callback = typeof onDone === "function" ? onDone : () => {};
   chrome.runtime.sendMessage(
-    { type: "applyCodeBlock", filePath, content },
+    { type: "applyCodeBlock", filePath, content, saveAs },
     (res) => {
       callback();
       if (!res || !res.ok) {
@@ -431,38 +437,6 @@ function createBatchDownloadButton(blocks) {
   return button;
 }
 
-function createCodePreviewElement(block) {
-  const preview = document.createElement("pre");
-  preview.textContent = buildCodePreviewText(block && block.content);
-  preview.style.fontSize = "12px";
-  preview.style.lineHeight = "1.4";
-  preview.style.color = "#e5e7eb";
-  preview.style.padding = "6px";
-  preview.style.borderRadius = "4px";
-  preview.style.border = "1px solid #374151";
-  preview.style.background = "#030712";
-  preview.style.margin = "0";
-  preview.style.maxHeight = `${CHAT_LOG_CODE_PREVIEW_MAX_HEIGHT}px`;
-  preview.style.overflow = "auto";
-  preview.style.whiteSpace = "pre";
-  preview.style.fontFamily = "Consolas, Monaco, 'Courier New', monospace";
-  return preview;
-}
-
-function buildCodePreviewText(content) {
-  if (!content) {
-    return "(no code)";
-  }
-  const normalized = String(content).replace(/\r\n/g, "\n");
-  const lines = normalized.split("\n");
-  if (lines.length <= CHAT_LOG_CODE_PREVIEW_LINE_LIMIT) {
-    return normalized;
-  }
-  const previewLines = lines.slice(0, CHAT_LOG_CODE_PREVIEW_LINE_LIMIT);
-  previewLines.push("...");
-  return previewLines.join("\n");
-}
-
 function createChatLogButton(label, variant = "secondary", size = "md") {
   const button = document.createElement("button");
   button.textContent = label;
@@ -502,7 +476,7 @@ function downloadCodeBlocksSequentially(blocks) {
 
 function createBlockDownloadPromise(block) {
   return new Promise((resolve) => {
-    triggerChatLogDownload(block.filePath, block.content, resolve);
+    triggerChatLogDownload(block.filePath, block.content, { onDone: resolve });
   });
 }
 
@@ -515,4 +489,73 @@ function cgptJumpToCodeBlock(targetElement) {
   if (typeof targetElement.scrollIntoView === "function") {
     targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
   }
+}
+
+function createBlockSaveButton(block) {
+  const button = createChatLogButton("Save", "success", "sm");
+  if (!block || !block.filePath) {
+    setChatLogButtonDisabled(button, true);
+    button.title = "File path not detected";
+    return button;
+  }
+  button.addEventListener("click", () => {
+    handleBlockSave(button, block, false);
+  });
+  return button;
+}
+
+function createBlockSaveAsButton(block) {
+  const button = createChatLogButton("Save As", "secondary", "sm");
+  if (!block || !block.filePath) {
+    setChatLogButtonDisabled(button, true);
+    button.title = "File path not detected";
+    return button;
+  }
+  button.addEventListener("click", () => {
+    handleBlockSave(button, block, true);
+  });
+  return button;
+}
+
+function handleBlockSave(button, block, saveAs) {
+  if (!button || button.disabled || !block || !block.filePath) return;
+  const originalText = button.textContent;
+  setChatLogButtonDisabled(button, true);
+  button.textContent = "Saving...";
+  triggerChatLogDownload(block.filePath, block.content, {
+    saveAs,
+    onDone: () => {
+      button.textContent = originalText;
+      setChatLogButtonDisabled(button, false);
+    },
+  });
+}
+
+function createCodeMetaInfoElement(block) {
+  const meta = document.createElement("div");
+  meta.style.fontSize = "11px";
+  meta.style.color = "#d1d5db";
+  meta.style.background = "rgba(3, 7, 18, 0.6)";
+  meta.style.border = "1px dashed #27272a";
+  meta.style.borderRadius = "4px";
+  meta.style.padding = "6px";
+  meta.style.whiteSpace = "normal";
+  meta.style.lineHeight = "1.4";
+  meta.textContent = buildCodeMetaInfoText(block && block.content);
+  return meta;
+}
+
+function buildCodeMetaInfoText(content) {
+  if (!content) {
+    return "No code detected in this block.";
+  }
+  const normalized = String(content).replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+  const nonEmptyLines = lines.filter((line) => line.trim().length > 0).length;
+  const totalChars = normalized.length;
+  const summaryParts = [];
+  summaryParts.push(`Lines: ${lines.length}`);
+  summaryParts.push(`Non-empty: ${nonEmptyLines}`);
+  summaryParts.push(`Characters: ${totalChars}`);
+  return summaryParts.join(" ・ ");
 }
