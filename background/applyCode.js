@@ -96,8 +96,10 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
         } else {
           console.log("Downloaded and overwrote:", targetPath, "id:", downloadId);
           cgptResolveDownloadAbsolutePath(downloadId, (resolved) => {
+            const resolvedDownloadPath =
+              resolved && resolved.ok && resolved.path ? resolved.path : "";
             const finalAbsolutePath =
-              (resolved && resolved.ok && resolved.path) || absoluteFilePath || targetPath || "";
+              absoluteFilePath || targetPath || resolvedDownloadPath || "";
             cgptAppendLog(
               {
                 time: new Date().toISOString(),
