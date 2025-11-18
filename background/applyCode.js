@@ -21,6 +21,7 @@ function cgptResolveDownloadAbsolutePath(downloadId, callback) {
 function cgptHandleApplyCodeBlock(message, sendResponse) {
   const filePath = message.filePath;
   const content = message.content;
+  const saveAs = Boolean(message.saveAs);
   const rawFilePath = typeof filePath === "string" ? filePath : "";
   let relativeFilePath = rawFilePath;
   let absoluteFilePath = "";
@@ -71,7 +72,7 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
         url,
         filename: targetPath,
         conflictAction: "overwrite",
-        saveAs: false,
+        saveAs,
       },
       (downloadId) => {
         if (chrome.runtime.lastError) {
