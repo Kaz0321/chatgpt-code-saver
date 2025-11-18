@@ -1,5 +1,6 @@
 const CHAT_LOG_PREVIEW_LINE_LIMIT = 1;
-const CHAT_LOG_CODE_PREVIEW_LINE_LIMIT = 1;
+const CHAT_LOG_CODE_PLACEHOLDER_TEXT =
+  "コードは省略されています。ジャンプで原文を確認してください。";
 
 function openChatLogModal() {
   if (document.getElementById("cgpt-helper-chatlog-modal")) return;
@@ -146,9 +147,25 @@ function openChatLogModal() {
       const assistantBlocks = collectAssistantBlocksForEntry(entry, orderedUsers[index + 1], allEntries);
       if (assistantBlocks.length > 0) {
         const blockHeader = document.createElement("div");
-        blockHeader.textContent = `対応するコードブロック (${assistantBlocks.length})`;
-        blockHeader.style.fontSize = "12px";
-        blockHeader.style.color = "#a5b4fc";
+        blockHeader.style.display = "flex";
+        blockHeader.style.alignItems = "center";
+        blockHeader.style.justifyContent = "space-between";
+        blockHeader.style.gap = "8px";
+
+        const blockHeaderLabel = document.createElement("div");
+        blockHeaderLabel.textContent = `対応するコードブロック (${assistantBlocks.length})`;
+        blockHeaderLabel.style.fontSize = "12px";
+        blockHeaderLabel.style.color = "#a5b4fc";
+        blockHeader.appendChild(blockHeaderLabel);
+
+        const blockHeaderActions = document.createElement("div");
+        blockHeaderActions.style.display = "flex";
+        blockHeaderActions.style.gap = "6px";
+
+        const batchDownloadBtn = createBatchDownloadButton(assistantBlocks);
+        blockHeaderActions.appendChild(batchDownloadBtn);
+
+        blockHeader.appendChild(blockHeaderActions);
         card.appendChild(blockHeader);
 
         assistantBlocks.forEach((block) => {
@@ -229,22 +246,8 @@ function openChatLogModal() {
 
           blockWrapper.appendChild(blockHeaderRow);
 
-          const codePre = document.createElement("pre");
-          codePre.style.margin = "0";
-          codePre.style.fontSize = "12px";
-          codePre.style.whiteSpace = "pre-wrap";
-          codePre.style.background = "#030712";
-          codePre.style.padding = "8px";
-          codePre.style.borderRadius = "4px";
-          codePre.style.overflowX = "auto";
-          const codeContent = block.content || "";
-          const codePreview = createCodeSingleLinePreview(
-            codeContent,
-            CHAT_LOG_CODE_PREVIEW_LINE_LIMIT
-          );
-          codePre.textContent = codePreview;
-          codePre.title = codeContent;
-          blockWrapper.appendChild(codePre);
+          const codePlaceholder = createCodePlaceholderElement();
+          blockWrapper.appendChild(codePlaceholder);
 
           card.appendChild(blockWrapper);
         });
@@ -342,33 +345,6 @@ function createSingleLinePreview(text, lineLimit = 1) {
   const firstLine = lines[0] || "";
   const hasMore = lines.length > lineLimit;
   return hasMore ? `${firstLine.trimEnd()}...` : firstLine;
-}
-
-function createCodeSingleLinePreview(text, lineLimit = 1) {
-  if (!text) return "";
-  if (!lineLimit || lineLimit <= 0) return text;
-  const normalized = normalizeLineEndings(text);
-  const lines = normalized.split("\n");
-  if (!lines.length) return "";
-
-  const firstLine = lines[0];
-  const shouldSkipFirstLine = isLikelyFileNameLine(firstLine);
-  const previewIndex = shouldSkipFirstLine && lines.length > 1 ? 1 : 0;
-  const previewLine = lines[previewIndex] || "";
-  const hasMore = lines.length > previewIndex + lineLimit;
-  return hasMore ? `${previewLine.trimEnd()}...` : previewLine;
-}
-
-function isLikelyFileNameLine(line) {
-  if (!line) return false;
-  const trimmed = line.trim();
-  if (!trimmed) return false;
-  if (/^\/\/\s*file:/i.test(trimmed) || /^#\s*file:/i.test(trimmed)) {
-    return true;
-  }
-  const filePattern = /^[\w.\-\\/]+$/;
-  const hasExtension = /\.[A-Za-z0-9]+$/.test(trimmed);
-  return filePattern.test(trimmed) && hasExtension;
 }
 
 function normalizeLineEndings(text) {
@@ -477,6 +453,64 @@ function triggerChatLogDownload(filePath, content, onDone) {
       }
     }
   );
+}
+
+function createBatchDownloadButton(blocks) {
+  const button = document.createElement("button");
+  button.textContent = "まとめてDL";
+  button.style.fontSize = "11px";
+  button.style.padding = "3px 10px";
+  button.style.borderRadius = "4px";
+  button.style.border = "1px solid rgba(255,255,255,0.3)";
+  button.style.background = "rgba(16,185,129,0.2)";
+  button.style.color = "#6ee7b7";
+  button.style.cursor = blocks.length ? "pointer" : "not-allowed";
+  button.disabled = !blocks.length;
+
+  if (!blocks.length) {
+    return button;
+  }
+
+  button.addEventListener("click", async () => {
+    if (button.disabled) return;
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = "DL中...";
+
+    try {
+      await downloadCodeBlocksSequentially(blocks);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  });
+
+  return button;
+}
+
+function createCodePlaceholderElement() {
+  const placeholder = document.createElement("div");
+  placeholder.textContent = CHAT_LOG_CODE_PLACEHOLDER_TEXT;
+  placeholder.style.fontSize = "12px";
+  placeholder.style.fontStyle = "italic";
+  placeholder.style.color = "#9ca3af";
+  placeholder.style.padding = "6px";
+  placeholder.style.borderRadius = "4px";
+  placeholder.style.border = "1px dashed #374151";
+  placeholder.style.background = "#030712";
+  return placeholder;
+}
+
+function downloadCodeBlocksSequentially(blocks) {
+  return blocks.reduce((promise, block) => {
+    return promise.then(() => createBlockDownloadPromise(block));
+  }, Promise.resolve());
+}
+
+function createBlockDownloadPromise(block) {
+  return new Promise((resolve) => {
+    triggerChatLogDownload(block.filePath, block.content, resolve);
+  });
 }
 
 function cgptJumpToCodeBlock(targetElement) {
