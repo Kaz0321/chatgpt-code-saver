@@ -52,6 +52,10 @@ function tryDecorateSingleCodeBlock(code) {
     buttonContainer.appendChild(expandBtn);
 
     wrapper.appendChild(buttonContainer);
+    pre.cgptButtonContainer = buttonContainer;
+    if (typeof cgptCalculateButtonOverlayOffset === "function") {
+      pre.cgptButtonOverlayOffset = cgptCalculateButtonOverlayOffset(buttonContainer);
+    }
 
     cgptEnsureCollapsibleState(pre);
     pre.cgptViewButtons = { shrinkBtn, collapseBtn, expandBtn };

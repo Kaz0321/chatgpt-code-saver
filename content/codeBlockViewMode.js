@@ -128,6 +128,20 @@ function cgptUpdateViewButtonStates(pre) {
   });
 }
 
+function cgptGetButtonOverlayOffset(pre) {
+  if (!pre) return 0;
+  if (typeof pre.cgptButtonOverlayOffset === "number") {
+    return pre.cgptButtonOverlayOffset;
+  }
+  const container = pre.cgptButtonContainer;
+  if (!container || typeof cgptCalculateButtonOverlayOffset !== "function") {
+    return 0;
+  }
+  const offset = cgptCalculateButtonOverlayOffset(container);
+  pre.cgptButtonOverlayOffset = offset;
+  return offset;
+}
+
 function cgptSetPreViewMode(pre, mode) {
   if (!pre || !cgptEnsureCollapsibleState(pre)) return;
   const collapsibleEl = cgptGetCollapsibleElement(pre);
@@ -146,7 +160,8 @@ function cgptSetPreViewMode(pre, mode) {
         : viewSettings.collapsedLineCount;
     const normalizedLines = Math.max(1, Number(lineCount) || 1);
     const lineHeight = cgptGetCodeLineHeight(pre);
-    const targetHeight = normalizedLines * lineHeight;
+    const buttonOverlayOffset = cgptGetButtonOverlayOffset(pre);
+    const targetHeight = normalizedLines * lineHeight + buttonOverlayOffset;
     collapsibleEl.style.maxHeight = `${targetHeight}px`;
     collapsibleEl.style.overflow = "hidden";
     cgptSetCollapsedVisualState(collapsibleEl, true);
