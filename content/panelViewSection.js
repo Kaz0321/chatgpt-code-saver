@@ -39,7 +39,7 @@ function createViewSection() {
 
 function createViewModeButton(label, mode) {
   const variants = {
-    compact: "muted",
+    compact: "accent",
     collapsed: "accent",
     expanded: "accent",
   };
