@@ -56,10 +56,23 @@ function cgptReadDownloadFilename(downloadId, callback) {
 }
 
 function cgptExtractFolderFromFilename(filename) {
-  if (typeof filename !== "string" || !filename) {
+  if (typeof filename !== "string") {
     return "";
   }
-  return filename.replace(/[\\/][^\\/]+$/, "");
+  let sanitized = filename.trim();
+  if (!sanitized) {
+    return "";
+  }
+  sanitized = sanitized.replace(/\\+/g, "/");
+  sanitized = sanitized.replace(/\.crdownload$/i, "");
+  if (sanitized.endsWith(`/${CGPT_PROJECT_FOLDER_PICKER_FILENAME}`)) {
+    return sanitized.slice(0, sanitized.length - CGPT_PROJECT_FOLDER_PICKER_FILENAME.length - 1);
+  }
+  const separatorIndex = sanitized.lastIndexOf("/");
+  if (separatorIndex === -1) {
+    return "";
+  }
+  return sanitized.slice(0, separatorIndex);
 }
 
 function cgptCleanupDownload(downloadId, callback) {

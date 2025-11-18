@@ -4,6 +4,7 @@ const CGPT_PROJECT_FOLDER_ERROR_MESSAGES = {
   invalidChar: "フォルダパスに使用できない文字が含まれています",
   parentTraversal: "フォルダパスに .. は使用できません",
 };
+const cgptProjectFolderChangeHandlers = new Set();
 
 function cgptNormalizeProjectFolderPath(rawPath) {
   if (typeof rawPath !== "string") {
@@ -91,4 +92,28 @@ function cgptSetProjectFolderPath(folderPath, callback) {
       }
     }
   });
+}
+
+function cgptOnProjectFolderPathChanged(callback) {
+  if (typeof callback !== "function") {
+    return () => {};
+  }
+  if (typeof chrome === "undefined" || !chrome.storage || !chrome.storage.onChanged) {
+    return () => {};
+  }
+  const handler = (changes, areaName) => {
+    if (areaName !== "local") return;
+    const change = changes[CGPT_PROJECT_FOLDER_STORAGE_KEY];
+    if (!change) return;
+    const newValue = typeof change.newValue === "string" ? change.newValue : "";
+    callback(cgptNormalizeProjectFolderPath(newValue));
+  };
+  chrome.storage.onChanged.addListener(handler);
+  cgptProjectFolderChangeHandlers.add(handler);
+  return () => {
+    if (cgptProjectFolderChangeHandlers.has(handler)) {
+      chrome.storage.onChanged.removeListener(handler);
+      cgptProjectFolderChangeHandlers.delete(handler);
+    }
+  };
 }
