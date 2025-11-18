@@ -92,7 +92,7 @@ function createButtonRow() {
 }
 
 function createLineCountControls(initialValue, onCommit) {
-  const MIN_LINES = 0;
+  const MIN_LINES = 1;
   const MAX_LINES = 200;
 
   const controls = document.createElement("div");

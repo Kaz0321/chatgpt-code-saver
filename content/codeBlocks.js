@@ -60,6 +60,9 @@ function tryDecorateSingleCodeBlock(code) {
     });
 
     pre.cgptButtonContainer = buttonContainer;
+    if (typeof cgptCalculateButtonOverlayOffset === "function") {
+      pre.cgptButtonOverlayOffset = cgptCalculateButtonOverlayOffset(buttonContainer);
+    }
 
     cgptEnsureCollapsibleState(pre);
     pre.cgptViewButtons = { shrinkBtn, expandBtn };
