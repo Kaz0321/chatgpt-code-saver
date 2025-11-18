@@ -120,23 +120,13 @@ function cgptHandleSaveButtonClick(button, code, pre) {
   cgptTriggerApplyCode(button, filePath, content);
 }
 
-function cgptHandleSaveAsButtonClick(button, code, pre) {
+function cgptHandleSaveAsButtonClick(button, code) {
   const parsed = cgptParseCodeBlockMetadata(code);
-  const defaultPath = parsed && parsed.filePath ? parsed.filePath : "";
-  const userInput = prompt("保存するファイル名（パス）を入力してください", defaultPath);
-  if (!userInput) {
-    if (pre) {
-      const metadata = cgptRefreshSaveButtonState(pre, code);
-      cgptRefreshDownloadButtonState(pre, code, metadata);
-    }
-    return;
-  }
-  const filePath = userInput.trim();
-  if (!filePath) {
-    return;
-  }
-  const content = parsed && parsed.content ? parsed.content : cgptGetNormalizedCodeText(code);
-  cgptTriggerApplyCode(button, filePath, content);
+  const filePath = cgptGetSuggestedRelativeFilePath(parsed);
+  const content = cgptGetContentForSave(parsed, code);
+  cgptTriggerApplyCode(button, filePath, content, {
+    saveAs: true,
+  });
 }
 
 function cgptHandleDownloadButtonClick(button, code, pre) {
@@ -163,6 +153,7 @@ function cgptHandleDownloadButtonClick(button, code, pre) {
 }
 
 function cgptTriggerApplyCode(button, filePath, content, options = {}) {
+  const { saveAs, successButtonText, successToastBuilder } = options;
   if (!filePath) return;
   const validation = cgptValidateFilePath(filePath);
   if (!validation.ok) {
@@ -181,7 +172,7 @@ function cgptTriggerApplyCode(button, filePath, content, options = {}) {
       type: "applyCodeBlock",
       filePath: normalizedFilePath,
       content,
-      saveAs: Boolean(options.saveAs),
+      saveAs: Boolean(saveAs),
     },
     (res) => {
       if (!res || !res.ok) {
