@@ -48,3 +48,15 @@ function cgptUpdateSaveOptions(partialOptions, callback) {
     callback?.(cgptGetSaveOptions());
   });
 }
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    DEFAULT_SAVE_OPTIONS,
+    cgptGetSaveOptions,
+    cgptShouldStripMetadataLine,
+    cgptMergeSaveOptions,
+    cgptHasStorageSyncAccess,
+    cgptLoadSaveOptions,
+    cgptUpdateSaveOptions,
+  };
+}

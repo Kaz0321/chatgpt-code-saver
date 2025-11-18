@@ -32,3 +32,10 @@ function cgptValidateFilePath(rawFilePath) {
 
   return { ok: true, filePath: trimmed };
 }
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    CGPT_FILE_PATH_ERROR_MESSAGES,
+    cgptValidateFilePath,
+  };
+}
