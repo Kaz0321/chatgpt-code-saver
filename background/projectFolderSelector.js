@@ -77,10 +77,26 @@ function cgptExtractFolderFromFilename(filename) {
 
 function cgptCleanupDownload(downloadId, callback) {
   chrome.downloads.cancel(downloadId, () => {
-    chrome.downloads.erase({ id: downloadId }, () => {
-      if (typeof callback === "function") {
-        callback();
-      }
+    cgptRemoveDownloadedFile(downloadId, () => {
+      chrome.downloads.erase({ id: downloadId }, () => {
+        if (typeof callback === "function") {
+          callback();
+        }
+      });
     });
+  });
+}
+
+function cgptRemoveDownloadedFile(downloadId, callback) {
+  if (!chrome.downloads || typeof chrome.downloads.removeFile !== "function") {
+    if (typeof callback === "function") {
+      callback();
+    }
+    return;
+  }
+  chrome.downloads.removeFile(downloadId, () => {
+    if (typeof callback === "function") {
+      callback();
+    }
   });
 }
