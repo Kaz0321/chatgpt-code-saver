@@ -16,6 +16,7 @@ function cgptEnsureCodeBlockStyles() {
   style.textContent = `
 .${CGPT_CODE_WRAPPER_CLASS} {
   position: relative;
+  display: block;
 }
 .${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS} {
   border-bottom: 4px solid rgba(255, 255, 255, 0.25);
@@ -53,10 +54,25 @@ function cgptWrapPreWithRelativeContainer(pre) {
   wrapper.style.position = "relative";
   wrapper.dataset.cgptCodeWrapper = "1";
   wrapper.classList.add(CGPT_CODE_WRAPPER_CLASS);
+  const computedStyle = window.getComputedStyle
+    ? window.getComputedStyle(pre)
+    : null;
+  if (computedStyle) {
+    ["marginTop", "marginRight", "marginBottom", "marginLeft"].forEach((prop) => {
+      wrapper.style[prop] = computedStyle[prop];
+    });
+  } else if (pre.style && pre.style.margin) {
+    wrapper.style.margin = pre.style.margin;
+  }
   if (pre.parentNode) {
     pre.parentNode.insertBefore(wrapper, pre);
   }
   wrapper.appendChild(pre);
+  pre.style.margin = "0";
+  pre.style.marginTop = "0";
+  pre.style.marginRight = "0";
+  pre.style.marginBottom = "0";
+  pre.style.marginLeft = "0";
   return wrapper;
 }
 
@@ -70,16 +86,13 @@ function cgptGetCollapsibleElement(pre) {
 }
 
 function cgptRememberOriginalPreStyles(pre) {
-  const collapsibleEl = cgptGetCollapsibleElement(pre);
-  if (!collapsibleEl) return;
-  if (pre.dataset.cgptOriginalOverflow === undefined) {
-    pre.dataset.cgptOriginalOverflow = collapsibleEl.style.overflow || "";
+  const contentEl = cgptGetCollapsibleContentElement(pre);
+  if (!contentEl) return;
+  if (pre.dataset.cgptOriginalContentOverflow === undefined) {
+    pre.dataset.cgptOriginalContentOverflow = contentEl.style.overflow || "";
   }
-  if (pre.dataset.cgptOriginalMaxHeight === undefined) {
-    pre.dataset.cgptOriginalMaxHeight = collapsibleEl.style.maxHeight || "";
-  }
-  if (pre.dataset.cgptOriginalPaddingTop === undefined) {
-    pre.dataset.cgptOriginalPaddingTop = collapsibleEl.style.paddingTop || "";
+  if (pre.dataset.cgptOriginalContentMaxHeight === undefined) {
+    pre.dataset.cgptOriginalContentMaxHeight = contentEl.style.maxHeight || "";
   }
 }
 
@@ -133,43 +146,30 @@ function cgptUpdateViewButtonStates(pre) {
   });
 }
 
-function cgptGetButtonOverlayOffset(pre) {
-  if (!pre) return 0;
-  if (typeof pre.cgptButtonOverlayOffset === "number") {
-    return pre.cgptButtonOverlayOffset;
-  }
-  const container = pre.cgptButtonContainer;
-  if (!container || typeof cgptCalculateButtonOverlayOffset !== "function") {
-    return 0;
-  }
-  const offset = cgptCalculateButtonOverlayOffset(container);
-  pre.cgptButtonOverlayOffset = offset;
-  return offset;
+function cgptGetCollapsibleContentElement(pre) {
+  return pre;
 }
 
 function cgptSetPreViewMode(pre, mode) {
   if (!pre || !cgptEnsureCollapsibleState(pre)) return;
-  const collapsibleEl = cgptGetCollapsibleElement(pre);
-  if (!collapsibleEl) return;
+  const wrapperEl = cgptGetCollapsibleElement(pre);
+  const contentEl = cgptGetCollapsibleContentElement(pre);
+  if (!contentEl) return;
   const viewSettings =
     typeof cgptGetViewSettings === "function" ? cgptGetViewSettings() : FALLBACK_VIEW_SETTINGS;
   pre.dataset.cgptViewMode = mode;
   if (mode === CGPT_VIEW_MODE.EXPANDED) {
-    collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
-    collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
-    collapsibleEl.style.paddingTop = pre.dataset.cgptOriginalPaddingTop || "";
-    cgptSetCollapsedVisualState(collapsibleEl, false);
+    contentEl.style.maxHeight = pre.dataset.cgptOriginalContentMaxHeight || "";
+    contentEl.style.overflow = pre.dataset.cgptOriginalContentOverflow || "";
+    cgptSetCollapsedVisualState(wrapperEl || contentEl, false);
   } else {
     const lineCount = viewSettings.compactLineCount;
     const normalizedLines = Math.max(0, Number(lineCount) || 0);
     const lineHeight = cgptGetCodeLineHeight(pre);
-    const buttonOverlayOffset = cgptGetButtonOverlayOffset(pre);
-    const paddingTop = buttonOverlayOffset > 0 ? `${buttonOverlayOffset}px` : "";
-    collapsibleEl.style.paddingTop = paddingTop;
-    const targetHeight = normalizedLines * lineHeight + Math.max(buttonOverlayOffset, 0);
-    collapsibleEl.style.maxHeight = `${targetHeight}px`;
-    collapsibleEl.style.overflow = "hidden";
-    cgptSetCollapsedVisualState(collapsibleEl, true);
+    const targetHeight = normalizedLines * lineHeight;
+    contentEl.style.maxHeight = `${targetHeight}px`;
+    contentEl.style.overflow = "hidden";
+    cgptSetCollapsedVisualState(wrapperEl || contentEl, true);
   }
   cgptUpdateViewButtonStates(pre);
 }

@@ -311,14 +311,3 @@ function cgptSetButtonDisabled(button, disabled) {
   button.style.cursor = disabled ? "not-allowed" : "pointer";
 }
 
-function cgptCalculateButtonOverlayOffset(container) {
-  if (!container) return 0;
-  const rect =
-    typeof container.getBoundingClientRect === "function"
-      ? container.getBoundingClientRect()
-      : null;
-  const height = rect && rect.height ? rect.height : container.offsetHeight || 0;
-  const topOffset = parseFloat(container.style.top || "0") || 0;
-  const SAFE_MARGIN_PX = 8;
-  return Math.max(0, height + topOffset + SAFE_MARGIN_PX);
-}
