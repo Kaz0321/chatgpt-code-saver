@@ -25,13 +25,6 @@ function createProjectFolderSection() {
   }
 
   const buttons = createButtonRow();
-  const selectBtn = createPanelButton("Choose Folder", "accent");
-  selectBtn.style.flex = "1";
-  selectBtn.addEventListener("click", () => {
-    requestProjectFolderSelection(input, selectBtn);
-  });
-  buttons.appendChild(selectBtn);
-
   const saveBtn = createPanelButton("Save", "success");
   saveBtn.style.flex = "1";
   saveBtn.addEventListener("click", () => {
@@ -75,84 +68,3 @@ function persistProjectFolderSelection(input, normalizedPath) {
   });
 }
 
-function requestProjectFolderSelection(input, button) {
-  const canSendRuntimeMessage =
-    typeof chrome !== "undefined" &&
-    chrome.runtime &&
-    typeof chrome.runtime.sendMessage === "function";
-  if (!canSendRuntimeMessage) {
-    if (typeof showToast === "function") {
-      showToast("フォルダ選択を開始できませんでした", "error");
-    }
-    return;
-  }
-
-  const originalText = button ? button.textContent : "";
-  if (button) {
-    button.disabled = true;
-    button.textContent = "Selecting...";
-  }
-
-  chrome.runtime.sendMessage({ type: "pickDownloadFolder" }, (response) => {
-    if (button) {
-      button.disabled = false;
-      button.textContent = originalText;
-    }
-    if (chrome.runtime && chrome.runtime.lastError) {
-      handleProjectFolderSelectionError(
-        chrome.runtime.lastError.message || "フォルダ選択に失敗しました",
-        input
-      );
-      return;
-    }
-    if (!response) {
-      handleProjectFolderSelectionError("フォルダ選択に失敗しました", input);
-      return;
-    }
-    if (!response.ok) {
-      if (response.error === "folder_picker_canceled") {
-        return;
-      }
-      const errMsg = response.error || "フォルダ選択に失敗しました";
-      handleProjectFolderSelectionError(errMsg, input);
-      return;
-    }
-    const normalizedPath = cgptNormalizeProjectFolderPath(response.folderPath || "");
-    persistProjectFolderSelection(input, normalizedPath);
-  });
-}
-
-function handleProjectFolderSelectionError(errorMessage, input) {
-  const fallbackMessage = errorMessage || "フォルダ選択に失敗しました";
-  if (typeof showToast === "function") {
-    showToast(fallbackMessage, "error");
-  }
-  if (shouldOfferManualFolderInput(fallbackMessage)) {
-    promptManualProjectFolderInput(input);
-  }
-}
-
-function shouldOfferManualFolderInput(errorMessage) {
-  if (!errorMessage) return false;
-  const lowerCased = `${errorMessage}`.toLowerCase();
-  return lowerCased.includes("invalid filename");
-}
-
-function promptManualProjectFolderInput(input) {
-  if (typeof window === "undefined" || typeof window.prompt !== "function") {
-    return;
-  }
-  const currentValue = input && typeof input.value === "string" ? input.value : "";
-  const userInput = window.prompt("フォルダパスを直接入力してください", currentValue);
-  if (userInput === null) {
-    return;
-  }
-  const validation = cgptValidateProjectFolderPath(userInput);
-  if (!validation.ok) {
-    if (typeof showToast === "function") {
-      showToast(validation.error || "フォルダパスが不正です", "error");
-    }
-    return;
-  }
-  persistProjectFolderSelection(input, validation.folderPath);
-}
