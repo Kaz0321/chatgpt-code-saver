@@ -76,7 +76,11 @@ function persistProjectFolderSelection(input, normalizedPath) {
 }
 
 function requestProjectFolderSelection(input, button) {
-  if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== "function") {
+  const canSendRuntimeMessage =
+    typeof chrome !== "undefined" &&
+    chrome.runtime &&
+    typeof chrome.runtime.sendMessage === "function";
+  if (!canSendRuntimeMessage) {
     if (typeof showToast === "function") {
       showToast("フォルダ選択を開始できませんでした", "error");
     }
