@@ -108,8 +108,8 @@ function openLogViewer() {
 }
 
 function createLogModalButton(label, variant = "secondary", size = "sm") {
-  if (typeof createChatLogButton === "function") {
-    return createChatLogButton(label, variant, size);
+  if (typeof cgptCreateChatLogButton === "function") {
+    return cgptCreateChatLogButton(label, variant, size);
   }
   const button = document.createElement("button");
   button.textContent = label;
