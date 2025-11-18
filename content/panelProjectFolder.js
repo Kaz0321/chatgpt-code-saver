@@ -99,19 +99,53 @@ function requestProjectFolderSelection(input, button) {
       button.textContent = originalText;
     }
     if (chrome.runtime && chrome.runtime.lastError) {
-      if (typeof showToast === "function") {
-        showToast(chrome.runtime.lastError.message || "フォルダ選択に失敗しました", "error");
-      }
+      handleProjectFolderSelectionError(
+        chrome.runtime.lastError.message || "フォルダ選択に失敗しました",
+        input
+      );
       return;
     }
     if (!response || !response.ok) {
       const errMsg = (response && response.error) || "フォルダ選択に失敗しました";
-      if (typeof showToast === "function") {
-        showToast(errMsg, "error");
-      }
+      handleProjectFolderSelectionError(errMsg, input);
       return;
     }
     const normalizedPath = cgptNormalizeProjectFolderPath(response.folderPath || "");
     persistProjectFolderSelection(input, normalizedPath);
   });
+}
+
+function handleProjectFolderSelectionError(errorMessage, input) {
+  const fallbackMessage = errorMessage || "フォルダ選択に失敗しました";
+  if (typeof showToast === "function") {
+    showToast(fallbackMessage, "error");
+  }
+  if (shouldOfferManualFolderInput(fallbackMessage)) {
+    promptManualProjectFolderInput(input);
+  }
+}
+
+function shouldOfferManualFolderInput(errorMessage) {
+  if (!errorMessage) return false;
+  const lowerCased = `${errorMessage}`.toLowerCase();
+  return lowerCased.includes("invalid filename");
+}
+
+function promptManualProjectFolderInput(input) {
+  if (typeof window === "undefined" || typeof window.prompt !== "function") {
+    return;
+  }
+  const currentValue = input && typeof input.value === "string" ? input.value : "";
+  const userInput = window.prompt("フォルダパスを直接入力してください", currentValue);
+  if (userInput === null) {
+    return;
+  }
+  const validation = cgptValidateProjectFolderPath(userInput);
+  if (!validation.ok) {
+    if (typeof showToast === "function") {
+      showToast(validation.error || "フォルダパスが不正です", "error");
+    }
+    return;
+  }
+  persistProjectFolderSelection(input, validation.folderPath);
 }
