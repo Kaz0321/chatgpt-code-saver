@@ -163,13 +163,6 @@ function cgptHandleDownloadButtonClick(button, code, pre) {
 }
 
 function cgptTriggerApplyCode(button, filePath, content, options = {}) {
-  const { successButtonText = "保存済", successToastBuilder } = options;
-  const suggestedPath = cgptGetSuggestedRelativeFilePath(parsed);
-  const content = cgptGetContentForSave(parsed, code);
-  cgptTriggerApplyCode(button, suggestedPath, content, { saveAs: true });
-}
-
-function cgptTriggerApplyCode(button, filePath, content, options = {}) {
   if (!filePath) return;
   const validation = cgptValidateFilePath(filePath);
   if (!validation.ok) {
