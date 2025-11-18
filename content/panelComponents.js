@@ -91,21 +91,9 @@ function createButtonRow() {
   return row;
 }
 
-function createLineCountRow(labelText, initialValue, onCommit) {
+function createLineCountControls(initialValue, onCommit) {
   const MIN_LINES = 1;
   const MAX_LINES = 200;
-
-  const row = document.createElement("label");
-  row.style.display = "flex";
-  row.style.alignItems = "center";
-  row.style.gap = "8px";
-  row.style.fontSize = "11px";
-  row.style.color = "rgba(255,255,255,0.8)";
-
-  const span = document.createElement("span");
-  span.textContent = labelText;
-  span.style.flex = "1";
-  row.appendChild(span);
 
   const controls = document.createElement("div");
   controls.style.display = "flex";
@@ -172,6 +160,5 @@ function createLineCountRow(labelText, initialValue, onCommit) {
   incrementButton.addEventListener("click", () => adjustValue(1));
   controls.appendChild(incrementButton);
 
-  row.appendChild(controls);
-  return row;
+  return controls;
 }

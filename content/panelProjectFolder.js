@@ -1,10 +1,10 @@
 function createProjectFolderSection() {
   const section = document.createElement("div");
-  section.appendChild(createSectionLabel("プロジェクトフォルダ"));
+  section.appendChild(createSectionLabel("Project Folder"));
 
   const input = document.createElement("input");
   input.type = "text";
-  input.placeholder = "例: dev/my-project";
+  input.placeholder = "e.g. dev/my-project";
   input.style.width = "100%";
   input.style.padding = "4px 6px";
   input.style.fontSize = "11px";
@@ -41,7 +41,7 @@ function commitProjectFolderInput(input) {
   const validation = cgptValidateProjectFolderPath(rawValue);
   if (!validation.ok) {
     if (typeof showToast === "function") {
-      showToast(validation.error || "フォルダパスが不正です", "error");
+      showToast(validation.error || "Folder path is invalid.", "error");
     }
     return;
   }
@@ -52,7 +52,7 @@ function persistProjectFolderSelection(input, normalizedPath) {
   if (!input) return;
   cgptSetProjectFolderPath(normalizedPath || "", (result) => {
     if (!result || !result.ok) {
-      const errMsg = (result && result.error) || "フォルダの保存に失敗しました";
+      const errMsg = (result && result.error) || "Failed to save the folder path.";
       if (typeof showToast === "function") {
         showToast(errMsg, "error");
       }
@@ -61,8 +61,8 @@ function persistProjectFolderSelection(input, normalizedPath) {
     input.value = normalizedPath || "";
     if (typeof showToast === "function") {
       const message = normalizedPath
-        ? `プロジェクトフォルダを保存しました: ${normalizedPath}`
-        : "プロジェクトフォルダ設定をクリアしました";
+        ? `Project folder saved: ${normalizedPath}`
+        : "Project folder cleared.";
       showToast(message, "success");
     }
   });

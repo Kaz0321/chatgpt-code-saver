@@ -5,7 +5,7 @@ function ensureDefaultTemplates() {
     templates = [
       {
         id,
-        title: "コード出力ルール（基本）",
+        title: "Code output guide (default)",
         content: DEFAULT_TEMPLATE_CONTENT,
       },
     ];
@@ -34,7 +34,7 @@ function saveTemplatesToStorage() {
     (res) => {
       if (!res || !res.ok) {
         console.error("Failed to save templates", res && res.error);
-        showToast("テンプレートの保存に失敗しました。", "error");
+        showToast("Failed to save templates.", "error");
       }
     }
   );
@@ -62,7 +62,7 @@ function rebuildTemplateDropdown(selectEl) {
     selectEl.disabled = true;
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
-    emptyOption.textContent = "テンプレートがありません";
+    emptyOption.textContent = "No templates available";
     emptyOption.selected = true;
     selectEl.appendChild(emptyOption);
     return;
@@ -89,8 +89,8 @@ function rebuildTemplateDropdown(selectEl) {
 function insertTemplateToInput(templateText) {
   const inserted = cgptInsertTextToChatInput(templateText);
   if (!inserted) {
-    alert("ChatGPTの入力欄が見つかりませんでした。");
+    alert("Could not find the ChatGPT input field.");
     return;
   }
-  showToast("テンプレートを貼り付けました。", "success");
+  showToast("Template inserted.", "success");
 }

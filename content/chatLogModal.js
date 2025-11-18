@@ -3,7 +3,7 @@ const CHAT_LOG_PREVIEW_LINE_LIMIT = 1;
 function openChatLogModal() {
   if (document.getElementById("cgpt-helper-chatlog-modal")) return;
   if (typeof getChatLogEntries !== "function") {
-    alert("チャットログ機能の初期化に失敗しました。");
+    alert("Failed to initialize the chat log.");
     return;
   }
 
@@ -490,10 +490,10 @@ async function handleBatchSaveAsAll(button, blocks) {
       overrideFolderPath: folderPath,
     });
     if (typeof showToast === "function") {
-      showToast(`保存先: ${folderPath}`, "success");
+      showToast(`Saved to: ${folderPath}`, "success");
     }
   } catch (error) {
-    const message = (error && error.message) || "フォルダの指定に失敗しました";
+    const message = (error && error.message) || "Failed to select a folder.";
     if (typeof showToast === "function") {
       showToast(message, "error");
     }
@@ -558,7 +558,7 @@ function promptUserForDownloadFolder() {
       chrome.runtime &&
       typeof chrome.runtime.sendMessage === "function";
     if (!canSendRuntimeMessage) {
-      reject(new Error("フォルダ選択を開始できませんでした"));
+      reject(new Error("Unable to start the folder picker."));
       return;
     }
 
@@ -568,7 +568,7 @@ function promptUserForDownloadFolder() {
         return;
       }
       if (!response) {
-        reject(new Error("フォルダの指定に失敗しました"));
+        reject(new Error("Failed to select a folder."));
         return;
       }
       if (!response.ok) {
@@ -576,7 +576,7 @@ function promptUserForDownloadFolder() {
           resolve("");
           return;
         }
-        reject(new Error(response.error || "フォルダの指定に失敗しました"));
+        reject(new Error(response.error || "Failed to select a folder."));
         return;
       }
       resolve(response.folderPath || "");
@@ -647,5 +647,5 @@ function buildCodeMetaInfoText(content) {
   summaryParts.push(`Lines: ${lines.length}`);
   summaryParts.push(`Non-empty: ${nonEmptyLines}`);
   summaryParts.push(`Characters: ${totalChars}`);
-  return summaryParts.join(" ・ ");
+  return summaryParts.join(" • ");
 }

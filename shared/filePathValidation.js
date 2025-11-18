@@ -1,9 +1,9 @@
 const CGPT_FILE_PATH_ERROR_MESSAGES = {
-  missing: "ファイルパスが指定されていません",
-  empty: "ファイルパスが空です",
-  leadingSlash: "ファイルパスの先頭に / または \\ は使用できません",
-  invalidChar: "ファイルパスに使用できない文字が含まれています",
-  parentTraversal: "ファイルパスに .. は使用できません",
+  missing: "File path is not provided.",
+  empty: "File path cannot be empty.",
+  leadingSlash: "File path must not start with / or \\\\.",
+  invalidChar: "File path contains unsupported characters.",
+  parentTraversal: "File path cannot include .. segments.",
 };
 
 function cgptValidateFilePath(rawFilePath) {
