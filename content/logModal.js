@@ -136,56 +136,92 @@ function createLogEntryCard(entry) {
 
   const header = document.createElement("div");
   header.style.display = "flex";
-  header.style.justifyContent = "space-between";
+  header.style.flexWrap = "wrap";
   header.style.alignItems = "center";
-  header.style.gap = "8px";
-
-  const infoStack = document.createElement("div");
-  infoStack.style.display = "flex";
-  infoStack.style.flexDirection = "column";
-  infoStack.style.gap = "2px";
+  header.style.justifyContent = "flex-start";
+  header.style.rowGap = "4px";
+  header.style.columnGap = "12px";
 
   const timestamp = document.createElement("div");
   timestamp.textContent = formatLogTimestamp(entry && entry.time);
   timestamp.style.fontSize = "12px";
   timestamp.style.color = "#e5e7eb";
-  infoStack.appendChild(timestamp);
+  timestamp.style.flex = "1";
+  header.appendChild(timestamp);
 
   const status = document.createElement("div");
   const kind = (entry && entry.kind ? entry.kind : "apply").toUpperCase();
   const ok = Boolean(entry && entry.ok);
   status.textContent = `${kind} • ${ok ? "Success" : "Failed"}`;
   status.style.fontSize = "11px";
+  status.style.fontWeight = "600";
   status.style.color = ok ? "#6ee7b7" : "#fca5a5";
-  infoStack.appendChild(status);
+  header.appendChild(status);
 
-  header.appendChild(infoStack);
-
-  const actions = document.createElement("div");
-  actions.style.display = "flex";
-  actions.style.gap = "6px";
-  const openBtn = createLogEntryOpenButton(entry);
-  if (openBtn) {
-    actions.appendChild(openBtn);
+  const downloadInfo = document.createElement("div");
+  downloadInfo.style.fontSize = "11px";
+  downloadInfo.style.color = "#a5b4fc";
+  downloadInfo.style.display = "flex";
+  downloadInfo.style.flexWrap = "wrap";
+  downloadInfo.style.gap = "4px";
+  const downloadLabel = typeof (entry && entry.downloadId) === "number"
+    ? `Download ID: ${entry.downloadId}`
+    : "Download ID: N/A";
+  const downloadFragments = [downloadLabel];
+  if (!ok && entry && entry.error) {
+    downloadFragments.push(`Error: ${entry.error}`);
   }
-  if (actions.childNodes.length > 0) {
-    header.appendChild(actions);
-  }
+  downloadInfo.textContent = downloadFragments.join(" • ");
+  header.appendChild(downloadInfo);
 
   card.appendChild(header);
 
-  const codeBlock = document.createElement("pre");
-  codeBlock.textContent = buildLogEntryCodeText(entry);
-  codeBlock.style.margin = "0";
-  codeBlock.style.fontFamily = "monospace";
-  codeBlock.style.fontSize = "12px";
-  codeBlock.style.background = "#0b1120";
-  codeBlock.style.color = "#f3f4f6";
-  codeBlock.style.padding = "8px";
-  codeBlock.style.borderRadius = "6px";
-  codeBlock.style.border = "1px solid #1f2937";
-  codeBlock.style.whiteSpace = "pre-wrap";
-  card.appendChild(codeBlock);
+  const fileRow = document.createElement("div");
+  fileRow.style.display = "flex";
+  fileRow.style.flexWrap = "wrap";
+  fileRow.style.alignItems = "baseline";
+  fileRow.style.columnGap = "8px";
+  fileRow.style.rowGap = "4px";
+  fileRow.style.paddingLeft = "8px";
+
+  const fileNameText = document.createElement("span");
+  fileNameText.textContent = getLogEntryFileName(entry);
+  fileNameText.style.fontSize = "12px";
+  fileNameText.style.fontWeight = "bold";
+  fileNameText.style.color = "#facc15";
+  fileRow.appendChild(fileNameText);
+
+  const metaInfoText = document.createElement("span");
+  metaInfoText.textContent = buildLogEntryMetaInfo(entry);
+  metaInfoText.style.fontSize = "11px";
+  metaInfoText.style.color = "#fef3c7";
+  metaInfoText.style.opacity = "0.85";
+  fileRow.appendChild(metaInfoText);
+
+  card.appendChild(fileRow);
+
+  const pathRow = document.createElement("div");
+  pathRow.style.display = "flex";
+  pathRow.style.flexWrap = "wrap";
+  pathRow.style.alignItems = "center";
+  pathRow.style.justifyContent = "space-between";
+  pathRow.style.rowGap = "6px";
+  pathRow.style.paddingLeft = "16px";
+
+  const fullPathText = document.createElement("div");
+  fullPathText.textContent = buildLogEntryFullPath(entry);
+  fullPathText.style.fontFamily = "monospace";
+  fullPathText.style.fontSize = "11px";
+  fullPathText.style.color = "#d1d5db";
+  fullPathText.style.wordBreak = "break-all";
+  pathRow.appendChild(fullPathText);
+
+  const openBtn = createLogEntryOpenButton(entry);
+  if (openBtn) {
+    pathRow.appendChild(openBtn);
+  }
+
+  card.appendChild(pathRow);
 
   return card;
 }
@@ -212,28 +248,39 @@ function createLogEntryOpenButton(entry) {
   return button;
 }
 
-function buildLogEntryCodeText(entry) {
-  const lines = [];
-  const ok = Boolean(entry && entry.ok);
-  lines.push(`// status: ${ok ? "success" : "error"}`);
-  lines.push(`// action: ${(entry && entry.kind) || "apply"}`);
-  if (entry && entry.error) {
-    lines.push(`// error: ${entry.error}`);
+function getLogEntryFileName(entry) {
+  const pathCandidate =
+    (entry && (entry.filePathRelative || entry.filePath || entry.filePathAbsolute)) || "";
+  if (!pathCandidate) {
+    return "Unknown file";
   }
-  if (entry && entry.filePathRelative) {
-    lines.push(`// relative: ${entry.filePathRelative}`);
+  const normalized = pathCandidate.replace(/\\/g, "/");
+  const segments = normalized.split("/").filter(Boolean);
+  return segments.length ? segments[segments.length - 1] : normalized;
+}
+
+function buildLogEntryMetaInfo(entry) {
+  const parts = [];
+  if (entry && (entry.filePathRelative || entry.filePath)) {
+    parts.push(`Relative: ${entry.filePathRelative || entry.filePath}`);
   }
+  if (entry && entry.kind) {
+    parts.push(`Action: ${String(entry.kind).toUpperCase()}`);
+  }
+  if (parts.length === 0) {
+    return "No additional information.";
+  }
+  return parts.join(" • ");
+}
+
+function buildLogEntryFullPath(entry) {
   if (entry && entry.filePathAbsolute) {
-    lines.push(`// absolute: ${entry.filePathAbsolute}`);
-  } else if (entry && entry.filePath) {
-    lines.push(`// path: ${entry.filePath}`);
-  } else {
-    lines.push("// path: (not provided)");
+    return `Full path: ${entry.filePathAbsolute}`;
   }
-  if (typeof (entry && entry.downloadId) === "number") {
-    lines.push(`// downloadId: ${entry.downloadId}`);
+  if (entry && entry.filePath) {
+    return `Full path: ${entry.filePath}`;
   }
-  return lines.join("\n");
+  return "Full path: (not provided)";
 }
 
 function formatLogTimestamp(time) {
