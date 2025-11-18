@@ -2,23 +2,33 @@ function init() {
   checkAndNotifyReloaded();
 
   loadTemplatesFromStorage(() => {
+    const finalizeSetup = () => {
+      createFloatingPanel();
+      if (typeof initChatLogTracker === "function") {
+        initChatLogTracker();
+      }
+      decorateCodeBlocks(document);
+      setupMutationObserver();
+    };
+
+    const ensureSaveOptionsLoaded = (next) => {
+      if (typeof cgptLoadSaveOptions === "function") {
+        cgptLoadSaveOptions(next);
+        return;
+      }
+      next();
+    };
+
+    const continueAfterViewSettings = () => {
+      ensureSaveOptionsLoaded(finalizeSetup);
+    };
+
     if (typeof cgptLoadViewSettings === "function") {
-      cgptLoadViewSettings(() => {
-        createFloatingPanel();
-        if (typeof initChatLogTracker === "function") {
-          initChatLogTracker();
-        }
-        decorateCodeBlocks(document);
-        setupMutationObserver();
-      });
+      cgptLoadViewSettings(continueAfterViewSettings);
       return;
     }
-    createFloatingPanel();
-    if (typeof initChatLogTracker === "function") {
-      initChatLogTracker();
-    }
-    decorateCodeBlocks(document);
-    setupMutationObserver();
+
+    continueAfterViewSettings();
   });
 }
 

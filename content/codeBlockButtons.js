@@ -164,6 +164,12 @@ function cgptHandleDownloadButtonClick(button, code, pre) {
 
 function cgptTriggerApplyCode(button, filePath, content, options = {}) {
   const { successButtonText = "保存済", successToastBuilder } = options;
+  const suggestedPath = cgptGetSuggestedRelativeFilePath(parsed);
+  const content = cgptGetContentForSave(parsed, code);
+  cgptTriggerApplyCode(button, suggestedPath, content, { saveAs: true });
+}
+
+function cgptTriggerApplyCode(button, filePath, content, options = {}) {
   if (!filePath) return;
   const validation = cgptValidateFilePath(filePath);
   if (!validation.ok) {
@@ -178,7 +184,12 @@ function cgptTriggerApplyCode(button, filePath, content, options = {}) {
 
   const normalizedFilePath = validation.filePath;
   chrome.runtime.sendMessage(
-    { type: "applyCodeBlock", filePath: normalizedFilePath, content },
+    {
+      type: "applyCodeBlock",
+      filePath: normalizedFilePath,
+      content,
+      saveAs: Boolean(options.saveAs),
+    },
     (res) => {
       if (!res || !res.ok) {
         const errorMessage =
@@ -246,6 +257,50 @@ function cgptHandleCopyButtonClick(button, code) {
   } catch (error) {
     onFailure();
   }
+}
+
+function cgptGetContentForSave(parsedMetadata, code) {
+  if (parsedMetadata && parsedMetadata.content) {
+    return parsedMetadata.content;
+  }
+  const normalized = cgptGetNormalizedCodeText(code);
+  return cgptStripFirstLineIfNeeded(normalized);
+}
+
+function cgptStripFirstLineIfNeeded(text) {
+  if (!text || typeof cgptShouldStripMetadataLine !== "function") {
+    return text;
+  }
+  if (!cgptShouldStripMetadataLine()) {
+    return text;
+  }
+  const normalized = text.replace(/\r\n/g, "\n");
+  const [firstLine, ...rest] = normalized.split("\n");
+  if (!cgptLineLooksLikeFileInstruction(firstLine)) {
+    return normalized;
+  }
+  return rest.join("\n");
+}
+
+function cgptLineLooksLikeFileInstruction(line) {
+  if (!line) return false;
+  return /^\s*(?:\/\/|#)?\s*file\s*:/.test(line);
+}
+
+function cgptGetSuggestedRelativeFilePath(parsedMetadata) {
+  if (parsedMetadata && parsedMetadata.filePath) {
+    return parsedMetadata.filePath;
+  }
+  return cgptGenerateDefaultRelativeFilePath();
+}
+
+function cgptGenerateDefaultRelativeFilePath() {
+  const now = new Date();
+  const pad = (value) => `${value}`.padStart(2, "0");
+  const timestamp =
+    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return `code-block-${timestamp}.txt`;
 }
 
 function cgptFlashButtonText(button, text) {
