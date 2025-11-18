@@ -32,8 +32,8 @@ function createFloatingPanel() {
 
   const templateRow = document.createElement("div");
   templateRow.style.display = "flex";
-  templateRow.style.gap = "4px";
-  templateRow.style.alignItems = "center";
+  templateRow.style.gap = "8px";
+  templateRow.style.alignItems = "flex-start";
 
   const templateLabel = document.createElement("span");
   templateLabel.textContent = "選択";
@@ -41,20 +41,29 @@ function createFloatingPanel() {
   templateLabel.style.minWidth = "32px";
   templateRow.appendChild(templateLabel);
 
-  const select = document.createElement("select");
-  select.style.flex = "1";
-  select.style.fontSize = "11px";
-  select.style.padding = "2px 4px";
-  select.style.borderRadius = "4px";
-  select.style.border = "1px solid rgba(255,255,255,0.2)";
-  select.style.background = "#343541";
-  select.style.color = "#fff";
-  templateRow.appendChild(select);
+  const templateListWrapper = document.createElement("div");
+  templateListWrapper.style.flex = "1";
+  templateListWrapper.style.border = "1px solid rgba(255,255,255,0.2)";
+  templateListWrapper.style.borderRadius = "6px";
+  templateListWrapper.style.background = "rgba(31, 41, 55, 0.9)";
+  templateListWrapper.style.padding = "6px";
+  templateListWrapper.style.maxHeight = "150px";
+  templateListWrapper.style.overflowY = "auto";
 
-  rebuildTemplateSelect(select);
-  select.addEventListener("change", () => {
-    cgptSetSelectedTemplateId(select.value);
-  });
+  const templateList = document.createElement("div");
+  templateList.style.display = "flex";
+  templateList.style.flexDirection = "column";
+  templateList.style.gap = "4px";
+  templateListWrapper.appendChild(templateList);
+  templateRow.appendChild(templateListWrapper);
+
+  const refreshTemplateList = () => {
+    rebuildTemplateList(templateList, (templateId) => {
+      cgptSetSelectedTemplateId(templateId);
+      refreshTemplateList();
+    });
+  };
+  refreshTemplateList();
 
   templateSection.appendChild(templateRow);
 
@@ -68,7 +77,7 @@ function createFloatingPanel() {
       return;
     }
     openTemplateEditor("edit", tpl.id, () => {
-      rebuildTemplateSelect(select);
+      refreshTemplateList();
     });
   });
   manageRow.appendChild(editBtn);
@@ -77,7 +86,7 @@ function createFloatingPanel() {
   addBtn.style.flex = "1";
   addBtn.addEventListener("click", () => {
     openTemplateEditor("new", null, () => {
-      rebuildTemplateSelect(select);
+      refreshTemplateList();
     });
   });
   manageRow.appendChild(addBtn);
@@ -350,6 +359,9 @@ function createButtonRow() {
 }
 
 function createLineCountRow(labelText, initialValue, onCommit) {
+  const MIN_LINES = 1;
+  const MAX_LINES = 200;
+
   const row = document.createElement("label");
   row.style.display = "flex";
   row.style.alignItems = "center";
@@ -362,10 +374,15 @@ function createLineCountRow(labelText, initialValue, onCommit) {
   span.style.flex = "1";
   row.appendChild(span);
 
+  const controls = document.createElement("div");
+  controls.style.display = "flex";
+  controls.style.alignItems = "center";
+  controls.style.gap = "4px";
+
   const input = document.createElement("input");
   input.type = "number";
-  input.min = "1";
-  input.max = "200";
+  input.min = `${MIN_LINES}`;
+  input.max = `${MAX_LINES}`;
   input.value = `${initialValue}`;
   input.style.width = "64px";
   input.style.borderRadius = "4px";
@@ -373,15 +390,56 @@ function createLineCountRow(labelText, initialValue, onCommit) {
   input.style.background = "#1f2937";
   input.style.color = "#fff";
   input.style.padding = "2px 4px";
+  input.style.textAlign = "center";
+
+  const createAdjustButton = (label) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.style.width = "28px";
+    button.style.height = "24px";
+    button.style.borderRadius = "4px";
+    button.style.border = "1px solid rgba(255,255,255,0.2)";
+    button.style.background = "rgba(55, 65, 81, 0.95)";
+    button.style.color = "#fff";
+    button.style.cursor = "pointer";
+    button.style.display = "flex";
+    button.style.alignItems = "center";
+    button.style.justifyContent = "center";
+    return button;
+  };
+
+  const clampValue = (value) => {
+    return Math.max(MIN_LINES, Math.min(MAX_LINES, value));
+  };
 
   const commitValue = () => {
-    const parsed = Math.max(1, Math.min(200, Number.parseInt(input.value, 10) || 1));
+    const parsed = clampValue(Number.parseInt(input.value, 10) || MIN_LINES);
     input.value = `${parsed}`;
     onCommit(parsed);
   };
+
+  const adjustValue = (delta) => {
+    const current = clampValue(Number.parseInt(input.value, 10) || MIN_LINES);
+    const nextValue = clampValue(current + delta);
+    if (nextValue === current) return;
+    input.value = `${nextValue}`;
+    onCommit(nextValue);
+  };
+
+  const decrementButton = createAdjustButton("-");
+  decrementButton.addEventListener("click", () => adjustValue(-1));
+  controls.appendChild(decrementButton);
+
   input.addEventListener("change", commitValue);
   input.addEventListener("blur", commitValue);
-  row.appendChild(input);
+  controls.appendChild(input);
+
+  const incrementButton = createAdjustButton("+");
+  incrementButton.addEventListener("click", () => adjustValue(1));
+  controls.appendChild(incrementButton);
+
+  row.appendChild(controls);
   return row;
 }
 
