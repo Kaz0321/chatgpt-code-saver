@@ -16,7 +16,6 @@ function cgptEnsureCodeBlockStyles() {
   style.textContent = `
 .${CGPT_CODE_WRAPPER_CLASS} {
   position: relative;
-  display: block;
 }
 .${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS} {
   border-bottom: 4px solid rgba(255, 255, 255, 0.25);
@@ -54,25 +53,10 @@ function cgptWrapPreWithRelativeContainer(pre) {
   wrapper.style.position = "relative";
   wrapper.dataset.cgptCodeWrapper = "1";
   wrapper.classList.add(CGPT_CODE_WRAPPER_CLASS);
-  const computedStyle = window.getComputedStyle
-    ? window.getComputedStyle(pre)
-    : null;
-  if (computedStyle) {
-    ["marginTop", "marginRight", "marginBottom", "marginLeft"].forEach((prop) => {
-      wrapper.style[prop] = computedStyle[prop];
-    });
-  } else if (pre.style && pre.style.margin) {
-    wrapper.style.margin = pre.style.margin;
-  }
   if (pre.parentNode) {
     pre.parentNode.insertBefore(wrapper, pre);
   }
   wrapper.appendChild(pre);
-  pre.style.margin = "0";
-  pre.style.marginTop = "0";
-  pre.style.marginRight = "0";
-  pre.style.marginBottom = "0";
-  pre.style.marginLeft = "0";
   return wrapper;
 }
 
@@ -86,13 +70,13 @@ function cgptGetCollapsibleElement(pre) {
 }
 
 function cgptRememberOriginalPreStyles(pre) {
-  const contentEl = cgptGetCollapsibleContentElement(pre);
-  if (!contentEl) return;
-  if (pre.dataset.cgptOriginalContentOverflow === undefined) {
-    pre.dataset.cgptOriginalContentOverflow = contentEl.style.overflow || "";
+  const collapsibleEl = cgptGetCollapsibleElement(pre);
+  if (!collapsibleEl) return;
+  if (pre.dataset.cgptOriginalOverflow === undefined) {
+    pre.dataset.cgptOriginalOverflow = collapsibleEl.style.overflow || "";
   }
-  if (pre.dataset.cgptOriginalContentMaxHeight === undefined) {
-    pre.dataset.cgptOriginalContentMaxHeight = contentEl.style.maxHeight || "";
+  if (pre.dataset.cgptOriginalMaxHeight === undefined) {
+    pre.dataset.cgptOriginalMaxHeight = collapsibleEl.style.maxHeight || "";
   }
 }
 
@@ -146,30 +130,40 @@ function cgptUpdateViewButtonStates(pre) {
   });
 }
 
-function cgptGetCollapsibleContentElement(pre) {
-  return pre;
+function cgptGetButtonOverlayOffset(pre) {
+  if (!pre) return 0;
+  if (typeof pre.cgptButtonOverlayOffset === "number") {
+    return pre.cgptButtonOverlayOffset;
+  }
+  const container = pre.cgptButtonContainer;
+  if (!container || typeof cgptCalculateButtonOverlayOffset !== "function") {
+    return 0;
+  }
+  const offset = cgptCalculateButtonOverlayOffset(container);
+  pre.cgptButtonOverlayOffset = offset;
+  return offset;
 }
 
 function cgptSetPreViewMode(pre, mode) {
   if (!pre || !cgptEnsureCollapsibleState(pre)) return;
-  const wrapperEl = cgptGetCollapsibleElement(pre);
-  const contentEl = cgptGetCollapsibleContentElement(pre);
-  if (!contentEl) return;
+  const collapsibleEl = cgptGetCollapsibleElement(pre);
+  if (!collapsibleEl) return;
   const viewSettings =
     typeof cgptGetViewSettings === "function" ? cgptGetViewSettings() : FALLBACK_VIEW_SETTINGS;
   pre.dataset.cgptViewMode = mode;
   if (mode === CGPT_VIEW_MODE.EXPANDED) {
-    contentEl.style.maxHeight = pre.dataset.cgptOriginalContentMaxHeight || "";
-    contentEl.style.overflow = pre.dataset.cgptOriginalContentOverflow || "";
-    cgptSetCollapsedVisualState(wrapperEl || contentEl, false);
+    collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
+    collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
+    cgptSetCollapsedVisualState(collapsibleEl, false);
   } else {
     const lineCount = viewSettings.compactLineCount;
-    const normalizedLines = Math.max(0, Number(lineCount) || 0);
+    const normalizedLines = Math.max(1, Number(lineCount) || 1);
     const lineHeight = cgptGetCodeLineHeight(pre);
-    const targetHeight = normalizedLines * lineHeight;
-    contentEl.style.maxHeight = `${targetHeight}px`;
-    contentEl.style.overflow = "hidden";
-    cgptSetCollapsedVisualState(wrapperEl || contentEl, true);
+    const buttonOverlayOffset = cgptGetButtonOverlayOffset(pre);
+    const targetHeight = normalizedLines * lineHeight + buttonOverlayOffset;
+    collapsibleEl.style.maxHeight = `${targetHeight}px`;
+    collapsibleEl.style.overflow = "hidden";
+    cgptSetCollapsedVisualState(collapsibleEl, true);
   }
   cgptUpdateViewButtonStates(pre);
 }
