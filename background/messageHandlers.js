@@ -2,19 +2,9 @@ const cgptMessageHandlers = {
   applyCodeBlock(message, _sender, sendResponse) {
     return cgptHandleApplyCodeBlock(message, sendResponse);
   },
-  chooseProjectFolder(_message, _sender, sendResponse) {
+  pickDownloadFolder(_message, _sender, sendResponse) {
     cgptPromptProjectFolderSelection((result) => {
-      if (!result.ok) {
-        sendResponse(result);
-        return;
-      }
-      cgptSetProjectFolderPath(result.folderPath, () => {
-        if (chrome.runtime.lastError) {
-          sendResponse({ ok: false, error: chrome.runtime.lastError.message });
-        } else {
-          sendResponse({ ok: true, folderPath: result.folderPath });
-        }
-      });
+      sendResponse(result);
     });
     return true;
   },

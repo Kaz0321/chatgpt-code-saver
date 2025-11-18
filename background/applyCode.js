@@ -79,9 +79,12 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
   const filePath = message.filePath;
   const content = message.content;
   const saveAs = Boolean(message.saveAs);
+  const overrideFolderPathRaw =
+    typeof message.overrideFolderPath === "string" ? message.overrideFolderPath : "";
   const rawFilePath = typeof filePath === "string" ? filePath : "";
   let relativeFilePath = rawFilePath;
   let absoluteFilePath = "";
+  let overrideFolderPath = "";
   if (typeof content !== "string") {
     const errMsg = "invalid_content";
     cgptAppendLog({
@@ -118,7 +121,26 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
     relativeFilePath = normalizedFilePath;
   }
 
-  cgptGetProjectFolderPath((folderPath) => {
+  if (overrideFolderPathRaw) {
+    const overrideValidation = cgptValidateProjectFolderPath(overrideFolderPathRaw);
+    if (!overrideValidation.ok) {
+      const errMsg = overrideValidation.error || "invalid_override_folder";
+      cgptAppendLog({
+        time: new Date().toISOString(),
+        kind: "apply",
+        ok: false,
+        filePath: rawFilePath,
+        filePathRelative: relativeFilePath,
+        filePathAbsolute: absoluteFilePath,
+        error: errMsg,
+      });
+      sendResponse({ ok: false, error: errMsg });
+      return false;
+    }
+    overrideFolderPath = overrideValidation.folderPath;
+  }
+
+  const startDownloadWithFolder = (folderPath) => {
     const targetPath = cgptBuildFullFilePath(folderPath, normalizedFilePath);
     absoluteFilePath = targetPath || "";
     const encoded = encodeURIComponent(content);
@@ -182,6 +204,15 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
         }
       }
     );
+  };
+
+  if (overrideFolderPath) {
+    startDownloadWithFolder(overrideFolderPath);
+    return true;
+  }
+
+  cgptGetProjectFolderPath((folderPath) => {
+    startDownloadWithFolder(folderPath);
   });
 
   return true;
