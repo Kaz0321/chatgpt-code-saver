@@ -78,14 +78,6 @@ function cgptCreateShrinkButtonElement() {
   return button;
 }
 
-function cgptCreateCollapseButtonElement() {
-  const button = cgptCreateBaseButtonElement("overlay");
-  button.textContent = "Collapse";
-  button.title = "Fold to the configured line count";
-  cgptApplyButtonVariant(button, "accent");
-  return button;
-}
-
 function cgptCreateExpandButtonElement() {
   const button = cgptCreateBaseButtonElement("overlay");
   button.textContent = "Expand";
@@ -282,10 +274,6 @@ function cgptFlashButtonText(button, text) {
 
 function cgptHandleShrinkButtonClick(pre) {
   cgptSetPreViewMode(pre, CGPT_VIEW_MODE.COMPACT);
-}
-
-function cgptHandleCollapseButtonClick(pre) {
-  cgptSetPreViewMode(pre, CGPT_VIEW_MODE.COLLAPSED);
 }
 
 function cgptHandleExpandButtonClick(pre) {

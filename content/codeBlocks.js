@@ -44,19 +44,14 @@ function tryDecorateSingleCodeBlock(code) {
     buttonContainer.appendChild(copyBtn);
 
     const shrinkBtn = cgptCreateShrinkButtonElement();
-    const collapseBtn = cgptCreateCollapseButtonElement();
     const expandBtn = cgptCreateExpandButtonElement();
     shrinkBtn.addEventListener("click", () => {
       cgptHandleShrinkButtonClick(pre);
-    });
-    collapseBtn.addEventListener("click", () => {
-      cgptHandleCollapseButtonClick(pre);
     });
     expandBtn.addEventListener("click", () => {
       cgptHandleExpandButtonClick(pre);
     });
     buttonContainer.appendChild(shrinkBtn);
-    buttonContainer.appendChild(collapseBtn);
     buttonContainer.appendChild(expandBtn);
 
     wrapper.appendChild(buttonContainer);
@@ -70,7 +65,7 @@ function tryDecorateSingleCodeBlock(code) {
     }
 
     cgptEnsureCollapsibleState(pre);
-    pre.cgptViewButtons = { shrinkBtn, collapseBtn, expandBtn };
+    pre.cgptViewButtons = { shrinkBtn, expandBtn };
     cgptSetPreViewMode(pre, CGPT_VIEW_MODE.COMPACT);
   }
 

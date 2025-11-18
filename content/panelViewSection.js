@@ -27,23 +27,6 @@ function createViewSection() {
 
   viewButtons.appendChild(
     createViewModeRow({
-      label: "Collapse All",
-      mode: "collapsed",
-      initialLineCount: settings.collapsedLineCount,
-      onLineCountCommit: (value) => {
-        if (typeof cgptUpdateViewSettings === "function") {
-          cgptUpdateViewSettings({ collapsedLineCount: value }, () => {
-            if (typeof cgptReapplyViewMode === "function") {
-              cgptReapplyViewMode("collapsed");
-            }
-          });
-        }
-      },
-    })
-  );
-
-  viewButtons.appendChild(
-    createViewModeRow({
       label: "Expand All",
       mode: "expanded",
     })
@@ -74,7 +57,6 @@ function createViewModeRow({ label, mode, initialLineCount, onLineCountCommit })
 function createViewModeButton(label, mode) {
   const variants = {
     compact: "accent",
-    collapsed: "accent",
     expanded: "accent",
   };
   const variant = variants[mode] || "secondary";
@@ -89,7 +71,7 @@ function getViewSettingsForPanel() {
   if (typeof cgptGetViewSettings === "function") {
     return cgptGetViewSettings();
   }
-  return { compactLineCount: 1, collapsedLineCount: 12 };
+  return { compactLineCount: 1 };
 }
 
 function applyViewModeToAll(mode) {

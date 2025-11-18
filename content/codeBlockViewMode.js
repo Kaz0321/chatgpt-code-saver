@@ -3,12 +3,10 @@ const CGPT_CODE_COLLAPSED_CLASS = "cgpt-code-wrapper--collapsed";
 let cgptCodeBlockStylesInjected = false;
 const CGPT_VIEW_MODE = {
   COMPACT: "compact",
-  COLLAPSED: "collapsed",
   EXPANDED: "expanded",
 };
 const FALLBACK_VIEW_SETTINGS = {
   compactLineCount: 1,
-  collapsedLineCount: 12,
 };
 
 function cgptEnsureCodeBlockStyles() {
@@ -80,6 +78,9 @@ function cgptRememberOriginalPreStyles(pre) {
   if (pre.dataset.cgptOriginalMaxHeight === undefined) {
     pre.dataset.cgptOriginalMaxHeight = collapsibleEl.style.maxHeight || "";
   }
+  if (pre.dataset.cgptOriginalPaddingTop === undefined) {
+    pre.dataset.cgptOriginalPaddingTop = collapsibleEl.style.paddingTop || "";
+  }
 }
 
 function cgptEnsureCollapsibleState(pre) {
@@ -122,7 +123,6 @@ function cgptUpdateViewButtonStates(pre) {
   const mode = cgptGetViewModeFromDataset(pre);
   const disabledStates = {
     shrinkBtn: mode === CGPT_VIEW_MODE.COMPACT,
-    collapseBtn: mode === CGPT_VIEW_MODE.COLLAPSED,
     expandBtn: mode === CGPT_VIEW_MODE.EXPANDED,
   };
   Object.keys(buttons).forEach((key) => {
@@ -157,16 +157,16 @@ function cgptSetPreViewMode(pre, mode) {
   if (mode === CGPT_VIEW_MODE.EXPANDED) {
     collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
     collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
+    collapsibleEl.style.paddingTop = pre.dataset.cgptOriginalPaddingTop || "";
     cgptSetCollapsedVisualState(collapsibleEl, false);
   } else {
-    const lineCount =
-      mode === CGPT_VIEW_MODE.COMPACT
-        ? viewSettings.compactLineCount
-        : viewSettings.collapsedLineCount;
-    const normalizedLines = Math.max(1, Number(lineCount) || 1);
+    const lineCount = viewSettings.compactLineCount;
+    const normalizedLines = Math.max(0, Number(lineCount) || 0);
     const lineHeight = cgptGetCodeLineHeight(pre);
     const buttonOverlayOffset = cgptGetButtonOverlayOffset(pre);
-    const targetHeight = normalizedLines * lineHeight + buttonOverlayOffset;
+    const paddingTop = buttonOverlayOffset > 0 ? `${buttonOverlayOffset}px` : "";
+    collapsibleEl.style.paddingTop = paddingTop;
+    const targetHeight = normalizedLines * lineHeight + Math.max(buttonOverlayOffset, 0);
     collapsibleEl.style.maxHeight = `${targetHeight}px`;
     collapsibleEl.style.overflow = "hidden";
     cgptSetCollapsedVisualState(collapsibleEl, true);
