@@ -22,3 +22,10 @@ function cgptGetNormalizedCodeText(code) {
   const text = code.innerText || code.textContent || "";
   return text.replace(/\r\n/g, "\n");
 }
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptParseCodeBlockMetadata,
+    cgptGetNormalizedCodeText,
+  };
+}
