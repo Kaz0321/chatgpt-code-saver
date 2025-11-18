@@ -241,6 +241,12 @@ function createProjectFolderSection() {
     input.value = folderPath || "";
   });
 
+  if (typeof cgptOnProjectFolderPathChanged === "function") {
+    cgptOnProjectFolderPathChanged((newFolderPath) => {
+      input.value = newFolderPath || "";
+    });
+  }
+
   const buttons = createButtonRow();
   const selectBtn = createPanelButton("フォルダ選択", "accent");
   selectBtn.style.flex = "1";
@@ -310,6 +316,12 @@ function requestProjectFolderSelection(input, button) {
     if (button) {
       button.disabled = false;
       button.textContent = originalText;
+    }
+    if (chrome.runtime && chrome.runtime.lastError) {
+      if (typeof showToast === "function") {
+        showToast(chrome.runtime.lastError.message || "フォルダ選択に失敗しました", "error");
+      }
+      return;
     }
     if (!response || !response.ok) {
       const errMsg = (response && response.error) || "フォルダ選択に失敗しました";
