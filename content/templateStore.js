@@ -48,52 +48,41 @@ function getSelectedTemplate() {
   return found || templates[0];
 }
 
-function rebuildTemplateList(listEl, onSelect) {
-  if (!listEl) return;
+function rebuildTemplateDropdown(selectEl) {
+  if (!selectEl) return;
 
-  while (listEl.firstChild) {
-    listEl.removeChild(listEl.firstChild);
+  while (selectEl.firstChild) {
+    selectEl.removeChild(selectEl.firstChild);
   }
 
   const templates = cgptGetTemplates();
-  const selectedId = cgptGetSelectedTemplateId();
+  let selectedId = cgptGetSelectedTemplateId();
 
   if (!Array.isArray(templates) || templates.length === 0) {
-    const empty = document.createElement("div");
-    empty.textContent = "テンプレートがありません";
-    empty.style.fontSize = "10px";
-    empty.style.color = "rgba(255,255,255,0.6)";
-    empty.style.padding = "4px";
-    listEl.appendChild(empty);
+    selectEl.disabled = true;
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = "テンプレートがありません";
+    emptyOption.selected = true;
+    selectEl.appendChild(emptyOption);
     return;
   }
 
+  selectEl.disabled = false;
+  const hasValidSelection = templates.some((tpl) => tpl.id === selectedId);
+  if (!hasValidSelection) {
+    selectedId = templates[0].id;
+    cgptSetSelectedTemplateId(selectedId);
+  }
+
   templates.forEach((tpl) => {
-    const item = document.createElement("button");
-    item.type = "button";
-    item.textContent = tpl.title;
-    item.style.display = "block";
-    item.style.width = "100%";
-    item.style.textAlign = "left";
-    item.style.padding = "4px 6px";
-    item.style.fontSize = "11px";
-    item.style.borderRadius = "4px";
-    item.style.border = "1px solid rgba(255,255,255,0.2)";
-    item.style.background =
-      tpl.id === selectedId ? "rgba(129, 140, 248, 0.35)" : "rgba(255,255,255,0.02)";
-    item.style.color = "#fff";
-    item.style.cursor = "pointer";
-
-    item.addEventListener("click", () => {
-      if (typeof onSelect === "function") {
-        onSelect(tpl.id);
-      } else {
-        cgptSetSelectedTemplateId(tpl.id);
-        rebuildTemplateList(listEl, onSelect);
-      }
-    });
-
-    listEl.appendChild(item);
+    const option = document.createElement("option");
+    option.value = tpl.id;
+    option.textContent = tpl.title;
+    if (tpl.id === selectedId) {
+      option.selected = true;
+    }
+    selectEl.appendChild(option);
   });
 }
 
