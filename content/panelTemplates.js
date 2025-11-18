@@ -13,27 +13,27 @@ function createTemplateSection() {
   templateLabel.style.minWidth = "32px";
   templateRow.appendChild(templateLabel);
 
-  const templateListWrapper = document.createElement("div");
-  templateListWrapper.style.flex = "1";
-  templateListWrapper.style.border = "1px solid rgba(255,255,255,0.2)";
-  templateListWrapper.style.borderRadius = "6px";
-  templateListWrapper.style.background = "rgba(31, 41, 55, 0.9)";
-  templateListWrapper.style.padding = "6px";
-  templateListWrapper.style.maxHeight = "150px";
-  templateListWrapper.style.overflowY = "auto";
+  const templateDropdown = document.createElement("select");
+  templateDropdown.style.flex = "1";
+  templateDropdown.style.border = "1px solid rgba(255,255,255,0.2)";
+  templateDropdown.style.borderRadius = "6px";
+  templateDropdown.style.background = "rgba(31, 41, 55, 0.9)";
+  templateDropdown.style.padding = "6px";
+  templateDropdown.style.color = "#fff";
+  templateDropdown.style.fontSize = "12px";
+  templateDropdown.style.height = "32px";
+  templateDropdown.style.cursor = "pointer";
+  templateRow.appendChild(templateDropdown);
 
-  const templateList = document.createElement("div");
-  templateList.style.display = "flex";
-  templateList.style.flexDirection = "column";
-  templateList.style.gap = "4px";
-  templateListWrapper.appendChild(templateList);
-  templateRow.appendChild(templateListWrapper);
+  templateDropdown.addEventListener("change", (event) => {
+    const templateId = event.target.value;
+    if (templateId) {
+      cgptSetSelectedTemplateId(templateId);
+    }
+  });
 
   const refreshTemplateList = () => {
-    rebuildTemplateList(templateList, (templateId) => {
-      cgptSetSelectedTemplateId(templateId);
-      refreshTemplateList();
-    });
+    rebuildTemplateDropdown(templateDropdown);
   };
   refreshTemplateList();
 
