@@ -118,11 +118,8 @@ function openLogViewer() {
         const ok = entry.ok;
         const kind = entry.kind || "apply";
         const relativePath = entry.filePathRelative || "";
-        let absolutePath = entry.filePathAbsolute || "";
         const fallbackPath = entry.filePath || "";
-        if (!relativePath && !absolutePath && fallbackPath) {
-          absolutePath = fallbackPath;
-        }
+        let absolutePath = entry.filePathAbsolute || fallbackPath || "";
         let pathLabel = "";
         if (relativePath && absolutePath) {
           pathLabel = `相対: ${relativePath} | 絶対: ${absolutePath}`;
