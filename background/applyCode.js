@@ -1,13 +1,18 @@
 function cgptHandleApplyCodeBlock(message, sendResponse) {
   const filePath = message.filePath;
   const content = message.content;
+  const rawFilePath = typeof filePath === "string" ? filePath : "";
+  let relativeFilePath = rawFilePath;
+  let absoluteFilePath = "";
   if (typeof content !== "string") {
     const errMsg = "invalid_content";
     cgptAppendLog({
       time: new Date().toISOString(),
       kind: "apply",
       ok: false,
-      filePath: filePath || "",
+      filePath: rawFilePath,
+      filePathRelative: relativeFilePath,
+      filePathAbsolute: absoluteFilePath,
       error: errMsg,
     });
     sendResponse({ ok: false, error: errMsg });
@@ -21,7 +26,9 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
       time: new Date().toISOString(),
       kind: "apply",
       ok: false,
-      filePath: filePath || "",
+      filePath: rawFilePath,
+      filePathRelative: relativeFilePath,
+      filePathAbsolute: absoluteFilePath,
       error: errMsg,
     });
     sendResponse({ ok: false, error: errMsg });
@@ -29,9 +36,13 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
   }
 
   const normalizedFilePath = validation.filePath;
+  if (typeof normalizedFilePath === "string") {
+    relativeFilePath = normalizedFilePath;
+  }
 
   cgptGetProjectFolderPath((folderPath) => {
     const targetPath = cgptBuildFullFilePath(folderPath, normalizedFilePath);
+    absoluteFilePath = targetPath || "";
     const encoded = encodeURIComponent(content);
     const url = "data:text/plain;charset=utf-8," + encoded;
 
@@ -52,6 +63,8 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
               kind: "apply",
               ok: false,
               filePath: targetPath,
+              filePathRelative: relativeFilePath,
+              filePathAbsolute: absoluteFilePath,
               error: err,
               downloadId: null,
             },
@@ -67,6 +80,8 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
               kind: "apply",
               ok: true,
               filePath: targetPath,
+              filePathRelative: relativeFilePath,
+              filePathAbsolute: absoluteFilePath,
               error: "",
               downloadId,
             },

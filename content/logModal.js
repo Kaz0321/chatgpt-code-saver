@@ -117,12 +117,27 @@ function openLogViewer() {
 
         const ok = entry.ok;
         const kind = entry.kind || "apply";
-        const filePath = entry.filePath || "";
+        const relativePath = entry.filePathRelative || "";
+        let absolutePath = entry.filePathAbsolute || "";
+        const fallbackPath = entry.filePath || "";
+        if (!relativePath && !absolutePath && fallbackPath) {
+          absolutePath = fallbackPath;
+        }
+        let pathLabel = "";
+        if (relativePath && absolutePath) {
+          pathLabel = `相対: ${relativePath} | 絶対: ${absolutePath}`;
+        } else if (relativePath) {
+          pathLabel = `相対: ${relativePath}`;
+        } else if (absolutePath) {
+          pathLabel = `絶対: ${absolutePath}`;
+        } else if (fallbackPath) {
+          pathLabel = fallbackPath;
+        }
         const error = entry.error || "";
 
         const statusLabel = ok ? "[OK]" : "[ERROR]";
 
-        info.textContent = `${timeStr} ${statusLabel} (${kind}) ${filePath}${
+        info.textContent = `${timeStr} ${statusLabel} (${kind}) ${pathLabel}${
           error ? " - " + error : ""
         }`;
         info.style.color = ok ? "#a7f3d0" : "#fecaca";
