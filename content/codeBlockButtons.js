@@ -222,3 +222,15 @@ function cgptRefreshSaveButtonState(pre, code, metadataOverride) {
   cgptApplyButtonVariant(saveButton, hasMetadata ? "primary" : "warning");
   pre.dataset.cgptHasMetadata = hasMetadata ? "1" : "0";
 }
+
+function cgptCalculateButtonOverlayOffset(container) {
+  if (!container) return 0;
+  const rect =
+    typeof container.getBoundingClientRect === "function"
+      ? container.getBoundingClientRect()
+      : null;
+  const height = rect && rect.height ? rect.height : container.offsetHeight || 0;
+  const topOffset = parseFloat(container.style.top || "0") || 0;
+  const SAFE_MARGIN_PX = 8;
+  return Math.max(0, height + topOffset + SAFE_MARGIN_PX);
+}
