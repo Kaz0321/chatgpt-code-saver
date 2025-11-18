@@ -3,7 +3,7 @@ function createLogSection() {
   logSection.appendChild(createSectionLabel("履歴・ログ"));
   const logButtons = createButtonRow();
 
-  const chatLogBtn = createPanelButton("チャットログ", "accent");
+  const chatLogBtn = createPanelButton("Chat Log", "accent");
   chatLogBtn.style.flex = "1";
   chatLogBtn.addEventListener("click", () => {
     if (typeof openChatLogModal === "function") {
@@ -14,7 +14,7 @@ function createLogSection() {
   });
   logButtons.appendChild(chatLogBtn);
 
-  const historyBtn = createPanelButton("保存ログ", "secondary");
+  const historyBtn = createPanelButton("Save Log", "secondary");
   historyBtn.style.flex = "1";
   historyBtn.addEventListener("click", () => {
     openLogViewer();

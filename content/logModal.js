@@ -40,7 +40,7 @@ function openLogViewer() {
     headerRow.style.alignItems = "center";
 
     const title = document.createElement("div");
-    title.textContent = "保存ログ";
+    title.textContent = "Save Log";
     title.style.fontWeight = "bold";
     headerRow.appendChild(title);
 
@@ -49,37 +49,45 @@ function openLogViewer() {
     headerButtons.style.gap = "8px";
 
     const clearBtn = document.createElement("button");
-    clearBtn.textContent = "ログをクリア";
+    clearBtn.textContent = "Clear Logs";
     clearBtn.style.fontSize = "11px";
     clearBtn.style.padding = "4px 8px";
     clearBtn.style.borderRadius = "4px";
     clearBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-    clearBtn.style.background = "#b00020";
-    clearBtn.style.color = "#fff";
     clearBtn.style.cursor = "pointer";
+    if (typeof cgptApplySharedButtonVariant === "function") {
+      cgptApplySharedButtonVariant(clearBtn, "warning");
+    } else {
+      clearBtn.style.background = "#b00020";
+      clearBtn.style.color = "#fff";
+    }
     clearBtn.addEventListener("click", () => {
-      if (!confirm("ログをすべて削除しますか？")) return;
+      if (!confirm("Clear all logs?")) return;
       chrome.runtime.sendMessage({ type: "clearLogs" }, (res2) => {
         if (!res2 || !res2.ok) {
           showToast("ログの削除に失敗しました。", "error");
           return;
         }
         list.innerHTML = "";
-        list.appendChild(document.createTextNode("ログはありません。"));
+        list.appendChild(document.createTextNode("No logs yet."));
         showToast("ログを削除しました。", "success");
       });
     });
     headerButtons.appendChild(clearBtn);
 
     const closeBtn = document.createElement("button");
-    closeBtn.textContent = "閉じる";
+    closeBtn.textContent = "Close";
     closeBtn.style.fontSize = "11px";
     closeBtn.style.padding = "4px 8px";
     closeBtn.style.borderRadius = "4px";
     closeBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-    closeBtn.style.background = "#444";
-    closeBtn.style.color = "#fff";
     closeBtn.style.cursor = "pointer";
+    if (typeof cgptApplySharedButtonVariant === "function") {
+      cgptApplySharedButtonVariant(closeBtn, "muted");
+    } else {
+      closeBtn.style.background = "#444";
+      closeBtn.style.color = "#fff";
+    }
     closeBtn.addEventListener("click", () => {
       document.body.removeChild(overlay);
     });
@@ -100,7 +108,7 @@ function openLogViewer() {
     list.style.whiteSpace = "pre-wrap";
 
     if (logs.length === 0) {
-      list.textContent = "ログはありません。";
+      list.textContent = "No logs yet.";
     } else {
       logs.forEach((entry) => {
         const line = document.createElement("div");
@@ -142,14 +150,18 @@ function openLogViewer() {
 
         if (ok && typeof entry.downloadId === "number") {
           const openBtn = document.createElement("button");
-          openBtn.textContent = "開く";
+          openBtn.textContent = "Open";
           openBtn.style.fontSize = "10px";
           openBtn.style.padding = "2px 6px";
           openBtn.style.borderRadius = "4px";
           openBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-          openBtn.style.background = "rgba(59,130,246,0.2)";
-          openBtn.style.color = "#bfdbfe";
           openBtn.style.cursor = "pointer";
+          if (typeof cgptApplySharedButtonVariant === "function") {
+            cgptApplySharedButtonVariant(openBtn, "accent");
+          } else {
+            openBtn.style.background = "rgba(59,130,246,0.2)";
+            openBtn.style.color = "#bfdbfe";
+          }
           openBtn.addEventListener("click", () => {
             openBtn.disabled = true;
             chrome.runtime.sendMessage(

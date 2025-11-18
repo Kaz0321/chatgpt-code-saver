@@ -30,9 +30,9 @@ function createViewSection() {
   viewSection.appendChild(collapsedRow);
 
   const viewButtons = createButtonRow();
-  viewButtons.appendChild(createViewModeButton("全て縮小", "compact"));
-  viewButtons.appendChild(createViewModeButton("全て折りたたみ", "collapsed"));
-  viewButtons.appendChild(createViewModeButton("全て展開", "expanded"));
+  viewButtons.appendChild(createViewModeButton("Compact All", "compact"));
+  viewButtons.appendChild(createViewModeButton("Collapse All", "collapsed"));
+  viewButtons.appendChild(createViewModeButton("Expand All", "expanded"));
   viewSection.appendChild(viewButtons);
   return viewSection;
 }

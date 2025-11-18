@@ -45,7 +45,7 @@ function createTemplateSection() {
 function createTemplateActionRow(refreshTemplateList) {
   const manageRow = createButtonRow();
 
-  const editBtn = createPanelButton("編集", "success");
+  const editBtn = createPanelButton("Edit", "success");
   editBtn.style.flex = "1";
   editBtn.addEventListener("click", () => {
     const tpl = getSelectedTemplate();
@@ -59,7 +59,7 @@ function createTemplateActionRow(refreshTemplateList) {
   });
   manageRow.appendChild(editBtn);
 
-  const addBtn = createPanelButton("追加", "success");
+  const addBtn = createPanelButton("Add", "success");
   addBtn.style.flex = "1";
   addBtn.addEventListener("click", () => {
     openTemplateEditor("new", null, () => {
@@ -68,7 +68,7 @@ function createTemplateActionRow(refreshTemplateList) {
   });
   manageRow.appendChild(addBtn);
 
-  const insertBtn = createPanelButton("貼付け", "accent");
+  const insertBtn = createPanelButton("Insert", "accent");
   insertBtn.style.flex = "1";
   insertBtn.addEventListener("click", () => {
     const tpl = getSelectedTemplate();

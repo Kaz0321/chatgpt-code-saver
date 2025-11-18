@@ -1,6 +1,6 @@
 const CHAT_LOG_PREVIEW_LINE_LIMIT = 1;
-const CHAT_LOG_CODE_PLACEHOLDER_TEXT =
-  "コードは省略されています。ジャンプで原文を確認してください。";
+const CHAT_LOG_CODE_PREVIEW_LINE_LIMIT = 60;
+const CHAT_LOG_CODE_PREVIEW_MAX_HEIGHT = 200;
 
 function openChatLogModal() {
   if (document.getElementById("cgpt-helper-chatlog-modal")) return;
@@ -50,7 +50,7 @@ function openChatLogModal() {
   headerRow.style.alignItems = "center";
 
   const title = document.createElement("div");
-  title.textContent = "チャットログ";
+  title.textContent = "Chat Log";
   title.style.fontWeight = "bold";
   title.style.fontSize = "16px";
   headerRow.appendChild(title);
@@ -59,15 +59,7 @@ function openChatLogModal() {
   headerButtons.style.display = "flex";
   headerButtons.style.gap = "8px";
 
-  const closeBtn = document.createElement("button");
-  closeBtn.textContent = "閉じる";
-  closeBtn.style.fontSize = "12px";
-  closeBtn.style.padding = "4px 8px";
-  closeBtn.style.borderRadius = "4px";
-  closeBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-  closeBtn.style.background = "#444";
-  closeBtn.style.color = "#fff";
-  closeBtn.style.cursor = "pointer";
+  const closeBtn = createChatLogButton("Close", "muted");
   closeBtn.addEventListener("click", closeModal);
   headerButtons.appendChild(closeBtn);
 
@@ -83,7 +75,7 @@ function openChatLogModal() {
 
   if (userEntries.length === 0) {
     const empty = document.createElement("div");
-    empty.textContent = "自分のチャット履歴がまだ見つかりません。";
+    empty.textContent = "No user messages found.";
     empty.style.color = "#9ca3af";
     list.appendChild(empty);
   } else {
@@ -108,18 +100,10 @@ function openChatLogModal() {
       info.style.flex = "1";
       info.style.fontSize = "12px";
       info.style.color = "#d1d5db";
-      info.textContent = `${formatChatLogTimestamp(entry.timestamp)} に送信したメッセージ`;
+      info.textContent = `Sent ${formatChatLogTimestamp(entry.timestamp)}`;
       header.appendChild(info);
 
-      const jumpBtn = document.createElement("button");
-      jumpBtn.textContent = "ジャンプ";
-      jumpBtn.style.fontSize = "11px";
-      jumpBtn.style.padding = "3px 8px";
-      jumpBtn.style.borderRadius = "4px";
-      jumpBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-      jumpBtn.style.background = "rgba(59,130,246,0.2)";
-      jumpBtn.style.color = "#bfdbfe";
-      jumpBtn.style.cursor = "pointer";
+      const jumpBtn = createChatLogButton("Jump", "accent", "sm");
       jumpBtn.addEventListener("click", () => {
         closeModal();
         if (typeof highlightChatMessageElement === "function") {
@@ -137,7 +121,7 @@ function openChatLogModal() {
       messageBody.style.fontSize = "13px";
       messageBody.style.lineHeight = "1.5";
       messageBody.style.color = "#f3f4f6";
-      const messageText = entry.text || "(テキストなし)";
+      const messageText = entry.text || "(no text)";
       messageBody.textContent = createSingleLinePreview(
         messageText,
         CHAT_LOG_PREVIEW_LINE_LIMIT
@@ -153,7 +137,7 @@ function openChatLogModal() {
         blockHeader.style.gap = "8px";
 
         const blockHeaderLabel = document.createElement("div");
-        blockHeaderLabel.textContent = `対応するコードブロック (${assistantBlocks.length})`;
+        blockHeaderLabel.textContent = `Code blocks (${assistantBlocks.length})`;
         blockHeaderLabel.style.fontSize = "12px";
         blockHeaderLabel.style.color = "#a5b4fc";
         blockHeader.appendChild(blockHeaderLabel);
@@ -210,44 +194,19 @@ function openChatLogModal() {
           blockActionWrapper.style.display = "flex";
           blockActionWrapper.style.gap = "6px";
 
-          const jumpBtn = document.createElement("button");
-          jumpBtn.textContent = "ジャンプ";
-          jumpBtn.style.fontSize = "11px";
-          jumpBtn.style.padding = "2px 8px";
-          jumpBtn.style.borderRadius = "4px";
-          jumpBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-          jumpBtn.style.background = "rgba(59,130,246,0.2)";
-          jumpBtn.style.color = "#bfdbfe";
-          jumpBtn.style.cursor = "pointer";
+          const jumpBtn = createChatLogButton("Jump", "accent", "sm");
           jumpBtn.addEventListener("click", () => {
             closeModal();
             cgptJumpToCodeBlock(block.element);
           });
           blockActionWrapper.appendChild(jumpBtn);
 
-          const downloadBtn = document.createElement("button");
-          downloadBtn.textContent = "ダウンロード";
-          downloadBtn.style.fontSize = "11px";
-          downloadBtn.style.padding = "2px 8px";
-          downloadBtn.style.borderRadius = "4px";
-          downloadBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-          downloadBtn.style.background = "rgba(16,185,129,0.2)";
-          downloadBtn.style.color = "#6ee7b7";
-          downloadBtn.style.cursor = "pointer";
-          downloadBtn.addEventListener("click", () => {
-            downloadBtn.disabled = true;
-            triggerChatLogDownload(block.filePath, block.content, () => {
-              downloadBtn.disabled = false;
-            });
-          });
-          blockActionWrapper.appendChild(downloadBtn);
-
           blockHeaderRow.appendChild(blockActionWrapper);
 
           blockWrapper.appendChild(blockHeaderRow);
 
-          const codePlaceholder = createCodePlaceholderElement();
-          blockWrapper.appendChild(codePlaceholder);
+          const codePreview = createCodePreviewElement(block);
+          blockWrapper.appendChild(codePreview);
 
           card.appendChild(blockWrapper);
         });
@@ -260,7 +219,7 @@ function openChatLogModal() {
       );
       if (assistantUrls.length > 0) {
         const urlHeader = document.createElement("div");
-        urlHeader.textContent = `提供されたリンク (${assistantUrls.length})`;
+        urlHeader.textContent = `Links Provided (${assistantUrls.length})`;
         urlHeader.style.fontSize = "12px";
         urlHeader.style.color = "#7dd3fc";
         card.appendChild(urlHeader);
@@ -303,15 +262,7 @@ function openChatLogModal() {
 
           urlHeaderRow.appendChild(urlLabelWrapper);
 
-          const openBtn = document.createElement("button");
-          openBtn.textContent = "リンクを開く";
-          openBtn.style.fontSize = "11px";
-          openBtn.style.padding = "2px 8px";
-          openBtn.style.borderRadius = "4px";
-          openBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-          openBtn.style.background = "rgba(59,130,246,0.2)";
-          openBtn.style.color = "#bfdbfe";
-          openBtn.style.cursor = "pointer";
+          const openBtn = createChatLogButton("Open Link", "accent", "sm");
           openBtn.addEventListener("click", () => {
             window.open(link.url, "_blank", "noopener,noreferrer");
           });
@@ -442,30 +393,22 @@ function triggerChatLogDownload(filePath, content, onDone) {
     (res) => {
       callback();
       if (!res || !res.ok) {
-        const errMsg = (res && res.error) || "ダウンロードに失敗しました";
+        const errMsg = (res && res.error) || "Failed to download";
         if (typeof showToast === "function") {
           showToast(errMsg, "error");
         } else {
           alert(errMsg);
         }
       } else if (typeof showToast === "function") {
-        showToast(`ダウンロードを開始しました: ${filePath}`, "success");
+        showToast(`Started download: ${filePath}`, "success");
       }
     }
   );
 }
 
 function createBatchDownloadButton(blocks) {
-  const button = document.createElement("button");
-  button.textContent = "まとめてDL";
-  button.style.fontSize = "11px";
-  button.style.padding = "3px 10px";
-  button.style.borderRadius = "4px";
-  button.style.border = "1px solid rgba(255,255,255,0.3)";
-  button.style.background = "rgba(16,185,129,0.2)";
-  button.style.color = "#6ee7b7";
-  button.style.cursor = blocks.length ? "pointer" : "not-allowed";
-  button.disabled = !blocks.length;
+  const button = createChatLogButton("Download All", "success", "sm");
+  setChatLogButtonDisabled(button, !blocks.length);
 
   if (!blocks.length) {
     return button;
@@ -473,32 +416,82 @@ function createBatchDownloadButton(blocks) {
 
   button.addEventListener("click", async () => {
     if (button.disabled) return;
-    button.disabled = true;
+    setChatLogButtonDisabled(button, true);
     const originalText = button.textContent;
-    button.textContent = "DL中...";
+    button.textContent = "Downloading...";
 
     try {
       await downloadCodeBlocksSequentially(blocks);
     } finally {
-      button.disabled = false;
       button.textContent = originalText;
+      setChatLogButtonDisabled(button, false);
     }
   });
 
   return button;
 }
 
-function createCodePlaceholderElement() {
-  const placeholder = document.createElement("div");
-  placeholder.textContent = CHAT_LOG_CODE_PLACEHOLDER_TEXT;
-  placeholder.style.fontSize = "12px";
-  placeholder.style.fontStyle = "italic";
-  placeholder.style.color = "#9ca3af";
-  placeholder.style.padding = "6px";
-  placeholder.style.borderRadius = "4px";
-  placeholder.style.border = "1px dashed #374151";
-  placeholder.style.background = "#030712";
-  return placeholder;
+function createCodePreviewElement(block) {
+  const preview = document.createElement("pre");
+  preview.textContent = buildCodePreviewText(block && block.content);
+  preview.style.fontSize = "12px";
+  preview.style.lineHeight = "1.4";
+  preview.style.color = "#e5e7eb";
+  preview.style.padding = "6px";
+  preview.style.borderRadius = "4px";
+  preview.style.border = "1px solid #374151";
+  preview.style.background = "#030712";
+  preview.style.margin = "0";
+  preview.style.maxHeight = `${CHAT_LOG_CODE_PREVIEW_MAX_HEIGHT}px`;
+  preview.style.overflow = "auto";
+  preview.style.whiteSpace = "pre";
+  preview.style.fontFamily = "Consolas, Monaco, 'Courier New', monospace";
+  return preview;
+}
+
+function buildCodePreviewText(content) {
+  if (!content) {
+    return "(no code)";
+  }
+  const normalized = String(content).replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+  if (lines.length <= CHAT_LOG_CODE_PREVIEW_LINE_LIMIT) {
+    return normalized;
+  }
+  const previewLines = lines.slice(0, CHAT_LOG_CODE_PREVIEW_LINE_LIMIT);
+  previewLines.push("...");
+  return previewLines.join("\n");
+}
+
+function createChatLogButton(label, variant = "secondary", size = "md") {
+  const button = document.createElement("button");
+  button.textContent = label;
+  button.style.fontSize = size === "sm" ? "11px" : "12px";
+  button.style.padding = size === "sm" ? "2px 8px" : "4px 10px";
+  button.style.borderRadius = "4px";
+  button.style.border = "1px solid rgba(255,255,255,0.3)";
+  button.style.cursor = "pointer";
+  button.style.transition = "opacity 0.2s ease";
+  if (typeof cgptApplySharedButtonVariant === "function") {
+    cgptApplySharedButtonVariant(button, variant);
+  } else {
+    const fallback = {
+      accent: "#2563eb",
+      success: "#059669",
+      muted: "#4b5563",
+      secondary: "#374151",
+    };
+    button.style.background = fallback[variant] || fallback.secondary;
+    button.style.color = "#fff";
+  }
+  return button;
+}
+
+function setChatLogButtonDisabled(button, disabled) {
+  if (!button) return;
+  button.disabled = disabled;
+  button.style.opacity = disabled ? "0.5" : "1";
+  button.style.cursor = disabled ? "not-allowed" : "pointer";
 }
 
 function downloadCodeBlocksSequentially(blocks) {

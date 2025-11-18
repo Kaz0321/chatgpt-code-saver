@@ -4,17 +4,17 @@ function cgptParseCodeBlockMetadata(code) {
   const lines = text.split("\n");
   if (!lines.length) return null;
 
-  const firstLine = lines[0].replace(/^\ufeff/, "");
+  const firstLineRaw = (lines[0] || "").replace(/^\ufeff/, "");
   const match =
-    firstLine.trim().match(/^\/\/\s*file:\s*(.+)$/i) ||
-    firstLine.trim().match(/^#\s*file:\s*(.+)$/i);
+    firstLineRaw.trim().match(/^\/\/\s*file:\s*(.+)$/i) ||
+    firstLineRaw.trim().match(/^#\s*file:\s*(.+)$/i);
   if (!match) return null;
 
   const filePath = match[1].trim();
   if (!filePath) return null;
 
   const content = lines.slice(1).join("\n");
-  return { filePath, content };
+  return { filePath, content, metadataLine: firstLineRaw };
 }
 
 function cgptGetNormalizedCodeText(code) {
