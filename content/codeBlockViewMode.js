@@ -19,6 +19,11 @@ function cgptEnsureCodeBlockStyles() {
 .${CGPT_CODE_WRAPPER_CLASS} {
   position: relative;
 }
+.${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS} {
+  border-bottom: 4px solid rgba(255, 255, 255, 0.25);
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
 .${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS}::before {
   content: "";
   position: absolute;
