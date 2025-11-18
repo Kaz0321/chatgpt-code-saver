@@ -1,160 +1,46 @@
 # gpt-code-saver-extension
 
-Chrome 拡張「gpt-code-saver-extension」のソースです。ChatGPT が生成したコードブロックの 1 行目に `// file: path/to/file.ext` または `# file: path/to/file.ext` を記述すると、ボタン 1 つでローカル プロジェクトに直接保存できます。さらに、ChatGPT 入力欄に貼り付けるテンプレートの管理・貼り付け・編集 UI や、チャット履歴の収集・参照 UI も提供します。v0.0.3 ではコードブロック装飾ロジック・ビュー切替・保存ボタン処理を責務ごとにファイル分割し、背景とコンテンツの双方から共有できるファイルパスバリデータを導入しました。
+ChatGPT のコードブロックからローカル プロジェクトへ安全・確実に保存できる Chrome 拡張機能です。コードの 1 行目に `// file: path/to/file.ext` または `# file: path/to/file.ext` を書くだけで、保存先を迷わず即座にファイルへ反映できます。テンプレート管理やチャット履歴ビューも備え、ChatGPT を使った開発フローを丸ごと効率化します。
 
-## 主な機能
-- ✅ **コードブロックの自動保存** – `Apply to project` ボタンで `chrome.downloads` API を利用し、指定したファイルパスに上書き保存します。
-- ✅ **保存(指定)で OS の保存ダイアログを使用** – `保存(指定)` ボタンから `chrome.downloads` の `saveAs` ダイアログを開き、任意の保存先を選択できます。
-- ✅ **保存ログの記録・閲覧** – 成功／失敗を `chrome.storage.local` に保存し、UI モーダルから参照・削除できます。
-- ✅ **テンプレート管理パネル** – ChatGPT の画面右下にフローティング パネルを追加し、テンプレートの追加・編集・削除・貼り付けを行えます。
-- ✅ **テンプレート同期** – テンプレートは `chrome.storage.sync` に保存され、ブラウザ間で同期されます。
-- ✅ **保存ログ／再ダウンロード** – `chrome.storage.local` に保存したログをモーダルで参照し、失敗時の再実行や `chrome.downloads.open` によるファイルオープンが行えます。
-- ✅ **チャットログタイムライン** – `chatLogTracker` がユーザーとアシスタントの発話を追跡し、モーダルからコードブロック単位でジャンプや即時ダウンロードができます。
-- ✅ **拡張機能リロード通知** – バックグラウンドの更新時にトースト通知で知らせます。
+> 開発者向けの詳細なアーキテクチャやメッセージ フローは [DEVELOPERS.md](DEVELOPERS.md) を参照してください。
 
-## セットアップ & インストール
-1. このリポジトリをクローンまたは ZIP で取得し、任意のディレクトリに展開します。
-2. Chrome で `chrome://extensions/` を開き、右上の **デベロッパーモード** を有効にします。
+## 特徴
+- **ワンクリック保存** – `Apply to project` ボタンから `chrome.downloads` API を呼び出し、指定パスに上書き保存します。
+- **保存ダイアログ対応** – `保存(指定)` ボタンで OS 標準の保存ダイアログを開き、任意の保存先を選べます。
+- **保存ログ & 再実行** – 成否を `chrome.storage.local` に記録し、モーダルから履歴参照や再ダウンロードが可能です。
+- **テンプレート管理** – 右下のフローティング パネルでテンプレートの追加・編集・貼り付けが行え、`chrome.storage.sync` を介して同期されます。
+- **チャットログタイムライン** – 会話の発言とコードブロックを追跡し、履歴モーダルから該当メッセージへジャンプしたり即ダウンロードできます。
+- **拡張リロード通知** – バックグラウンド更新をトーストで通知し、状態のずれを防ぎます。
+
+## インストール手順
+1. このリポジトリを ZIP で取得するか `git clone` します。
+2. Chrome で `chrome://extensions/` を開き、右上の **デベロッパーモード** をオンにします。
 3. **パッケージ化されていない拡張機能を読み込む** をクリックし、展開したディレクトリを選択します。
-4. ChatGPT (`https://chat.openai.com/` または `https://chatgpt.com/`) を開き、右下に表示されるヘルパーパネルとコードブロックの `Apply to project` ボタンを確認します。
+4. ChatGPT ( `https://chat.openai.com/` または `https://chatgpt.com/` ) を開き、右下のヘルパーパネルとコードブロックの `Apply to project` ボタンが表示されることを確認します。
 
-> ビルド ステップは不要です。`background/` や `content/` 以下のファイルがそのまま読み込まれます。
+> ビルド工程は不要です。`background/` と `content/` 直下のファイルがそのまま読み込まれます。
 
 ## 使い方
 ### コードブロックを保存する
-1. ChatGPT にコードの生成を依頼するとき、**必ず 1 行目に保存先パスを記述**するようプロンプトします。
-2. 回答のコードブロック右上に追加される **Apply to project** ボタンを押すと、バックグラウンド サービスワーカーが `chrome.downloads.download` を実行してローカル ファイルに上書き保存します。`保存(指定)` ボタンを押すと OS の保存ダイアログが開き、任意のパスに保存できます。
-3. 成功／失敗は画面下部のトーストとログに記録されます。ログはパネルの「ログ」ボタンから参照できます。
-4. ヘルパーパネルの「保存オプション」で「保存時に1行目の file: 行を削除」を有効にすると、`保存`/`保存(指定)` でメタデータ行を除去して保存できます。
+1. ChatGPT への依頼時に、**生成コードの 1 行目へ `file:` 付きの保存先パスを含めるよう促します**。
+2. 回答のコードブロック右上に表示される **Apply to project** を押すと、バックグラウンドが `chrome.downloads.download` を実行してローカル ファイルに保存します。
+3. `保存(指定)` で OS の保存ダイアログを開き、任意のパスを選択できます。
+4. 成功／失敗は画面下部のトーストと保存ログに記録され、後からログ モーダルで確認できます。
+5. ヘルパーパネルの「保存オプション」から「保存時に1行目の file: 行を削除」を有効にすると、メタデータ行を除いて保存できます。
 
-### テンプレート パネルを使う
-1. 「テンプレ」ドロップダウンからテンプレートを選択し、「選択テンプレ貼り付け」で ChatGPT 入力欄に貼り付けます。
-2. 「編集」「追加」ボタンでテンプレート モーダルを開き、タイトルと内容を編集します。保存すると `chrome.storage.sync` に永続化されます。
-3. 拡張が更新された直後は `reloadNotifier` がトースト通知でサービスワーカーの再読み込み完了を知らせます。
+### テンプレート パネル
+1. 右下パネルの「テンプレ」ドロップダウンでテンプレートを選び、「選択テンプレ貼り付」で ChatGPT 入力欄に挿入します。
+2. 「編集」または「追加」からテンプレート モーダルを開き、タイトルと本文を編集します。保存内容はブラウザ間で同期されます。
 
-### チャットログをたどる
-1. 右下パネルの「チャットログ」ボタンからモーダルを開き、`chatLogTracker` が収集したユーザー発話一覧を表示します。
-2. 各カード内の「ジャンプ」で元のメッセージへスクロールし、ハイライト表示させます。
-3. 返信に含まれるコードブロックはファイルパスごとに抽出され、「ダウンロード」で即座に `applyCodeBlock` のフローを呼び出せます。
+### チャットログの活用
+1. パネルの「チャットログ」ボタンからモーダルを開き、ユーザー／アシスタントの発話履歴を一覧表示します。
+2. 各カードの「ジャンプ」で元メッセージへスクロールし、ハイライトを表示します。
+3. コードブロック単位に抽出されたファイルへ直接ダウンロード操作を実行できます。
 
-## アーキテクチャ
-```
-manifest.json (MV3)
-├─ background/
-│  ├─ index.js          … ルート初期化。onInstalled 登録とメッセージハンドラ設定。
-│  ├─ applyCode.js      … ダウンロード API を呼び出して保存＆ログを記録。
-│  ├─ logStore.js       … chrome.storage.local でログの追加・取得・削除。
-│  ├─ templateStore.js  … chrome.storage.sync でテンプレートを取得・保存。
-│  └─ messageHandlers.js … type ごとの runtime メッセージハンドラを集約。
-│  └─ reloadState.js    … 拡張の再読込状態を管理し、初回起動で更新。
-├─ shared/
-│  └─ filePathValidation.js … 背景・コンテンツ共通のファイルパス検証ロジック。
-└─ content/
-   ├─ init.js           … 初期化エントリ。テンプレ読込→UI生成→コード監視。
-   ├─ state.js          … テンプレ配列/選択 ID を集約管理するアクセサ群。
-   ├─ saveOptions.js    … 保存時のメタデータ除去フラグを保持。
-   ├─ chatInput.js      … ChatGPT 入力欄の検出とテキスト挿入ユーティリティ。
-   ├─ templateStore.js  … テンプレの同期、貼り付けコマンドの調停役。
-   ├─ templateEditor.js … モーダル UI と CRUD 操作。
-   ├─ panel.js          … 画面右下のフローティング パネル。
-   ├─ codeBlockMetadata.js … コードブロック先頭の `file:` メタデータを解析。
-   ├─ codeBlockViewMode.js … ラップ要素生成、行数制御、ビュー切替処理。
-   ├─ codeBlockButtons.js … 保存/コピー/表示切替ボタン生成とハンドラ群。
-   ├─ codeBlocks.js     … `pre code` 装飾のエントリ。各責務モジュールを連携。
-   ├─ logModal.js       … 保存ログのモーダル表示＋ファイルオープン。
-   ├─ chatLogTracker.js … ユーザー／アシスタント発話とコードブロックを追跡。
-   ├─ chatLogModal.js   … チャット履歴と対応コードブロックを一覧化。
-   ├─ toast.js          … 軽量トースト通知。
-   └─ reloadNotifier.js … 拡張リロード通知の表示。
-```
+## 権限とプライバシー
+- 使用する権限は `chrome.storage`, `chrome.downloads`, `activeTab`, `scripting` など、拡張の機能に必要な最小限です。
+- 取得したテンプレート・ログ・チャットメタデータはすべてローカルブラウザ内に保存され、外部サーバーへ送信されません。
 
-### クラス図 (モジュール間の責務)
-```mermaid
-classDiagram
-    class BackgroundServiceWorker {
-      +onInstalled()
-      +onMessage(message)
-    }
-    class ApplyCodeHandler {
-      +cgptHandleApplyCodeBlock(msg)
-    }
-    class LogStore {
-      +cgptAppendLog(entry)
-      +cgptGetLogs()
-      +cgptClearLogs()
-    }
-    class TemplateStoreBG {
-      +cgptGetTemplates()
-      +cgptSetTemplates(templates)
-    }
-    class DownloadOpener {
-      +openDownloadedFile(downloadId)
-    }
-    class ContentInit {
-      +init()
-    }
-    class TemplateStoreContent {
-      +loadTemplatesFromStorage()
-      +saveTemplatesToStorage()
-      +insertTemplateToInput()
-    }
-    class TemplatePanel {
-      +createFloatingPanel()
-    }
-    class TemplateEditor {
-      +openTemplateEditor(mode)
-    }
-    class CodeBlockDecorator {
-      +decorateCodeBlocks()
-      +setupMutationObserver()
-    }
-    class LogViewer {
-      +openLogViewer()
-    }
-    class ChatLogTracker {
-      +initChatLogTracker()
-      +getChatLogEntries()
-      +highlightChatMessageElement()
-    }
-    class ChatLogModal {
-      +openChatLogModal()
-    }
-    class Toast {
-      +showToast(message)
-    }
-    class ReloadNotifier {
-      +checkAndNotifyReloaded()
-    }
-
-    BackgroundServiceWorker --> ApplyCodeHandler : delegates applyCodeBlock
-    BackgroundServiceWorker --> LogStore : append/get/clear logs
-    BackgroundServiceWorker --> TemplateStoreBG : get/set templates
-    BackgroundServiceWorker --> DownloadOpener : openDownloadedFile
-    ContentInit --> TemplateStoreContent : load templates
-    ContentInit --> TemplatePanel
-    ContentInit --> CodeBlockDecorator
-    ContentInit --> ChatLogTracker
-    TemplatePanel --> TemplateEditor
-    TemplatePanel --> TemplateStoreContent
-    TemplatePanel --> ChatLogModal
-    TemplateStoreContent --> Toast
-    CodeBlockDecorator --> BackgroundServiceWorker : sendMessage
-    LogViewer --> BackgroundServiceWorker : getLogs/clearLogs
-    ChatLogModal --> ChatLogTracker : readEntries/highlight
-    ChatLogModal --> BackgroundServiceWorker : applyCodeBlock
-    ReloadNotifier --> Toast
-```
-
-## メッセージ フロー
-| 送信元 | 宛先 | type | 役割 |
-| ------ | ---- | ---- | ---- |
-| content/codeBlocks | background/index | `applyCodeBlock` | コード保存を要求し、結果をログ化 |
-| content/chatLogModal | background/index | `applyCodeBlock` | 履歴モーダルから即時ダウンロードを要求 |
-| content/templateStore | background/index | `getTemplates` / `setTemplates` | テンプレートの同期 |
-| content/logModal | background/index | `getLogs` / `clearLogs` | 保存ログをモーダルに表示 |
-| content/logModal | background/index | `openDownloadedFile` | ダウンロード済みファイルを OS で開く |
-
-## 開発メモ
-- 依存する npm パッケージやビルドはありません。必要に応じて `content/` や `background/` の JS ファイルを直接編集してください。
-- デバッグ時は DevTools > Sources > Service Workers で `background/index.js` を確認し、`chrome.runtime.sendMessage` のレスポンスを追跡します。
-- 既定テンプレート文言は `content/state.js` の `DEFAULT_TEMPLATE_CONTENT` で定義されています。`cgptSetTemplates`/`cgptSetSelectedTemplateId` アクセサを経由することで状態破壊的な変更を避け、単一責務を保ちながら拡張できます。
+## サポート
+- 既知の制限や最新の開発情報は [DEVELOPERS.md](DEVELOPERS.md) を確認してください。
+- バグ報告や改善案は Issue で受け付けています。再現手順と Chrome バージョンを記載していただけると助かります。
