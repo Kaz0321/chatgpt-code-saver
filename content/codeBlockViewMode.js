@@ -9,6 +9,22 @@ const FALLBACK_VIEW_SETTINGS = {
   compactLineCount: 1,
 };
 
+function cgptNormalizePositiveNumber(value) {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0;
+  }
+  return parsed;
+}
+
+function cgptCalculateCompactHeight(lineCount, lineHeight, buttonOverlayOffset) {
+  const safeLineCount = Math.max(0, Number.isFinite(lineCount) ? lineCount : 0);
+  const safeLineHeight = cgptNormalizePositiveNumber(lineHeight);
+  const codeHeight = safeLineCount * safeLineHeight;
+  const safeOverlayOffset = Math.max(0, Number.isFinite(buttonOverlayOffset) ? buttonOverlayOffset : 0);
+  return Math.max(codeHeight, safeOverlayOffset);
+}
+
 function cgptEnsureCodeBlockStyles() {
   if (cgptCodeBlockStylesInjected) return;
   const style = document.createElement("style");
@@ -182,7 +198,11 @@ function cgptSetPreViewMode(pre, mode) {
       : FALLBACK_VIEW_SETTINGS.compactLineCount;
     const lineHeight = cgptGetCodeLineHeight(pre);
     const buttonOverlayOffset = cgptGetButtonOverlayOffset(pre);
-    const targetHeight = normalizedLines * lineHeight + buttonOverlayOffset;
+    const targetHeight = cgptCalculateCompactHeight(
+      normalizedLines,
+      lineHeight,
+      buttonOverlayOffset
+    );
     collapsibleEl.style.maxHeight = `${targetHeight}px`;
     collapsibleEl.style.overflow = "hidden";
     cgptSetCollapsedVisualState(collapsibleEl, true);
@@ -210,4 +230,10 @@ function cgptReapplyViewMode(mode) {
       cgptSetPreViewMode(pre, mode);
     }
   });
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptCalculateCompactHeight,
+  };
 }
