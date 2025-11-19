@@ -157,7 +157,10 @@ function cgptSetPreViewMode(pre, mode) {
     cgptSetCollapsedVisualState(collapsibleEl, false);
   } else {
     const lineCount = viewSettings.compactLineCount;
-    const normalizedLines = Math.max(1, Number(lineCount) || 1);
+    const parsedLines = Number.parseInt(lineCount, 10);
+    const normalizedLines = Number.isFinite(parsedLines)
+      ? Math.max(0, parsedLines)
+      : FALLBACK_VIEW_SETTINGS.compactLineCount;
     const lineHeight = cgptGetCodeLineHeight(pre);
     const buttonOverlayOffset = cgptGetButtonOverlayOffset(pre);
     const targetHeight = normalizedLines * lineHeight + buttonOverlayOffset;

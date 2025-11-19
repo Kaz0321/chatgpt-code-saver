@@ -91,9 +91,9 @@ function createButtonRow() {
   return row;
 }
 
-function createLineCountControls(initialValue, onCommit) {
-  const MIN_LINES = 1;
-  const MAX_LINES = 200;
+function createLineCountControls({ initialValue, onCommit, min = 1, max = 200 }) {
+  const MIN_LINES = min;
+  const MAX_LINES = max;
 
   const controls = document.createElement("div");
   controls.style.display = "flex";
@@ -135,13 +135,15 @@ function createLineCountControls(initialValue, onCommit) {
   };
 
   const commitValue = () => {
-    const parsed = clampValue(Number.parseInt(input.value, 10) || MIN_LINES);
+    const parsedValue = Number.parseInt(input.value, 10);
+    const parsed = clampValue(Number.isFinite(parsedValue) ? parsedValue : MIN_LINES);
     input.value = `${parsed}`;
     onCommit(parsed);
   };
 
   const adjustValue = (delta) => {
-    const current = clampValue(Number.parseInt(input.value, 10) || MIN_LINES);
+    const currentValue = Number.parseInt(input.value, 10);
+    const current = clampValue(Number.isFinite(currentValue) ? currentValue : MIN_LINES);
     const nextValue = clampValue(current + delta);
     if (nextValue === current) return;
     input.value = `${nextValue}`;
