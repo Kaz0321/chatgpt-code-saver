@@ -13,28 +13,12 @@ function createViewSection() {
       label: "Compact All",
       mode: "compact",
       initialLineCount: settings.compactLineCount,
+      minLineCount: 0,
       onLineCountCommit: (value) => {
         if (typeof cgptUpdateViewSettings === "function") {
           cgptUpdateViewSettings({ compactLineCount: value }, () => {
             if (typeof cgptReapplyViewMode === "function") {
               cgptReapplyViewMode("compact");
-            }
-          });
-        }
-      },
-    })
-  );
-
-  viewButtons.appendChild(
-    createViewModeRow({
-      label: "Collapse All",
-      mode: "collapsed",
-      initialLineCount: settings.collapsedLineCount,
-      onLineCountCommit: (value) => {
-        if (typeof cgptUpdateViewSettings === "function") {
-          cgptUpdateViewSettings({ collapsedLineCount: value }, () => {
-            if (typeof cgptReapplyViewMode === "function") {
-              cgptReapplyViewMode("collapsed");
             }
           });
         }
@@ -53,7 +37,13 @@ function createViewSection() {
   return viewSection;
 }
 
-function createViewModeRow({ label, mode, initialLineCount, onLineCountCommit }) {
+function createViewModeRow({
+  label,
+  mode,
+  initialLineCount,
+  onLineCountCommit,
+  minLineCount,
+}) {
   const row = document.createElement("div");
   row.style.display = "flex";
   row.style.alignItems = "center";
@@ -64,7 +54,11 @@ function createViewModeRow({ label, mode, initialLineCount, onLineCountCommit })
   row.appendChild(button);
 
   if (typeof initialLineCount === "number" && typeof onLineCountCommit === "function") {
-    const controls = createLineCountControls(initialLineCount, onLineCountCommit);
+    const controls = createLineCountControls({
+      initialValue: initialLineCount,
+      onCommit: onLineCountCommit,
+      min: typeof minLineCount === "number" ? minLineCount : undefined,
+    });
     row.appendChild(controls);
   }
 
@@ -74,7 +68,6 @@ function createViewModeRow({ label, mode, initialLineCount, onLineCountCommit })
 function createViewModeButton(label, mode) {
   const variants = {
     compact: "accent",
-    collapsed: "accent",
     expanded: "accent",
   };
   const variant = variants[mode] || "secondary";
@@ -89,7 +82,7 @@ function getViewSettingsForPanel() {
   if (typeof cgptGetViewSettings === "function") {
     return cgptGetViewSettings();
   }
-  return { compactLineCount: 1, collapsedLineCount: 12 };
+  return { compactLineCount: 1 };
 }
 
 function applyViewModeToAll(mode) {

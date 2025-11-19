@@ -5,13 +5,7 @@ function createTemplateSection() {
   const templateRow = document.createElement("div");
   templateRow.style.display = "flex";
   templateRow.style.gap = "8px";
-  templateRow.style.alignItems = "flex-start";
-
-  const templateLabel = document.createElement("span");
-  templateLabel.textContent = "Select";
-  templateLabel.style.fontSize = "11px";
-  templateLabel.style.minWidth = "32px";
-  templateRow.appendChild(templateLabel);
+  templateRow.style.alignItems = "stretch";
 
   const templateDropdown = document.createElement("select");
   templateDropdown.style.flex = "1";
@@ -23,6 +17,7 @@ function createTemplateSection() {
   templateDropdown.style.fontSize = "12px";
   templateDropdown.style.height = "32px";
   templateDropdown.style.cursor = "pointer";
+  templateDropdown.setAttribute("aria-label", "Select template");
   templateRow.appendChild(templateDropdown);
 
   templateDropdown.addEventListener("change", (event) => {
