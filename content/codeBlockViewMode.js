@@ -94,18 +94,37 @@ function cgptGetViewModeFromDataset(pre) {
   return pre.dataset.cgptViewMode || CGPT_VIEW_MODE.EXPANDED;
 }
 
+function cgptNormalizeLineHeight(style) {
+  if (!style) {
+    return null;
+  }
+  const rawLineHeight = style.lineHeight;
+  if (!rawLineHeight || rawLineHeight === "normal") {
+    return null;
+  }
+  const numericLineHeight = parseFloat(rawLineHeight);
+  if (!Number.isFinite(numericLineHeight)) {
+    return null;
+  }
+  if (/px$/i.test(rawLineHeight)) {
+    return numericLineHeight;
+  }
+  const fontSize = parseFloat(style.fontSize);
+  if (Number.isFinite(fontSize) && fontSize > 0) {
+    return fontSize * numericLineHeight;
+  }
+  return null;
+}
+
 function cgptGetCodeLineHeight(pre) {
   const code = pre.querySelector("code") || pre;
   const style = window.getComputedStyle ? window.getComputedStyle(code) : null;
-  if (!style) {
-    return 18;
+  const normalizedLineHeight = cgptNormalizeLineHeight(style);
+  if (Number.isFinite(normalizedLineHeight) && normalizedLineHeight > 0) {
+    return normalizedLineHeight;
   }
-  let lineHeight = parseFloat(style.lineHeight);
-  if (!Number.isFinite(lineHeight)) {
-    const fontSize = parseFloat(style.fontSize) || 14;
-    lineHeight = fontSize * 1.4;
-  }
-  return lineHeight || 18;
+  const fallbackFontSize = style ? parseFloat(style.fontSize) || 14 : 14;
+  return fallbackFontSize * 1.4;
 }
 
 function cgptSetCollapsedVisualState(element, isCollapsed) {
