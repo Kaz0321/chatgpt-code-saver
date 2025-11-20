@@ -7,6 +7,9 @@ function init() {
       if (typeof initChatLogTracker === "function") {
         initChatLogTracker();
       }
+      if (typeof cgptStartLightweightModeWatcher === "function") {
+        cgptStartLightweightModeWatcher();
+      }
       decorateCodeBlocks(document);
       setupMutationObserver();
     };
@@ -19,8 +22,18 @@ function init() {
       next();
     };
 
+    const ensureLightweightModeLoaded = (next) => {
+      if (typeof cgptLoadLightweightMode === "function") {
+        cgptLoadLightweightMode(next);
+        return;
+      }
+      next();
+    };
+
     const continueAfterViewSettings = () => {
-      ensureSaveOptionsLoaded(finalizeSetup);
+      ensureLightweightModeLoaded(() => {
+        ensureSaveOptionsLoaded(finalizeSetup);
+      });
     };
 
     if (typeof cgptLoadViewSettings === "function") {
