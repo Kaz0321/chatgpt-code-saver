@@ -35,6 +35,11 @@ test('cgptParseCodeBlockMetadata returns null when metadata is missing', () => {
   assert.strictEqual(metadata, null);
 });
 
+test('cgptParseCodeBlockMetadata ignores file: lines that are not first', () => {
+  const metadata = cgptParseCodeBlockMetadata({ innerText: 'console.log("before");\n// file: src/late.js\nconsole.log("after");' });
+  assert.strictEqual(metadata, null);
+});
+
 test('cgptGetNormalizedCodeText converts CRLF to LF', () => {
   const code = { innerText: 'line1\r\nline2' };
   assert.strictEqual(cgptGetNormalizedCodeText(code), 'line1\nline2');
