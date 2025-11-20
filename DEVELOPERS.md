@@ -124,3 +124,8 @@ classDiagram
 - デバッグ時は DevTools > Sources > Service Workers で `background/index.js` のログや `chrome.runtime.sendMessage` のレスポンスを確認します。
 - 既定テンプレート文言は `content/state.js` の `DEFAULT_TEMPLATE_CONTENT` で定義されています。アクセサ (`cgptSetTemplates`, `cgptSetSelectedTemplateId` など) を経由して状態を更新し、単一責務を保ってください。
 - 権限を追加／削除する場合は `manifest.json` を更新し、README の「権限とプライバシー」節の整合性も確認します。
+
+## リリースとバージョン管理
+- 拡張の公開バージョンは `manifest.json` と `package.json` の両方で同じ値にそろえます。権限の追加・削除が伴う場合は、README の説明も合わせて見直してください。
+- リリースタグは `vX.Y.Z` 形式で作成します。タグを打つ前に `git status` がクリーンであることと、サービスワーカーのバージョンが期待どおりに更新されていることを確認してください。
+- 機能追加やリファクタリングでは、保存処理・テンプレ管理・チャットログ管理といった単一機能ごとにファイルを分け、変更範囲を限定します。
