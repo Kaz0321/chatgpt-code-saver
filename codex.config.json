@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Instructions for Codex/GPT style models so that their outputs work seamlessly with gpt-code-saver-extension.",
+  "instructions": {
+    "fileMetadata": {
+      "requirement": "Always place `// file: relative/path.ext` (for JS-like files) or `# file: relative/path.ext` (for shell/Python) as the very first line of every code block.",
+      "reason": "The extension reads this metadata to determine the download destination before saving the block.",
+      "examples": [
+        "// file: content/panel.js",
+        "# file: scripts/setup.sh"
+      ]
+    },
+    "codeBlockStructure": {
+      "singleResponsibility": "Each code block should represent a single file. Avoid concatenating multiple files in one block.",
+      "applyToProjectButton": "The Apply to project button writes the block exactly as provided, so omit extra commentary or diff prefixes inside the block."
+    },
+    "communication": {
+      "preferredLanguage": "ja-JP",
+      "style": "Explain the context briefly outside code blocks, then provide the code block with the file metadata line at the top.",
+      "tests": "When sharing test commands, provide them outside of code blocks or wrap them with a shell-specific metadata line (e.g. '# file: scripts/run-tests.sh')."
+    }
+  }
+}

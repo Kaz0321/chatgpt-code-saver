@@ -9,6 +9,22 @@ const FALLBACK_VIEW_SETTINGS = {
   compactLineCount: 1,
 };
 
+function cgptNormalizePositiveNumber(value) {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0;
+  }
+  return parsed;
+}
+
+function cgptCalculateCompactHeight(lineCount, lineHeight, buttonOverlayOffset) {
+  const safeLineCount = Math.max(0, Number.isFinite(lineCount) ? lineCount : 0);
+  const safeLineHeight = cgptNormalizePositiveNumber(lineHeight);
+  const codeHeight = safeLineCount * safeLineHeight;
+  const safeOverlayOffset = Math.max(0, Number.isFinite(buttonOverlayOffset) ? buttonOverlayOffset : 0);
+  return Math.max(codeHeight, safeOverlayOffset);
+}
+
 function cgptEnsureCodeBlockStyles() {
   if (cgptCodeBlockStylesInjected) return;
   const style = document.createElement("style");
@@ -78,9 +94,6 @@ function cgptRememberOriginalPreStyles(pre) {
   if (pre.dataset.cgptOriginalMaxHeight === undefined) {
     pre.dataset.cgptOriginalMaxHeight = collapsibleEl.style.maxHeight || "";
   }
-  if (pre.dataset.cgptOriginalPaddingTop === undefined) {
-    pre.dataset.cgptOriginalPaddingTop = collapsibleEl.style.paddingTop || "";
-  }
 }
 
 function cgptEnsureCollapsibleState(pre) {
@@ -97,18 +110,37 @@ function cgptGetViewModeFromDataset(pre) {
   return pre.dataset.cgptViewMode || CGPT_VIEW_MODE.EXPANDED;
 }
 
+function cgptNormalizeLineHeight(style) {
+  if (!style) {
+    return null;
+  }
+  const rawLineHeight = style.lineHeight;
+  if (!rawLineHeight || rawLineHeight === "normal") {
+    return null;
+  }
+  const numericLineHeight = parseFloat(rawLineHeight);
+  if (!Number.isFinite(numericLineHeight)) {
+    return null;
+  }
+  if (/px$/i.test(rawLineHeight)) {
+    return numericLineHeight;
+  }
+  const fontSize = parseFloat(style.fontSize);
+  if (Number.isFinite(fontSize) && fontSize > 0) {
+    return fontSize * numericLineHeight;
+  }
+  return null;
+}
+
 function cgptGetCodeLineHeight(pre) {
   const code = pre.querySelector("code") || pre;
   const style = window.getComputedStyle ? window.getComputedStyle(code) : null;
-  if (!style) {
-    return 18;
+  const normalizedLineHeight = cgptNormalizeLineHeight(style);
+  if (Number.isFinite(normalizedLineHeight) && normalizedLineHeight > 0) {
+    return normalizedLineHeight;
   }
-  let lineHeight = parseFloat(style.lineHeight);
-  if (!Number.isFinite(lineHeight)) {
-    const fontSize = parseFloat(style.fontSize) || 14;
-    lineHeight = fontSize * 1.4;
-  }
-  return lineHeight || 18;
+  const fallbackFontSize = style ? parseFloat(style.fontSize) || 14 : 14;
+  return fallbackFontSize * 1.4;
 }
 
 function cgptSetCollapsedVisualState(element, isCollapsed) {
@@ -157,16 +189,20 @@ function cgptSetPreViewMode(pre, mode) {
   if (mode === CGPT_VIEW_MODE.EXPANDED) {
     collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
     collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
-    collapsibleEl.style.paddingTop = pre.dataset.cgptOriginalPaddingTop || "";
     cgptSetCollapsedVisualState(collapsibleEl, false);
   } else {
     const lineCount = viewSettings.compactLineCount;
-    const normalizedLines = Math.max(0, Number(lineCount) || 0);
+    const parsedLines = Number.parseInt(lineCount, 10);
+    const normalizedLines = Number.isFinite(parsedLines)
+      ? Math.max(0, parsedLines)
+      : FALLBACK_VIEW_SETTINGS.compactLineCount;
     const lineHeight = cgptGetCodeLineHeight(pre);
     const buttonOverlayOffset = cgptGetButtonOverlayOffset(pre);
-    const paddingTop = buttonOverlayOffset > 0 ? `${buttonOverlayOffset}px` : "";
-    collapsibleEl.style.paddingTop = paddingTop;
-    const targetHeight = normalizedLines * lineHeight + Math.max(buttonOverlayOffset, 0);
+    const targetHeight = cgptCalculateCompactHeight(
+      normalizedLines,
+      lineHeight,
+      buttonOverlayOffset
+    );
     collapsibleEl.style.maxHeight = `${targetHeight}px`;
     collapsibleEl.style.overflow = "hidden";
     cgptSetCollapsedVisualState(collapsibleEl, true);
@@ -194,4 +230,10 @@ function cgptReapplyViewMode(mode) {
       cgptSetPreViewMode(pre, mode);
     }
   });
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptCalculateCompactHeight,
+  };
 }

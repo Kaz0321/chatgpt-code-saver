@@ -13,6 +13,7 @@ function createViewSection() {
       label: "Compact All",
       mode: "compact",
       initialLineCount: settings.compactLineCount,
+      minLineCount: 0,
       onLineCountCommit: (value) => {
         if (typeof cgptUpdateViewSettings === "function") {
           cgptUpdateViewSettings({ compactLineCount: value }, () => {
@@ -36,7 +37,13 @@ function createViewSection() {
   return viewSection;
 }
 
-function createViewModeRow({ label, mode, initialLineCount, onLineCountCommit }) {
+function createViewModeRow({
+  label,
+  mode,
+  initialLineCount,
+  onLineCountCommit,
+  minLineCount,
+}) {
   const row = document.createElement("div");
   row.style.display = "flex";
   row.style.alignItems = "center";
@@ -47,7 +54,11 @@ function createViewModeRow({ label, mode, initialLineCount, onLineCountCommit })
   row.appendChild(button);
 
   if (typeof initialLineCount === "number" && typeof onLineCountCommit === "function") {
-    const controls = createLineCountControls(initialLineCount, onLineCountCommit);
+    const controls = createLineCountControls({
+      initialValue: initialLineCount,
+      onCommit: onLineCountCommit,
+      min: typeof minLineCount === "number" ? minLineCount : undefined,
+    });
     row.appendChild(controls);
   }
 

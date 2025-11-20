@@ -5,25 +5,63 @@ function createTemplateSection() {
   const templateRow = document.createElement("div");
   templateRow.style.display = "flex";
   templateRow.style.gap = "8px";
-  templateRow.style.alignItems = "flex-start";
+  templateRow.style.alignItems = "stretch";
 
-  const templateLabel = document.createElement("span");
-  templateLabel.textContent = "Select";
-  templateLabel.style.fontSize = "11px";
-  templateLabel.style.minWidth = "32px";
-  templateRow.appendChild(templateLabel);
+  const templateDropdownContainer = document.createElement("div");
+  templateDropdownContainer.style.flex = "1";
+  templateDropdownContainer.style.position = "relative";
+  templateDropdownContainer.style.display = "flex";
+  templateDropdownContainer.style.alignItems = "center";
+  templateDropdownContainer.style.border = "1px solid rgba(255,255,255,0.25)";
+  templateDropdownContainer.style.borderRadius = "8px";
+  templateDropdownContainer.style.background = "rgba(31, 41, 55, 0.95)";
+  templateDropdownContainer.style.transition = "border-color 0.15s ease, background 0.15s ease";
 
   const templateDropdown = document.createElement("select");
   templateDropdown.style.flex = "1";
-  templateDropdown.style.border = "1px solid rgba(255,255,255,0.2)";
-  templateDropdown.style.borderRadius = "6px";
-  templateDropdown.style.background = "rgba(31, 41, 55, 0.9)";
-  templateDropdown.style.padding = "6px";
+  templateDropdown.style.appearance = "none";
+  templateDropdown.style.WebkitAppearance = "none";
+  templateDropdown.style.MozAppearance = "none";
+  templateDropdown.style.background = "transparent";
+  templateDropdown.style.border = "none";
+  templateDropdown.style.outline = "none";
+  templateDropdown.style.padding = "6px 32px 6px 10px";
   templateDropdown.style.color = "#fff";
   templateDropdown.style.fontSize = "12px";
   templateDropdown.style.height = "32px";
   templateDropdown.style.cursor = "pointer";
-  templateRow.appendChild(templateDropdown);
+  templateDropdown.setAttribute("aria-label", "Select template");
+  templateDropdownContainer.appendChild(templateDropdown);
+
+  const dropdownIcon = document.createElement("span");
+  dropdownIcon.textContent = "▼";
+  dropdownIcon.style.position = "absolute";
+  dropdownIcon.style.right = "10px";
+  dropdownIcon.style.pointerEvents = "none";
+  dropdownIcon.style.color = "rgba(255,255,255,0.6)";
+  dropdownIcon.style.fontSize = "10px";
+  dropdownIcon.style.lineHeight = "1";
+  templateDropdownContainer.appendChild(dropdownIcon);
+
+  templateDropdown.addEventListener("focus", () => {
+    templateDropdownContainer.style.borderColor = "#38bdf8";
+    templateDropdownContainer.style.background = "rgba(15, 23, 42, 0.95)";
+  });
+
+  templateDropdown.addEventListener("blur", () => {
+    templateDropdownContainer.style.borderColor = "rgba(255,255,255,0.25)";
+    templateDropdownContainer.style.background = "rgba(31, 41, 55, 0.95)";
+  });
+
+  templateDropdownContainer.addEventListener("mouseenter", () => {
+    templateDropdownContainer.style.borderColor = "rgba(255,255,255,0.5)";
+  });
+
+  templateDropdownContainer.addEventListener("mouseleave", () => {
+    templateDropdownContainer.style.borderColor = "rgba(255,255,255,0.25)";
+  });
+
+  templateRow.appendChild(templateDropdownContainer);
 
   templateDropdown.addEventListener("change", (event) => {
     const templateId = event.target.value;

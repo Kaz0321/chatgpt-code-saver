@@ -9,7 +9,23 @@ function openChatLogModal() {
 
   const allEntries = getChatLogEntries();
   const userEntries = allEntries.filter((entry) => entry.role === "user");
+  const { overlay, closeModal } = cgptCreateChatLogModalOverlay();
+  const dialog = cgptCreateChatLogDialog();
 
+  dialog.appendChild(cgptCreateChatLogHeader(closeModal));
+  dialog.appendChild(cgptCreateChatLogList(userEntries, allEntries, closeModal));
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      closeModal();
+    }
+  });
+}
+
+function cgptCreateChatLogModalOverlay() {
   const overlay = document.createElement("div");
   overlay.id = "cgpt-helper-chatlog-modal";
   overlay.style.position = "fixed";
@@ -29,6 +45,10 @@ function openChatLogModal() {
     }
   };
 
+  return { overlay, closeModal };
+}
+
+function cgptCreateChatLogDialog() {
   const dialog = document.createElement("div");
   dialog.style.background = "#202123";
   dialog.style.color = "#fff";
@@ -41,7 +61,10 @@ function openChatLogModal() {
   dialog.style.flexDirection = "column";
   dialog.style.gap = "10px";
   dialog.style.boxShadow = "0 10px 40px rgba(0,0,0,0.6)";
+  return dialog;
+}
 
+function cgptCreateChatLogHeader(closeModal) {
   const headerRow = document.createElement("div");
   headerRow.style.display = "flex";
   headerRow.style.justifyContent = "space-between";
@@ -57,13 +80,15 @@ function openChatLogModal() {
   headerButtons.style.display = "flex";
   headerButtons.style.gap = "8px";
 
-  const closeBtn = createChatLogButton("Close", "muted");
+  const closeBtn = cgptCreateChatLogButton("Close", "muted");
   closeBtn.addEventListener("click", closeModal);
   headerButtons.appendChild(closeBtn);
 
   headerRow.appendChild(headerButtons);
-  dialog.appendChild(headerRow);
+  return headerRow;
+}
 
+function cgptCreateChatLogList(userEntries, allEntries, closeModal) {
   const list = document.createElement("div");
   list.style.flex = "1";
   list.style.overflow = "auto";
@@ -71,581 +96,274 @@ function openChatLogModal() {
   list.style.flexDirection = "column";
   list.style.gap = "12px";
 
-  if (userEntries.length === 0) {
+  const orderedUsers = [...userEntries].sort((a, b) => a.order - b.order);
+  if (orderedUsers.length === 0) {
     const empty = document.createElement("div");
     empty.textContent = "No user messages found.";
     empty.style.color = "#9ca3af";
     list.appendChild(empty);
-  } else {
-    const orderedUsers = userEntries.sort((a, b) => a.order - b.order);
-    orderedUsers.forEach((entry, index) => {
-      const card = document.createElement("div");
-      card.style.border = "1px solid #3f3f46";
-      card.style.borderRadius = "8px";
-      card.style.padding = "10px";
-      card.style.background = "#18181b";
-      card.style.display = "flex";
-      card.style.flexDirection = "column";
-      card.style.gap = "6px";
-
-      const header = document.createElement("div");
-      header.style.display = "flex";
-      header.style.justifyContent = "space-between";
-      header.style.alignItems = "center";
-      header.style.gap = "8px";
-
-      const info = document.createElement("div");
-      info.style.flex = "1";
-      info.style.fontSize = "12px";
-      info.style.color = "#d1d5db";
-      info.textContent = `Sent ${formatChatLogTimestamp(entry.timestamp)}`;
-      header.appendChild(info);
-
-      const jumpBtn = createChatLogButton("Jump", "accent", "sm");
-      jumpBtn.addEventListener("click", () => {
-        closeModal();
-        if (typeof highlightChatMessageElement === "function") {
-          highlightChatMessageElement(entry.element);
-        } else if (entry.element && typeof entry.element.scrollIntoView === "function") {
-          entry.element.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      });
-      header.appendChild(jumpBtn);
-
-      card.appendChild(header);
-
-      const messageBody = document.createElement("div");
-      messageBody.style.whiteSpace = "pre-wrap";
-      messageBody.style.fontSize = "13px";
-      messageBody.style.lineHeight = "1.5";
-      messageBody.style.color = "#f3f4f6";
-      const messageText = entry.text || "(no text)";
-      messageBody.textContent = createSingleLinePreview(
-        messageText,
-        CHAT_LOG_PREVIEW_LINE_LIMIT
-      );
-      card.appendChild(messageBody);
-
-      const assistantBlocks = collectAssistantBlocksForEntry(entry, orderedUsers[index + 1], allEntries);
-      if (assistantBlocks.length > 0) {
-        const blockHeader = document.createElement("div");
-        blockHeader.style.display = "flex";
-        blockHeader.style.alignItems = "center";
-        blockHeader.style.justifyContent = "space-between";
-        blockHeader.style.gap = "8px";
-
-        const blockHeaderLabel = document.createElement("div");
-        blockHeaderLabel.textContent = `Code blocks (${assistantBlocks.length})`;
-        blockHeaderLabel.style.fontSize = "12px";
-        blockHeaderLabel.style.color = "#a5b4fc";
-        blockHeader.appendChild(blockHeaderLabel);
-
-        const blockHeaderActions = document.createElement("div");
-        blockHeaderActions.style.display = "flex";
-        blockHeaderActions.style.gap = "6px";
-
-        const batchSaveBtn = createBatchSaveAllButton(assistantBlocks);
-        blockHeaderActions.appendChild(batchSaveBtn);
-
-        const batchSaveAsBtn = createBatchSaveAsAllButton(assistantBlocks);
-        blockHeaderActions.appendChild(batchSaveAsBtn);
-
-        blockHeader.appendChild(blockHeaderActions);
-        card.appendChild(blockHeader);
-
-        assistantBlocks.forEach((block) => {
-          const blockWrapper = document.createElement("div");
-          blockWrapper.style.border = "1px solid #27272a";
-          blockWrapper.style.borderRadius = "6px";
-          blockWrapper.style.background = "#111827";
-          blockWrapper.style.padding = "6px";
-          blockWrapper.style.display = "flex";
-          blockWrapper.style.flexDirection = "column";
-          blockWrapper.style.gap = "6px";
-
-          const blockHeaderRow = document.createElement("div");
-          blockHeaderRow.style.display = "flex";
-          blockHeaderRow.style.justifyContent = "space-between";
-          blockHeaderRow.style.alignItems = "center";
-          blockHeaderRow.style.gap = "8px";
-
-          const fileInfoWrapper = document.createElement("div");
-          fileInfoWrapper.style.flex = "1";
-          fileInfoWrapper.style.display = "flex";
-          fileInfoWrapper.style.flexDirection = "column";
-          fileInfoWrapper.style.gap = "2px";
-
-          const fileNameLabel = document.createElement("div");
-          fileNameLabel.style.display = "flex";
-          fileNameLabel.style.flexWrap = "wrap";
-          fileNameLabel.style.alignItems = "baseline";
-          fileNameLabel.style.columnGap = "6px";
-
-          const fileNameText = document.createElement("span");
-          fileNameText.textContent = block.fileName || block.filePath;
-          fileNameText.style.fontSize = "12px";
-          fileNameText.style.color = "#facc15";
-          fileNameText.style.fontWeight = "bold";
-          fileNameLabel.appendChild(fileNameText);
-
-          const metaInfoText = document.createElement("span");
-          metaInfoText.textContent = buildCodeMetaInfoText(block && block.content);
-          metaInfoText.style.fontSize = "11px";
-          metaInfoText.style.color = "#fef3c7";
-          metaInfoText.style.opacity = "0.85";
-          fileNameLabel.appendChild(metaInfoText);
-
-          fileInfoWrapper.appendChild(fileNameLabel);
-
-          const filePathLabel = document.createElement("div");
-          filePathLabel.textContent = block.filePath;
-          filePathLabel.style.fontSize = "11px";
-          filePathLabel.style.color = "#fef3c7";
-          filePathLabel.style.opacity = "0.9";
-          fileInfoWrapper.appendChild(filePathLabel);
-
-          blockHeaderRow.appendChild(fileInfoWrapper);
-
-          const blockActionWrapper = document.createElement("div");
-          blockActionWrapper.style.display = "flex";
-          blockActionWrapper.style.gap = "6px";
-          blockActionWrapper.style.flexWrap = "wrap";
-
-          const saveBtn = createBlockSaveButton(block);
-          blockActionWrapper.appendChild(saveBtn);
-
-          const saveAsBtn = createBlockSaveAsButton(block);
-          blockActionWrapper.appendChild(saveAsBtn);
-
-          const jumpBtn = createChatLogButton("Jump", "accent", "sm");
-          jumpBtn.addEventListener("click", () => {
-            closeModal();
-            cgptJumpToCodeBlock(block.element);
-          });
-          blockActionWrapper.appendChild(jumpBtn);
-
-          blockHeaderRow.appendChild(blockActionWrapper);
-
-          blockWrapper.appendChild(blockHeaderRow);
-
-          card.appendChild(blockWrapper);
-        });
-      }
-
-      const assistantUrls = collectAssistantUrlsForEntry(
-        entry,
-        orderedUsers[index + 1],
-        allEntries
-      );
-      if (assistantUrls.length > 0) {
-        const urlHeader = document.createElement("div");
-        urlHeader.textContent = `Links Provided (${assistantUrls.length})`;
-        urlHeader.style.fontSize = "12px";
-        urlHeader.style.color = "#7dd3fc";
-        card.appendChild(urlHeader);
-
-        assistantUrls.forEach((link) => {
-          const urlWrapper = document.createElement("div");
-          urlWrapper.style.border = "1px solid #1f2937";
-          urlWrapper.style.borderRadius = "6px";
-          urlWrapper.style.background = "#0f172a";
-          urlWrapper.style.padding = "6px";
-          urlWrapper.style.display = "flex";
-          urlWrapper.style.flexDirection = "column";
-          urlWrapper.style.gap = "6px";
-
-          const urlHeaderRow = document.createElement("div");
-          urlHeaderRow.style.display = "flex";
-          urlHeaderRow.style.justifyContent = "space-between";
-          urlHeaderRow.style.alignItems = "center";
-          urlHeaderRow.style.gap = "8px";
-
-          const urlLabelWrapper = document.createElement("div");
-          urlLabelWrapper.style.flex = "1";
-          urlLabelWrapper.style.display = "flex";
-          urlLabelWrapper.style.flexDirection = "column";
-          urlLabelWrapper.style.gap = "2px";
-
-          const urlDisplayText = document.createElement("div");
-          urlDisplayText.textContent = link.text || link.url;
-          urlDisplayText.style.fontSize = "12px";
-          urlDisplayText.style.color = "#bae6fd";
-          urlDisplayText.style.fontWeight = "bold";
-          urlLabelWrapper.appendChild(urlDisplayText);
-
-          const urlValue = document.createElement("div");
-          urlValue.textContent = link.url;
-          urlValue.style.fontSize = "11px";
-          urlValue.style.color = "#e0f2fe";
-          urlValue.style.opacity = "0.9";
-          urlLabelWrapper.appendChild(urlValue);
-
-          urlHeaderRow.appendChild(urlLabelWrapper);
-
-          const openBtn = createChatLogButton("Open Link", "accent", "sm");
-          openBtn.addEventListener("click", () => {
-            window.open(link.url, "_blank", "noopener,noreferrer");
-          });
-          urlHeaderRow.appendChild(openBtn);
-
-          urlWrapper.appendChild(urlHeaderRow);
-          card.appendChild(urlWrapper);
-        });
-      }
-
-      list.appendChild(card);
-    });
+    return list;
   }
 
-  dialog.appendChild(list);
-  overlay.appendChild(dialog);
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) {
-      closeModal();
-    }
+  orderedUsers.forEach((entry, index) => {
+    const nextEntry = orderedUsers[index + 1];
+    const card = cgptCreateChatLogUserCard(entry, nextEntry, allEntries, closeModal);
+    list.appendChild(card);
   });
+
+  return list;
 }
 
-function createSingleLinePreview(text, lineLimit = 1) {
-  if (!text) return "";
-  if (!lineLimit || lineLimit <= 0) return text;
-  const normalized = normalizeLineEndings(text);
-  const lines = normalized.split("\n");
-  const firstLine = lines[0] || "";
-  const hasMore = lines.length > lineLimit;
-  return hasMore ? `${firstLine.trimEnd()}...` : firstLine;
-}
+function cgptCreateChatLogUserCard(entry, nextEntry, allEntries, closeModal) {
+  const card = document.createElement("div");
+  card.style.border = "1px solid #3f3f46";
+  card.style.borderRadius = "8px";
+  card.style.padding = "10px";
+  card.style.background = "#18181b";
+  card.style.display = "flex";
+  card.style.flexDirection = "column";
+  card.style.gap = "6px";
 
-function normalizeLineEndings(text) {
-  return String(text).replace(/\r\n/g, "\n");
-}
+  card.appendChild(cgptCreateChatLogUserHeader(entry, closeModal));
+  card.appendChild(cgptCreateChatLogMessageBody(entry));
 
-function formatChatLogTimestamp(ts) {
-  const date = new Date(ts);
-  if (!isNaN(date.getTime())) {
-    return date.toLocaleString();
+  const assistantBlocks = cgptCollectAssistantBlocksForEntry(entry, nextEntry, allEntries);
+  const blockSection = cgptCreateChatLogBlocksSection(assistantBlocks, closeModal);
+  if (blockSection) {
+    card.appendChild(blockSection);
   }
-  return ts || "";
+
+  const assistantUrls = cgptCollectAssistantUrlsForEntry(entry, nextEntry, allEntries);
+  const urlSection = cgptCreateChatLogUrlsSection(assistantUrls);
+  if (urlSection) {
+    card.appendChild(urlSection);
+  }
+
+  return card;
 }
 
-function collectAssistantBlocksForEntry(entry, nextEntry, allEntries) {
-  const blocks = [];
-  const startOrder = entry.order;
-  const endOrder = nextEntry ? nextEntry.order : Infinity;
-  allEntries
-    .filter((e) => e.role === "assistant" && e.order > startOrder && e.order < endOrder)
-    .forEach((assistantEntry) => {
-      if (!assistantEntry.element) return;
-      extractFormattedCodeBlocksFromElement(assistantEntry.element).forEach((block) => {
-        blocks.push(block);
-      });
-    });
-  return blocks;
-}
+function cgptCreateChatLogUserHeader(entry, closeModal) {
+  const header = document.createElement("div");
+  header.style.display = "flex";
+  header.style.justifyContent = "space-between";
+  header.style.alignItems = "center";
+  header.style.gap = "8px";
 
-function collectAssistantUrlsForEntry(entry, nextEntry, allEntries) {
-  const urls = [];
-  const seen = new Set();
-  const startOrder = entry.order;
-  const endOrder = nextEntry ? nextEntry.order : Infinity;
-  allEntries
-    .filter((e) => e.role === "assistant" && e.order > startOrder && e.order < endOrder)
-    .forEach((assistantEntry) => {
-      if (!assistantEntry.element) return;
-      extractStandaloneUrlsFromElement(assistantEntry.element).forEach((link) => {
-        const key = `${link.url}|${link.text}`;
-        if (seen.has(key)) return;
-        seen.add(key);
-        urls.push(link);
-      });
-    });
-  return urls;
-}
+  const info = document.createElement("div");
+  info.style.flex = "1";
+  info.style.fontSize = "12px";
+  info.style.color = "#d1d5db";
+  info.textContent = `Sent ${cgptFormatChatLogTimestamp(entry.timestamp)}`;
+  header.appendChild(info);
 
-function extractFormattedCodeBlocksFromElement(element) {
-  const results = [];
-  if (!element) return results;
-  element.querySelectorAll("pre code").forEach((codeEl) => {
-    const rawText = codeEl.textContent || "";
-    const normalized = rawText.replace(/\r\n/g, "\n");
-    const lines = normalized.split("\n");
-    if (!lines.length) return;
-    const firstLine = lines[0].trim();
-    const match =
-      firstLine.match(/^\/\/\s*file:\s*(.+)$/i) || firstLine.match(/^#\s*file:\s*(.+)$/i);
-    if (!match) return;
-    const filePath = match[1].trim();
-    if (!filePath) return;
-    const content = lines.slice(1).join("\n");
-    const blockElement = codeEl.closest("pre") || codeEl;
-    results.push({ filePath, fileName: deriveFileName(filePath), content, element: blockElement });
-  });
-  return results;
-}
-
-function extractStandaloneUrlsFromElement(element) {
-  const results = [];
-  if (!element) return results;
-  const anchors = element.querySelectorAll("a[href]");
-  anchors.forEach((anchor) => {
-    if (anchor.closest("pre")) return;
-    const href = anchor.getAttribute("href") || "";
-    if (!/^https?:\/\//i.test(href)) return;
-    const text = (anchor.textContent || "").trim();
-    results.push({ url: href, text });
-  });
-  return results;
-}
-
-function deriveFileName(filePath) {
-  if (!filePath) return "";
-  const normalized = filePath.replace(/\\/g, "/");
-  const parts = normalized.split("/");
-  return parts[parts.length - 1] || filePath;
-}
-
-function triggerChatLogDownload(filePath, content, options = {}) {
-  const { onDone, saveAs = false, overrideFolderPath = "" } = options || {};
-  const callback = typeof onDone === "function" ? onDone : () => {};
-  chrome.runtime.sendMessage(
-    { type: "applyCodeBlock", filePath, content, saveAs, overrideFolderPath },
-    (res) => {
-      callback();
-      if (!res || !res.ok) {
-        const errMsg = (res && res.error) || "Failed to download";
-        if (typeof showToast === "function") {
-          showToast(errMsg, "error");
-        } else {
-          alert(errMsg);
-        }
-      } else if (typeof showToast === "function") {
-        showToast(`Started download: ${filePath}`, "success");
-      }
+  const jumpBtn = cgptCreateChatLogButton("Jump", "accent", "sm");
+  jumpBtn.addEventListener("click", () => {
+    closeModal();
+    if (typeof highlightChatMessageElement === "function") {
+      highlightChatMessageElement(entry.element);
+    } else {
+      cgptJumpToCodeBlock(entry.element);
     }
-  );
-}
-
-function createBatchSaveAllButton(blocks) {
-  return createBatchSaveButton(blocks, {
-    label: "Save All",
-    pendingLabel: "Saving...",
   });
+  header.appendChild(jumpBtn);
+
+  return header;
 }
 
-function createBatchSaveAsAllButton(blocks) {
-  const button = createChatLogButton("Save As All", "secondary", "sm");
-  setChatLogButtonDisabled(button, !blocks || !blocks.length);
+function cgptCreateChatLogMessageBody(entry) {
+  const messageBody = document.createElement("div");
+  messageBody.style.whiteSpace = "pre-wrap";
+  messageBody.style.fontSize = "13px";
+  messageBody.style.lineHeight = "1.5";
+  messageBody.style.color = "#f3f4f6";
+  const messageText = entry.text || "(no text)";
+  messageBody.textContent = cgptCreateSingleLinePreview(messageText, CHAT_LOG_PREVIEW_LINE_LIMIT);
+  return messageBody;
+}
+
+function cgptCreateChatLogBlocksSection(blocks, closeModal) {
   if (!blocks || !blocks.length) {
-    return button;
+    return null;
   }
-  button.addEventListener("click", () => {
-    if (button.disabled) return;
-    handleBatchSaveAsAll(button, blocks);
+
+  const section = document.createElement("div");
+  section.style.display = "flex";
+  section.style.flexDirection = "column";
+  section.style.gap = "6px";
+
+  const blockHeader = document.createElement("div");
+  blockHeader.style.display = "flex";
+  blockHeader.style.alignItems = "center";
+  blockHeader.style.justifyContent = "space-between";
+  blockHeader.style.gap = "8px";
+
+  const blockHeaderLabel = document.createElement("div");
+  blockHeaderLabel.textContent = `Code blocks (${blocks.length})`;
+  blockHeaderLabel.style.fontSize = "12px";
+  blockHeaderLabel.style.color = "#a5b4fc";
+  blockHeader.appendChild(blockHeaderLabel);
+
+  const blockHeaderActions = document.createElement("div");
+  blockHeaderActions.style.display = "flex";
+  blockHeaderActions.style.gap = "6px";
+  blockHeaderActions.appendChild(cgptCreateBatchSaveAllButton(blocks));
+  blockHeaderActions.appendChild(cgptCreateBatchSaveAsAllButton(blocks));
+  blockHeader.appendChild(blockHeaderActions);
+
+  section.appendChild(blockHeader);
+
+  blocks.forEach((block) => {
+    section.appendChild(cgptCreateChatLogCodeBlockCard(block, closeModal));
   });
-  return button;
+
+  return section;
 }
 
-function createBatchSaveButton(blocks, options = {}) {
-  const { label = "Save All", variant = "success", pendingLabel = "Saving..." } = options;
-  const button = createChatLogButton(label, variant, "sm");
-  setChatLogButtonDisabled(button, !blocks || !blocks.length);
+function cgptCreateChatLogCodeBlockCard(block, closeModal) {
+  const blockWrapper = document.createElement("div");
+  blockWrapper.style.border = "1px solid #27272a";
+  blockWrapper.style.borderRadius = "6px";
+  blockWrapper.style.background = "#111827";
+  blockWrapper.style.padding = "6px";
+  blockWrapper.style.display = "flex";
+  blockWrapper.style.flexDirection = "column";
+  blockWrapper.style.gap = "6px";
 
-  if (!blocks || !blocks.length) {
-    return button;
+  const blockHeaderRow = document.createElement("div");
+  blockHeaderRow.style.display = "flex";
+  blockHeaderRow.style.justifyContent = "space-between";
+  blockHeaderRow.style.alignItems = "center";
+  blockHeaderRow.style.gap = "8px";
+
+  const fileInfoWrapper = cgptCreateChatLogBlockInfo(block);
+  blockHeaderRow.appendChild(fileInfoWrapper);
+
+  const blockActionWrapper = document.createElement("div");
+  blockActionWrapper.style.display = "flex";
+  blockActionWrapper.style.gap = "6px";
+  blockActionWrapper.style.flexWrap = "wrap";
+
+  blockActionWrapper.appendChild(cgptCreateBlockSaveButton(block));
+  blockActionWrapper.appendChild(cgptCreateBlockSaveAsButton(block));
+
+  const jumpBtn = cgptCreateChatLogButton("Jump", "accent", "sm");
+  jumpBtn.addEventListener("click", () => {
+    closeModal();
+    cgptJumpToCodeBlock(block.element);
+  });
+  blockActionWrapper.appendChild(jumpBtn);
+
+  blockHeaderRow.appendChild(blockActionWrapper);
+  blockWrapper.appendChild(blockHeaderRow);
+
+  return blockWrapper;
+}
+
+function cgptCreateChatLogBlockInfo(block) {
+  const fileInfoWrapper = document.createElement("div");
+  fileInfoWrapper.style.flex = "1";
+  fileInfoWrapper.style.display = "flex";
+  fileInfoWrapper.style.flexDirection = "column";
+  fileInfoWrapper.style.gap = "2px";
+
+  const fileNameLabel = document.createElement("div");
+  fileNameLabel.style.display = "flex";
+  fileNameLabel.style.flexWrap = "wrap";
+  fileNameLabel.style.alignItems = "baseline";
+  fileNameLabel.style.columnGap = "6px";
+
+  const fileNameText = document.createElement("span");
+  fileNameText.textContent = block.fileName || block.filePath;
+  fileNameText.style.fontSize = "12px";
+  fileNameText.style.color = "#facc15";
+  fileNameText.style.fontWeight = "bold";
+  fileNameLabel.appendChild(fileNameText);
+
+  const metaInfoText = document.createElement("span");
+  metaInfoText.textContent = cgptBuildCodeMetaInfoText(block && block.content);
+  metaInfoText.style.fontSize = "11px";
+  metaInfoText.style.color = "#fef3c7";
+  metaInfoText.style.opacity = "0.85";
+  fileNameLabel.appendChild(metaInfoText);
+
+  fileInfoWrapper.appendChild(fileNameLabel);
+
+  const filePathLabel = document.createElement("div");
+  filePathLabel.textContent = block.filePath;
+  filePathLabel.style.fontSize = "11px";
+  filePathLabel.style.color = "#fef3c7";
+  filePathLabel.style.opacity = "0.9";
+  fileInfoWrapper.appendChild(filePathLabel);
+
+  return fileInfoWrapper;
+}
+
+function cgptCreateChatLogUrlsSection(assistantUrls) {
+  if (!assistantUrls || !assistantUrls.length) {
+    return null;
   }
+  const section = document.createElement("div");
+  section.style.display = "flex";
+  section.style.flexDirection = "column";
+  section.style.gap = "6px";
 
-  button.addEventListener("click", async () => {
-    if (button.disabled) return;
-    await handleBatchSave(button, blocks, { pendingLabel });
+  const urlHeader = document.createElement("div");
+  urlHeader.textContent = `Links Provided (${assistantUrls.length})`;
+  urlHeader.style.fontSize = "12px";
+  urlHeader.style.color = "#7dd3fc";
+  section.appendChild(urlHeader);
+
+  assistantUrls.forEach((link) => {
+    section.appendChild(cgptCreateChatLogUrlCard(link));
   });
 
-  return button;
+  return section;
 }
 
-async function handleBatchSave(button, blocks, options = {}) {
-  const originalText = button.textContent;
-  setChatLogButtonDisabled(button, true);
-  button.textContent = options.pendingLabel || "Saving...";
-  try {
-    await downloadCodeBlocksSequentially(blocks);
-  } finally {
-    button.textContent = originalText;
-    setChatLogButtonDisabled(button, false);
-  }
-}
+function cgptCreateChatLogUrlCard(link) {
+  const urlWrapper = document.createElement("div");
+  urlWrapper.style.border = "1px solid #1f2937";
+  urlWrapper.style.borderRadius = "6px";
+  urlWrapper.style.background = "#0f172a";
+  urlWrapper.style.padding = "6px";
+  urlWrapper.style.display = "flex";
+  urlWrapper.style.flexDirection = "column";
+  urlWrapper.style.gap = "6px";
 
-async function handleBatchSaveAsAll(button, blocks) {
-  const originalText = button.textContent;
-  setChatLogButtonDisabled(button, true);
-  button.textContent = "Selecting...";
-  try {
-    const folderPath = await promptUserForDownloadFolder();
-    if (!folderPath) {
-      return;
-    }
-    button.textContent = "Saving...";
-    await downloadCodeBlocksSequentially(blocks, {
-      overrideFolderPath: folderPath,
-    });
-    if (typeof showToast === "function") {
-      showToast(`Saved to: ${folderPath}`, "success");
-    }
-  } catch (error) {
-    const message = (error && error.message) || "Failed to select a folder.";
-    if (typeof showToast === "function") {
-      showToast(message, "error");
-    }
-  } finally {
-    button.textContent = originalText;
-    setChatLogButtonDisabled(button, false);
-  }
-}
+  const urlHeaderRow = document.createElement("div");
+  urlHeaderRow.style.display = "flex";
+  urlHeaderRow.style.justifyContent = "space-between";
+  urlHeaderRow.style.alignItems = "center";
+  urlHeaderRow.style.gap = "8px";
 
-function createChatLogButton(label, variant = "secondary", size = "md") {
-  const button = document.createElement("button");
-  button.textContent = label;
-  button.style.fontSize = size === "sm" ? "11px" : "12px";
-  button.style.padding = size === "sm" ? "2px 8px" : "4px 10px";
-  button.style.borderRadius = "4px";
-  button.style.border = "1px solid rgba(255,255,255,0.3)";
-  button.style.cursor = "pointer";
-  button.style.transition = "opacity 0.2s ease";
-  if (typeof cgptApplySharedButtonVariant === "function") {
-    cgptApplySharedButtonVariant(button, variant);
-  } else {
-    const fallback = {
-      accent: "#2563eb",
-      success: "#059669",
-      muted: "#4b5563",
-      secondary: "#374151",
-    };
-    button.style.background = fallback[variant] || fallback.secondary;
-    button.style.color = "#fff";
-  }
-  return button;
-}
+  const urlLabelWrapper = document.createElement("div");
+  urlLabelWrapper.style.flex = "1";
+  urlLabelWrapper.style.display = "flex";
+  urlLabelWrapper.style.flexDirection = "column";
+  urlLabelWrapper.style.gap = "2px";
 
-function setChatLogButtonDisabled(button, disabled) {
-  if (!button) return;
-  button.disabled = disabled;
-  button.style.opacity = disabled ? "0.5" : "1";
-  button.style.cursor = disabled ? "not-allowed" : "pointer";
-}
+  const urlDisplayText = document.createElement("div");
+  urlDisplayText.textContent = link.text || link.url;
+  urlDisplayText.style.fontSize = "12px";
+  urlDisplayText.style.color = "#bae6fd";
+  urlDisplayText.style.fontWeight = "bold";
+  urlLabelWrapper.appendChild(urlDisplayText);
 
-function downloadCodeBlocksSequentially(blocks, options = {}) {
-  const normalizedBlocks = Array.isArray(blocks) ? blocks : [];
-  return normalizedBlocks.reduce((promise, block) => {
-    return promise.then(() => createBlockDownloadPromise(block, options));
-  }, Promise.resolve());
-}
+  const urlValue = document.createElement("div");
+  urlValue.textContent = link.url;
+  urlValue.style.fontSize = "11px";
+  urlValue.style.color = "#e0f2fe";
+  urlValue.style.opacity = "0.9";
+  urlLabelWrapper.appendChild(urlValue);
 
-function createBlockDownloadPromise(block, options = {}) {
-  return new Promise((resolve) => {
-    triggerChatLogDownload(block.filePath, block.content, {
-      saveAs: Boolean(options.saveAs),
-      overrideFolderPath: options.overrideFolderPath,
-      onDone: resolve,
-    });
+  urlHeaderRow.appendChild(urlLabelWrapper);
+
+  const openBtn = cgptCreateChatLogButton("Open Link", "accent", "sm");
+  openBtn.addEventListener("click", () => {
+    window.open(link.url, "_blank", "noopener,noreferrer");
   });
-}
+  urlHeaderRow.appendChild(openBtn);
 
-function promptUserForDownloadFolder() {
-  return new Promise((resolve, reject) => {
-    const canSendRuntimeMessage =
-      typeof chrome !== "undefined" &&
-      chrome.runtime &&
-      typeof chrome.runtime.sendMessage === "function";
-    if (!canSendRuntimeMessage) {
-      reject(new Error("Unable to start the folder picker."));
-      return;
-    }
-
-    chrome.runtime.sendMessage({ type: "pickDownloadFolder" }, (response) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-        return;
-      }
-      if (!response) {
-        reject(new Error("Failed to select a folder."));
-        return;
-      }
-      if (!response.ok) {
-        if (response.error === "folder_picker_canceled") {
-          resolve("");
-          return;
-        }
-        reject(new Error(response.error || "Failed to select a folder."));
-        return;
-      }
-      resolve(response.folderPath || "");
-    });
-  });
-}
-
-function cgptJumpToCodeBlock(targetElement) {
-  if (!targetElement) return;
-  if (typeof highlightChatMessageElement === "function") {
-    highlightChatMessageElement(targetElement);
-    return;
-  }
-  if (typeof targetElement.scrollIntoView === "function") {
-    targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-}
-
-function createBlockSaveButton(block) {
-  const button = createChatLogButton("Save", "success", "sm");
-  if (!block || !block.filePath) {
-    setChatLogButtonDisabled(button, true);
-    button.title = "File path not detected";
-    return button;
-  }
-  button.addEventListener("click", () => {
-    handleBlockSave(button, block, false);
-  });
-  return button;
-}
-
-function createBlockSaveAsButton(block) {
-  const button = createChatLogButton("Save As", "secondary", "sm");
-  if (!block || !block.filePath) {
-    setChatLogButtonDisabled(button, true);
-    button.title = "File path not detected";
-    return button;
-  }
-  button.addEventListener("click", () => {
-    handleBlockSave(button, block, true);
-  });
-  return button;
-}
-
-function handleBlockSave(button, block, saveAs) {
-  if (!button || button.disabled || !block || !block.filePath) return;
-  const originalText = button.textContent;
-  setChatLogButtonDisabled(button, true);
-  button.textContent = "Saving...";
-  triggerChatLogDownload(block.filePath, block.content, {
-    saveAs,
-    onDone: () => {
-      button.textContent = originalText;
-      setChatLogButtonDisabled(button, false);
-    },
-  });
-}
-
-function buildCodeMetaInfoText(content) {
-  if (!content) {
-    return "No code detected in this block.";
-  }
-  const normalized = String(content).replace(/\r\n/g, "\n");
-  const lines = normalized.split("\n");
-  const nonEmptyLines = lines.filter((line) => line.trim().length > 0).length;
-  const totalChars = normalized.length;
-  const summaryParts = [];
-  summaryParts.push(`Lines: ${lines.length}`);
-  summaryParts.push(`Non-empty: ${nonEmptyLines}`);
-  summaryParts.push(`Characters: ${totalChars}`);
-  return summaryParts.join(" • ");
+  urlWrapper.appendChild(urlHeaderRow);
+  return urlWrapper;
 }
