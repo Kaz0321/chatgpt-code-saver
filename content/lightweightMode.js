@@ -14,8 +14,8 @@ body.${CGPT_LIGHTWEIGHT_CLASS} pre code {
   font-feature-settings: "kern" 0;
 }
 
-/* 長大コードはホバー時以外は折りたたむ */
-body.${CGPT_LIGHTWEIGHT_CLASS} pre:not(:hover) {
+/* 長大コードはホバー時以外は折りたたむ（拡張側でExpanded指定時は除外） */
+body.${CGPT_LIGHTWEIGHT_CLASS} pre:not(:hover):not([data-cgpt-view-mode="expanded"]) {
   max-height: 350px;
   overflow: hidden;
 }
