@@ -6,6 +6,7 @@ function createFloatingPanel() {
   panel.appendChild(createProjectFolderSection());
   panel.appendChild(createSaveOptionsSection());
   panel.appendChild(createTemplateSection());
+  panel.appendChild(createLightweightModeSection());
   panel.appendChild(createViewSection());
   panel.appendChild(createLogSection());
 
