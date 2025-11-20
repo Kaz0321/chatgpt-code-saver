@@ -2,13 +2,20 @@ function ensureDefaultTemplates() {
   let templates = cgptGetTemplates();
   if (!Array.isArray(templates) || templates.length === 0) {
     const id = cgptGenerateTemplateId();
-    templates = [
-      {
-        id,
-        title: "Code output guide (default)",
-        content: DEFAULT_TEMPLATE_CONTENT,
-      },
-    ];
+    const defaultTemplateFactory =
+      typeof cgptCreateDefaultTemplate === "function"
+        ? cgptCreateDefaultTemplate
+        : (templateId) => ({
+            id: templateId,
+            title: "Code output guide (default)",
+            content:
+              typeof cgptGetDefaultTemplateContent === "function"
+                ? cgptGetDefaultTemplateContent()
+                : typeof DEFAULT_TEMPLATE_CONTENT !== "undefined"
+                ? DEFAULT_TEMPLATE_CONTENT
+                : "",
+          });
+    templates = [defaultTemplateFactory(id)];
     cgptSetTemplates(templates);
     cgptSetSelectedTemplateId(id);
   } else if (!cgptGetSelectedTemplateId()) {

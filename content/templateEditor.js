@@ -1,3 +1,13 @@
+function cgptResolveDefaultTemplateContent() {
+  if (typeof cgptGetDefaultTemplateContent === "function") {
+    return cgptGetDefaultTemplateContent();
+  }
+  if (typeof DEFAULT_TEMPLATE_CONTENT !== "undefined") {
+    return DEFAULT_TEMPLATE_CONTENT;
+  }
+  return "";
+}
+
 function openTemplateEditor(mode, templateId, onSave) {
   if (document.getElementById("cgpt-helper-template-modal")) return;
 
@@ -69,7 +79,7 @@ function openTemplateEditor(mode, templateId, onSave) {
   textarea.value =
     mode === "edit" && targetTemplate
       ? targetTemplate.content
-      : DEFAULT_TEMPLATE_CONTENT;
+      : cgptResolveDefaultTemplateContent();
   textarea.style.width = "100%";
   textarea.style.flex = "1";
   textarea.style.minHeight = "200px";
