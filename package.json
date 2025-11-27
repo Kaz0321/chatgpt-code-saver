@@ -1,6 +1,6 @@
 {
   "name": "gpt-code-saver-extension",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Chrome 拡張「gpt-code-saver-extension」のソースです。ChatGPT が生成したコードブロックの 1 行目に `// file: path/to/file.ext` または `# file: path/to/file.ext` を記述すると、ボタン 1 つでローカル プロジェクトに直接保存できます。さらに、ChatGPT 入力欄に貼り付けるテンプレートの管理・貼り付け・編集 UI や、チャット履歴の収集・参照 UI も提供します。v0.0.3 ではコードブロック装飾ロジック・ビュー切替・保存ボタン処理を責務ごとにファイル分割し、背景とコンテンツの双方から共有できるファイルパスバリデータを導入しました。",
   "main": "index.js",
   "scripts": {
