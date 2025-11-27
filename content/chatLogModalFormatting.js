@@ -60,6 +60,23 @@ function cgptCollectAssistantUrlsForEntry(entry, nextEntry, allEntries) {
   return urls;
 }
 
+function cgptCollectAssistantHeadingSections(entry, nextEntry, allEntries) {
+  const sections = [];
+  if (!entry || !Array.isArray(allEntries)) {
+    return sections;
+  }
+  const startOrder = entry.order;
+  const endOrder = nextEntry ? nextEntry.order : Infinity;
+  allEntries
+    .filter((candidate) => candidate.role === "assistant" && candidate.order > startOrder && candidate.order < endOrder)
+    .forEach((assistantEntry) => {
+      if (!assistantEntry.element) return;
+      const extracted = cgptExtractHeadingSectionsFromElement(assistantEntry.element);
+      extracted.forEach((section) => sections.push(section));
+    });
+  return sections;
+}
+
 function cgptExtractFormattedCodeBlocksFromElement(element) {
   const results = [];
   if (!element) return results;
@@ -79,6 +96,84 @@ function cgptExtractFormattedCodeBlocksFromElement(element) {
     results.push({ filePath, fileName: cgptDeriveFileName(filePath), content, element: blockElement });
   });
   return results;
+}
+
+function cgptExtractHeadingSectionsFromElement(element) {
+  const results = [];
+  if (!element) return results;
+  const headings = Array.from(element.querySelectorAll("h1, h2, h3, h4, h5, h6"));
+  if (!headings.length) return results;
+
+  const roots = [];
+  const stack = [];
+  headings.forEach((heading, index) => {
+    const level = cgptGetHeadingLevel(heading);
+    if (!level) return;
+    const nextHeading = headings[index + 1];
+    const content = cgptExtractHeadingContent(heading, nextHeading);
+    const node = {
+      title: (heading.textContent || "").trim(),
+      level,
+      content,
+      children: [],
+    };
+    while (stack.length && stack[stack.length - 1].level >= level) {
+      stack.pop();
+    }
+    if (stack.length) {
+      stack[stack.length - 1].children.push(node);
+    } else {
+      roots.push(node);
+    }
+    stack.push(node);
+  });
+
+  return roots;
+}
+
+function cgptGetHeadingLevel(headingElement) {
+  if (!headingElement || !headingElement.tagName) return 0;
+  const match = headingElement.tagName.match(/^H(\d)$/i);
+  if (!match) return 0;
+  const level = Number.parseInt(match[1], 10);
+  return Number.isFinite(level) ? level : 0;
+}
+
+function cgptExtractHeadingContent(heading, nextHeading) {
+  const doc = heading && heading.ownerDocument ? heading.ownerDocument : document;
+  if (!doc || typeof doc.createRange !== "function") return "";
+  const range = doc.createRange();
+  try {
+    range.setStartAfter(heading);
+    if (nextHeading) {
+      range.setEndBefore(nextHeading);
+    } else if (heading.parentNode && heading.parentNode.lastChild) {
+      range.setEndAfter(heading.parentNode.lastChild);
+    } else {
+      return "";
+    }
+    return range.toString().trim();
+  } catch (e) {
+    return "";
+  } finally {
+    if (typeof range.detach === "function") {
+      range.detach();
+    }
+  }
+}
+
+function cgptCountHeadingNodes(nodes) {
+  let count = 0;
+  const traverse = (list) => {
+    list.forEach((node) => {
+      count += 1;
+      if (node.children && node.children.length) {
+        traverse(node.children);
+      }
+    });
+  };
+  traverse(Array.isArray(nodes) ? nodes : []);
+  return count;
 }
 
 function cgptExtractStandaloneUrlsFromElement(element) {

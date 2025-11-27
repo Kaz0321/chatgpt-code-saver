@@ -5,6 +5,7 @@ let chatLogOrderCounter = 0;
 let chatLogTrackerInitialized = false;
 let chatLogRouteWatcher = null;
 let chatLogHighlightStyleInjected = false;
+let chatLogTimestampStyleInjected = false;
 let currentConversationKey = null;
 
 function initChatLogTracker() {
@@ -60,6 +61,30 @@ function ensureChatLogHighlightStyle() {
   `;
   document.head.appendChild(style);
   chatLogHighlightStyleInjected = true;
+}
+
+function ensureChatLogTimestampStyle() {
+  if (chatLogTimestampStyleInjected) return;
+  const style = document.createElement("style");
+  style.textContent = `
+    .cgpt-helper-chatlog-timestamp-wrapper {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 6px;
+      width: 100%;
+    }
+    .cgpt-helper-chatlog-timestamp-label {
+      font-size: 12px;
+      color: #9ca3af;
+      background: rgba(17, 24, 39, 0.75);
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 4px 10px;
+      line-height: 1.4;
+    }
+  `;
+  document.head.appendChild(style);
+  chatLogTimestampStyleInjected = true;
 }
 
 function captureChatLogsFromNode(rootNode) {
@@ -119,6 +144,7 @@ function processChatMessageElement(el) {
   };
 
   chatLogEntries.push(entry);
+  renderChatMessageTimestamp(entry);
 }
 
 function extractChatMessageTimestamp(el) {
@@ -131,6 +157,39 @@ function extractChatMessageTimestamp(el) {
     if (dt) return dt;
   }
   return new Date().toISOString();
+}
+
+function renderChatMessageTimestamp(entry) {
+  if (!entry || !entry.element) return;
+  ensureChatLogTimestampStyle();
+  const container = entry.element.querySelector(
+    ".cgpt-helper-chatlog-timestamp-wrapper"
+  );
+  const labelText =
+    typeof cgptFormatChatLogTimestamp === "function"
+      ? cgptFormatChatLogTimestamp(entry.timestamp)
+      : entry.timestamp;
+
+  if (container) {
+    const label = container.querySelector(".cgpt-helper-chatlog-timestamp-label");
+    if (label) {
+      label.textContent = labelText;
+    }
+    if (entry.element.firstChild !== container) {
+      entry.element.insertBefore(container, entry.element.firstChild);
+    }
+    return;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "cgpt-helper-chatlog-timestamp-wrapper";
+
+  const label = document.createElement("span");
+  label.className = "cgpt-helper-chatlog-timestamp-label";
+  label.textContent = labelText;
+  wrapper.appendChild(label);
+
+  entry.element.insertBefore(wrapper, entry.element.firstChild);
 }
 
 function extractChatMessageText(el) {
