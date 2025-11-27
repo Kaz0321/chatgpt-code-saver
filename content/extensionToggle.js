@@ -40,7 +40,7 @@ function cgptRenderExtensionDisabledEntryPoint() {
   const button = document.createElement("button");
   button.id = "cgpt-helper-extension-enable";
   button.type = "button";
-  button.textContent = "拡張機能を有効化";
+  button.textContent = "Enable extension";
   button.style.position = "fixed";
   button.style.right = "16px";
   button.style.bottom = "20px";

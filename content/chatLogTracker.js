@@ -20,9 +20,11 @@ function cgptCreateFoldSection({
   fold.className = "cgpt-helper-fold";
   const parsedLevel = Number.parseInt(level, 10);
   const numericLevel = Number.isFinite(parsedLevel) ? Math.max(0, parsedLevel) : 0;
+  const clampedLevel = Math.min(numericLevel, 6);
+  fold.style.setProperty("--cgpt-helper-fold-level", `${clampedLevel}`);
+  fold.style.setProperty("--cgpt-helper-fold-indent", `${Math.max(0, clampedLevel - 1) * 6}px`);
   if (numericLevel > 0) {
     fold.classList.add("cgpt-helper-fold-nested");
-    fold.style.setProperty("--cgpt-helper-fold-level", `${Math.min(numericLevel, 6)}`);
   }
 
   const header = document.createElement("div");
@@ -431,7 +433,7 @@ function renderChatMessageFolding(entry) {
   if (!movableNodes.length) return;
 
   const fold = cgptCreateFoldSection({
-    title: entry.role === "assistant" ? "応答" : "チャットメッセージ",
+    title: entry.role === "assistant" ? "Response" : "Message",
     initiallyOpen: true,
     level: 0,
     badgeText: entry.role === "assistant" ? "AI" : "USER",
@@ -484,7 +486,7 @@ function applyHeadingFold(root, baseLevel = 0) {
       title: heading.textContent || "(untitled)",
       initiallyOpen: level <= 2,
       level: baseLevel + Math.max(0, level - 1),
-      badgeText: `H${level}`,
+      badgeText: "",
       actions: { showSave: false, showSaveAs: false, showCopy: false },
     });
 
@@ -534,17 +536,29 @@ function ensureChatLogFoldStyle() {
   const style = document.createElement("style");
   style.textContent = `
     .cgpt-helper-fold {
+      position: relative;
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 10px;
-      padding: 10px;
+      padding: 10px 10px 10px 14px;
       margin-top: 10px;
       background: transparent;
       color: inherit;
       width: 100%;
     }
     .cgpt-helper-fold-nested {
-      margin-left: calc(var(--cgpt-helper-fold-level, 1) * 10px);
-      box-shadow: inset 2px 0 0 rgba(124, 58, 237, 0.35);
+      padding-left: calc(14px + var(--cgpt-helper-fold-indent, 0px));
+    }
+    .cgpt-helper-fold-nested::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      bottom: 8px;
+      left: 6px;
+      width: 2px;
+      background: rgba(124, 58, 237, 0.5);
+      box-shadow: var(--cgpt-helper-fold-indent, 0px) 0 0 rgba(124, 58, 237, 0.28);
+      border-radius: 4px;
+      pointer-events: none;
     }
     .cgpt-helper-fold-header {
       display: flex;
