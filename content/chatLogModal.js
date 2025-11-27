@@ -127,6 +127,12 @@ function cgptCreateChatLogUserCard(entry, nextEntry, allEntries, closeModal) {
   card.appendChild(cgptCreateChatLogUserHeader(entry, closeModal));
   card.appendChild(cgptCreateChatLogMessageBody(entry));
 
+  const headingSections = cgptCollectAssistantHeadingSections(entry, nextEntry, allEntries);
+  const headingSection = cgptCreateChatLogHeadingsSection(headingSections);
+  if (headingSection) {
+    card.appendChild(headingSection);
+  }
+
   const assistantBlocks = cgptCollectAssistantBlocksForEntry(entry, nextEntry, allEntries);
   const blockSection = cgptCreateChatLogBlocksSection(assistantBlocks, closeModal);
   if (blockSection) {
@@ -257,6 +263,83 @@ function cgptCreateChatLogCodeBlockCard(block, closeModal) {
   blockWrapper.appendChild(blockHeaderRow);
 
   return blockWrapper;
+}
+
+function cgptCreateChatLogHeadingsSection(headingSections) {
+  const totalHeadings = cgptCountHeadingNodes(headingSections);
+  if (!totalHeadings) {
+    return null;
+  }
+
+  const section = document.createElement("div");
+  section.style.display = "flex";
+  section.style.flexDirection = "column";
+  section.style.gap = "6px";
+
+  const headingHeader = document.createElement("div");
+  headingHeader.textContent = `Markdown headings (${totalHeadings})`;
+  headingHeader.style.fontSize = "12px";
+  headingHeader.style.color = "#f9a8d4";
+  section.appendChild(headingHeader);
+
+  headingSections.forEach((rootNode) => {
+    section.appendChild(cgptCreateHeadingNodeElement(rootNode, 0));
+  });
+
+  return section;
+}
+
+function cgptCreateHeadingNodeElement(node, depth) {
+  const details = document.createElement("details");
+  details.open = depth === 0;
+  details.style.border = "1px solid #27272a";
+  details.style.borderRadius = "6px";
+  details.style.background = "#0b1324";
+  details.style.padding = "6px";
+  details.style.marginLeft = `${Math.min(depth, 4) * 12}px`;
+
+  const summary = document.createElement("summary");
+  summary.style.cursor = "pointer";
+  summary.style.display = "flex";
+  summary.style.alignItems = "center";
+  summary.style.gap = "6px";
+  summary.style.listStyle = "none";
+
+  const levelBadge = document.createElement("span");
+  levelBadge.textContent = `H${node.level}`;
+  levelBadge.style.fontSize = "10px";
+  levelBadge.style.fontWeight = "bold";
+  levelBadge.style.padding = "2px 6px";
+  levelBadge.style.borderRadius = "999px";
+  levelBadge.style.background = "rgba(255,255,255,0.1)";
+  levelBadge.style.color = "#c084fc";
+  summary.appendChild(levelBadge);
+
+  const title = document.createElement("span");
+  title.textContent = node.title || "(untitled heading)";
+  title.style.fontSize = "12px";
+  title.style.color = "#e5e7eb";
+  title.style.flex = "1";
+  summary.appendChild(title);
+
+  details.appendChild(summary);
+
+  const content = document.createElement("div");
+  content.style.marginTop = "6px";
+  content.style.fontSize = "12px";
+  content.style.lineHeight = "1.5";
+  content.style.color = "#f3f4f6";
+  content.style.whiteSpace = "pre-wrap";
+  content.textContent = node.content || "(no content under this heading)";
+  details.appendChild(content);
+
+  if (Array.isArray(node.children) && node.children.length) {
+    node.children.forEach((child) => {
+      details.appendChild(cgptCreateHeadingNodeElement(child, depth + 1));
+    });
+  }
+
+  return details;
 }
 
 function cgptCreateChatLogBlockInfo(block) {

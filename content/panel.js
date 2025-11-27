@@ -35,6 +35,9 @@ function createFloatingPanel() {
       ? cgptCreatePanelHeader({ onHide: () => requestVisibility(true) })
       : createPanelTitle();
   panel.appendChild(header);
+  if (typeof createExtensionToggleSection === "function") {
+    panel.appendChild(createExtensionToggleSection());
+  }
   panel.appendChild(createProjectFolderSection());
   panel.appendChild(createSaveOptionsSection());
   panel.appendChild(createTemplateSection());

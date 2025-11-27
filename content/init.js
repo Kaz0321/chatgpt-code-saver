@@ -1,58 +1,77 @@
 function init() {
   checkAndNotifyReloaded();
 
-  loadTemplatesFromStorage(() => {
-    const finalizeSetup = () => {
-      createFloatingPanel();
-      if (typeof initChatLogTracker === "function") {
-        initChatLogTracker();
-      }
-      if (typeof cgptStartLightweightModeWatcher === "function") {
-        cgptStartLightweightModeWatcher();
-      }
-      decorateCodeBlocks(document);
-      setupMutationObserver();
-    };
+  const startHelper = () => {
+    loadTemplatesFromStorage(() => {
+      const finalizeSetup = () => {
+        createFloatingPanel();
+        if (typeof initChatLogTracker === "function") {
+          initChatLogTracker();
+        }
+        if (typeof cgptStartLightweightModeWatcher === "function") {
+          cgptStartLightweightModeWatcher();
+        }
+        decorateCodeBlocks(document);
+        setupMutationObserver();
+      };
 
-    const ensureSaveOptionsLoaded = (next) => {
-      if (typeof cgptLoadSaveOptions === "function") {
-        cgptLoadSaveOptions(next);
-        return;
-      }
-      next();
-    };
+      const ensureSaveOptionsLoaded = (next) => {
+        if (typeof cgptLoadSaveOptions === "function") {
+          cgptLoadSaveOptions(next);
+          return;
+        }
+        next();
+      };
 
-    const ensurePanelVisibilityLoaded = (next) => {
-      if (typeof cgptLoadPanelVisibility === "function") {
-        cgptLoadPanelVisibility(next);
-        return;
-      }
-      next();
-    };
+      const ensurePanelVisibilityLoaded = (next) => {
+        if (typeof cgptLoadPanelVisibility === "function") {
+          cgptLoadPanelVisibility(next);
+          return;
+        }
+        next();
+      };
 
-    const ensureLightweightModeLoaded = (next) => {
-      if (typeof cgptLoadLightweightMode === "function") {
-        cgptLoadLightweightMode(next);
-        return;
-      }
-      next();
-    };
+      const ensureLightweightModeLoaded = (next) => {
+        if (typeof cgptLoadLightweightMode === "function") {
+          cgptLoadLightweightMode(next);
+          return;
+        }
+        next();
+      };
 
-    const continueAfterViewSettings = () => {
-      ensurePanelVisibilityLoaded(() => {
-        ensureLightweightModeLoaded(() => {
-          ensureSaveOptionsLoaded(finalizeSetup);
+      const continueAfterViewSettings = () => {
+        ensurePanelVisibilityLoaded(() => {
+          ensureLightweightModeLoaded(() => {
+            ensureSaveOptionsLoaded(finalizeSetup);
+          });
         });
-      });
-    };
+      };
 
-    if (typeof cgptLoadViewSettings === "function") {
-      cgptLoadViewSettings(continueAfterViewSettings);
+      if (typeof cgptLoadViewSettings === "function") {
+        cgptLoadViewSettings(continueAfterViewSettings);
+        return;
+      }
+
+      continueAfterViewSettings();
+    });
+  };
+
+  const startWithExtensionState = () => {
+    if (typeof cgptIsExtensionEnabled === "function" && !cgptIsExtensionEnabled()) {
+      if (typeof cgptRenderExtensionDisabledEntryPoint === "function") {
+        cgptRenderExtensionDisabledEntryPoint();
+      }
       return;
     }
+    startHelper();
+  };
 
-    continueAfterViewSettings();
-  });
+  if (typeof cgptLoadExtensionEnabled === "function") {
+    cgptLoadExtensionEnabled(startWithExtensionState);
+    return;
+  }
+
+  startWithExtensionState();
 }
 
 if (document.readyState === "loading") {
