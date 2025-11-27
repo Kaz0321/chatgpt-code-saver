@@ -9,6 +9,61 @@ let chatLogTimestampStyleInjected = false;
 let chatLogFoldStyleInjected = false;
 let currentConversationKey = null;
 
+function cgptCreateFoldSection({ title, initiallyOpen = true, level = 0, badgeText = "" }) {
+  const fold = document.createElement("div");
+  fold.className = "cgpt-helper-fold";
+  const parsedLevel = Number.parseInt(level, 10);
+  const numericLevel = Number.isFinite(parsedLevel) ? Math.max(0, parsedLevel) : 0;
+  if (numericLevel > 0) {
+    fold.classList.add("cgpt-helper-fold-nested");
+    fold.style.setProperty("--cgpt-helper-fold-level", `${Math.min(numericLevel, 6)}`);
+  }
+
+  const header = document.createElement("div");
+  header.className = "cgpt-helper-fold-header";
+
+  const titleWrapper = document.createElement("div");
+  titleWrapper.className = "cgpt-helper-fold-title";
+  if (badgeText) {
+    const badge = document.createElement("span");
+    badge.className = "cgpt-helper-fold-title-badge";
+    badge.textContent = badgeText;
+    titleWrapper.appendChild(badge);
+  }
+  const titleText = document.createElement("span");
+  titleText.textContent = title || "";
+  titleWrapper.appendChild(titleText);
+  header.appendChild(titleWrapper);
+
+  const actions = document.createElement("div");
+  actions.className = "cgpt-helper-fold-actions";
+  const toggleButton = document.createElement("button");
+  toggleButton.type = "button";
+  toggleButton.className = "cgpt-helper-fold-toggle";
+  actions.appendChild(toggleButton);
+  header.appendChild(actions);
+  fold.appendChild(header);
+
+  const body = document.createElement("div");
+  body.className = "cgpt-helper-fold-body";
+  fold.appendChild(body);
+
+  let isOpen = initiallyOpen !== false;
+  const syncState = () => {
+    fold.classList.toggle("cgpt-helper-fold-collapsed", !isOpen);
+    toggleButton.textContent = isOpen ? "折りたたむ" : "展開する";
+    toggleButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    toggleButton.setAttribute("aria-label", `${title || "セクション"}を${isOpen ? "折りたたむ" : "展開"}`);
+  };
+  toggleButton.addEventListener("click", () => {
+    isOpen = !isOpen;
+    syncState();
+  });
+  syncState();
+
+  return { container: fold, body, titleWrapper };
+}
+
 function initChatLogTracker() {
   if (chatLogTrackerInitialized) return;
   chatLogTrackerInitialized = true;
@@ -205,33 +260,30 @@ function renderChatMessageFolding(entry) {
   const movableNodes = Array.from(messageElement.childNodes).filter((node) => node !== timestampNode);
   if (!movableNodes.length) return;
 
-  const wrapper = document.createElement("details");
-  wrapper.className = "cgpt-helper-fold cgpt-helper-message-fold";
-  wrapper.open = true;
+  const fold = cgptCreateFoldSection({
+    title: entry.role === "assistant" ? "応答" : "チャットメッセージ",
+    initiallyOpen: true,
+    level: 0,
+    badgeText: entry.role === "assistant" ? "AI" : "USER",
+  });
 
-  const summary = document.createElement("summary");
-  summary.className = "cgpt-helper-fold-summary cgpt-helper-message-summary";
-  summary.textContent = entry.role === "assistant" ? "応答を表示/非表示" : "メッセージを表示/非表示";
-  wrapper.appendChild(summary);
-
-  const body = document.createElement("div");
-  body.className = "cgpt-helper-fold-body cgpt-helper-message-body";
+  const body = fold.body;
+  body.classList.add("cgpt-helper-message-body");
   movableNodes.forEach((node) => body.appendChild(node));
-  wrapper.appendChild(body);
 
   if (timestampNode && timestampNode.parentNode === messageElement) {
-    messageElement.insertBefore(wrapper, timestampNode.nextSibling);
+    messageElement.insertBefore(fold.container, timestampNode.nextSibling);
   } else {
-    messageElement.insertBefore(wrapper, messageElement.firstChild);
+    messageElement.insertBefore(fold.container, messageElement.firstChild);
   }
 
   entry.element.dataset.cgptHelperFoldApplied = "1";
   if (entry.role === "assistant") {
-    applyHeadingFold(body);
+    applyHeadingFold(body, 1);
   }
 }
 
-function applyHeadingFold(root) {
+function applyHeadingFold(root, baseLevel = 0) {
   if (!root || !(root.querySelectorAll instanceof Function)) return;
   const headings = Array.from(root.querySelectorAll("h1, h2, h3, h4, h5, h6"));
   if (!headings.length) return;
@@ -257,17 +309,15 @@ function applyHeadingFold(root) {
       return null;
     })();
 
-    const details = heading.ownerDocument.createElement("details");
-    details.className = "cgpt-helper-fold cgpt-helper-heading-fold";
-    details.open = level <= 2;
+    const headingFold = cgptCreateFoldSection({
+      title: heading.textContent || "(untitled)",
+      initiallyOpen: level <= 2,
+      level: baseLevel + Math.max(0, level - 1),
+      badgeText: `H${level}`,
+    });
 
-    const summary = heading.ownerDocument.createElement("summary");
-    summary.className = "cgpt-helper-fold-summary cgpt-helper-heading-summary";
-    summary.textContent = heading.textContent || "(untitled)";
-    details.appendChild(summary);
-
-    const content = heading.ownerDocument.createElement("div");
-    content.className = "cgpt-helper-fold-body cgpt-helper-heading-content";
+    headingFold.container.classList.add("cgpt-helper-heading-fold");
+    headingFold.body.classList.add("cgpt-helper-heading-content");
 
     const range = heading.ownerDocument.createRange();
     try {
@@ -280,7 +330,7 @@ function applyHeadingFold(root) {
         range.setEndAfter(heading);
       }
       const extracted = range.extractContents();
-      content.appendChild(extracted);
+      headingFold.body.appendChild(extracted);
     } catch (e) {
       // noop
     } finally {
@@ -289,8 +339,7 @@ function applyHeadingFold(root) {
       }
     }
 
-    details.appendChild(content);
-    heading.replaceWith(details);
+    heading.replaceWith(headingFold.container);
   });
 }
 
@@ -299,47 +348,90 @@ function ensureChatLogFoldStyle() {
   const style = document.createElement("style");
   style.textContent = `
     .cgpt-helper-fold {
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 10px;
-      padding: 6px 8px;
-      margin-top: 8px;
+      padding: 10px;
+      margin-top: 10px;
       background: transparent;
+      color: inherit;
       width: 100%;
     }
-    .cgpt-helper-fold[open] > .cgpt-helper-fold-summary::before {
-      transform: rotate(90deg);
+    .cgpt-helper-fold-nested {
+      margin-left: calc(var(--cgpt-helper-fold-level, 1) * 10px);
+      box-shadow: inset 2px 0 0 rgba(124, 58, 237, 0.35);
     }
-    .cgpt-helper-fold-summary {
-      cursor: pointer;
+    .cgpt-helper-fold-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+    }
+    .cgpt-helper-fold-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-size: 12px;
-      list-style: none;
+      font-weight: 600;
+      color: inherit;
+    }
+    .cgpt-helper-fold-title-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .cgpt-helper-fold-actions {
       display: flex;
       align-items: center;
       gap: 6px;
-      color: inherit;
-      text-align: left;
     }
-    .cgpt-helper-fold-summary::-webkit-details-marker {
-      display: none;
+    .cgpt-helper-fold-toggle {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(55, 65, 81, 0.8);
+      color: #f9fafb;
     }
-    .cgpt-helper-fold-summary::before {
-      content: "▸";
+    .cgpt-helper-fold-toggle:hover {
+      background: rgba(75, 85, 99, 0.9);
+    }
+    .cgpt-helper-fold-toggle::before {
+      content: '▸';
       display: inline-block;
       transition: transform 0.15s ease;
       font-size: 10px;
     }
+    .cgpt-helper-fold-collapsed .cgpt-helper-fold-toggle::before {
+      transform: rotate(0deg);
+    }
+    .cgpt-helper-fold:not(.cgpt-helper-fold-collapsed) .cgpt-helper-fold-toggle::before {
+      transform: rotate(90deg);
+    }
     .cgpt-helper-fold-body {
-      margin-top: 6px;
+      margin-top: 8px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
       color: inherit;
     }
+    .cgpt-helper-fold-collapsed .cgpt-helper-fold-body {
+      display: none;
+    }
     .cgpt-helper-heading-fold {
-      margin-left: 8px;
+      padding-top: 8px;
+      padding-bottom: 8px;
     }
     .cgpt-helper-heading-content {
-      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: inherit;
     }
   `;
   document.head.appendChild(style);
