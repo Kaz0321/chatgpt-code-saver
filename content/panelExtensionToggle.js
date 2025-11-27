@@ -2,11 +2,6 @@ function createExtensionToggleSection() {
   const section = document.createElement("div");
   section.appendChild(createSectionLabel("Extension"));
 
-  const status = document.createElement("div");
-  status.style.fontSize = "11px";
-  status.style.color = "rgba(255,255,255,0.85)";
-  status.style.marginBottom = "6px";
-
   const buttonRow = createButtonRow();
 
   const enableButton = createPanelButton("Enable", "accent");
@@ -14,23 +9,22 @@ function createExtensionToggleSection() {
   const disableButton = createPanelButton("Disable", "muted");
   disableButton.style.flex = "1";
 
-  const updateStateLabel = () => {
+  const updateStateControls = () => {
     const enabled = typeof cgptIsExtensionEnabled === "function" ? cgptIsExtensionEnabled() : true;
-    status.textContent = enabled ? "Status: Enabled" : "Status: Disabled";
     enableButton.disabled = enabled;
     disableButton.disabled = !enabled;
   };
 
   enableButton.addEventListener("click", () => {
     cgptUpdateExtensionEnabled(true, () => {
-      updateStateLabel();
+      updateStateControls();
       window.location.reload();
     });
   });
 
   disableButton.addEventListener("click", () => {
     cgptUpdateExtensionEnabled(false, () => {
-      updateStateLabel();
+      updateStateControls();
       window.location.reload();
     });
   });
@@ -38,9 +32,8 @@ function createExtensionToggleSection() {
   buttonRow.appendChild(enableButton);
   buttonRow.appendChild(disableButton);
 
-  section.appendChild(status);
   section.appendChild(buttonRow);
 
-  updateStateLabel();
+  updateStateControls();
   return section;
 }

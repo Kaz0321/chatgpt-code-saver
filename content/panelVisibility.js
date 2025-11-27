@@ -52,7 +52,7 @@ function cgptCreatePanelHeader({ onHide }) {
   title.style.flex = "1";
   header.appendChild(title);
 
-  const hideButton = createPanelButton("隠す", "muted");
+  const hideButton = createPanelButton("Hide", "muted");
   hideButton.style.padding = "2px 6px";
   hideButton.style.lineHeight = "1.3";
   hideButton.addEventListener("click", () => {
