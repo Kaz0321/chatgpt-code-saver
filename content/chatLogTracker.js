@@ -37,6 +37,7 @@ function cgptCreateFoldSection({
     titleWrapper.appendChild(badge);
   }
   const titleText = document.createElement("span");
+  titleText.className = "cgpt-helper-fold-title-text";
   titleText.textContent = title || "";
   titleWrapper.appendChild(titleText);
   header.appendChild(titleWrapper);
@@ -490,6 +491,20 @@ function applyHeadingFold(root, baseLevel = 0) {
     headingFold.container.classList.add("cgpt-helper-heading-fold");
     headingFold.body.classList.add("cgpt-helper-heading-content");
 
+    const headingClone = heading.cloneNode(true);
+    headingClone.classList.add("cgpt-helper-heading-title");
+    headingClone.style.margin = "0";
+    headingClone.style.padding = "0";
+    headingClone.style.display = "inline-flex";
+    headingClone.style.alignItems = "center";
+    headingClone.style.color = "inherit";
+
+    const fallbackText = headingFold.titleWrapper.querySelector(".cgpt-helper-fold-title-text");
+    if (fallbackText) {
+      fallbackText.remove();
+    }
+    headingFold.titleWrapper.appendChild(headingClone);
+
     const range = heading.ownerDocument.createRange();
     try {
       range.setStartAfter(heading);
@@ -546,6 +561,11 @@ function ensureChatLogFoldStyle() {
       font-weight: 600;
       color: inherit;
     }
+    .cgpt-helper-fold-title-text {
+      display: inline-flex;
+      align-items: center;
+      color: inherit;
+    }
     .cgpt-helper-fold-title-badge {
       font-size: 11px;
       padding: 2px 6px;
@@ -595,9 +615,21 @@ function ensureChatLogFoldStyle() {
       padding-top: 8px;
       padding-bottom: 8px;
     }
+    .cgpt-helper-heading-fold .cgpt-helper-fold-title {
+      font-size: inherit;
+      font-weight: inherit;
+    }
     .cgpt-helper-heading-content {
       font-size: inherit;
       line-height: inherit;
+      color: inherit;
+    }
+    .cgpt-helper-heading-title {
+      margin: 0;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       color: inherit;
     }
   `;
