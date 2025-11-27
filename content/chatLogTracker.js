@@ -146,7 +146,7 @@ function processChatMessageElement(el) {
 
   chatLogEntries.push(entry);
   renderChatMessageTimestamp(entry);
-  renderAssistantMessageFolding(entry);
+  renderChatMessageFolding(entry);
 }
 
 function extractChatMessageTimestamp(el) {
@@ -194,8 +194,8 @@ function renderChatMessageTimestamp(entry) {
   entry.element.insertBefore(wrapper, entry.element.firstChild);
 }
 
-function renderAssistantMessageFolding(entry) {
-  if (!entry || entry.role !== "assistant" || !entry.element) return;
+function renderChatMessageFolding(entry) {
+  if (!entry || !entry.element) return;
   if (entry.element.dataset.cgptHelperFoldApplied === "1") return;
 
   const messageElement = entry.element;
@@ -206,16 +206,16 @@ function renderAssistantMessageFolding(entry) {
   if (!movableNodes.length) return;
 
   const wrapper = document.createElement("details");
-  wrapper.className = "cgpt-helper-response-fold";
+  wrapper.className = "cgpt-helper-fold cgpt-helper-message-fold";
   wrapper.open = true;
 
   const summary = document.createElement("summary");
-  summary.className = "cgpt-helper-response-summary";
-  summary.textContent = "応答を表示/非表示";
+  summary.className = "cgpt-helper-fold-summary cgpt-helper-message-summary";
+  summary.textContent = entry.role === "assistant" ? "応答を表示/非表示" : "メッセージを表示/非表示";
   wrapper.appendChild(summary);
 
   const body = document.createElement("div");
-  body.className = "cgpt-helper-response-body";
+  body.className = "cgpt-helper-fold-body cgpt-helper-message-body";
   movableNodes.forEach((node) => body.appendChild(node));
   wrapper.appendChild(body);
 
@@ -226,7 +226,9 @@ function renderAssistantMessageFolding(entry) {
   }
 
   entry.element.dataset.cgptHelperFoldApplied = "1";
-  applyHeadingFold(body);
+  if (entry.role === "assistant") {
+    applyHeadingFold(body);
+  }
 }
 
 function applyHeadingFold(root) {
@@ -256,16 +258,16 @@ function applyHeadingFold(root) {
     })();
 
     const details = heading.ownerDocument.createElement("details");
-    details.className = "cgpt-helper-heading-fold";
+    details.className = "cgpt-helper-fold cgpt-helper-heading-fold";
     details.open = level <= 2;
 
     const summary = heading.ownerDocument.createElement("summary");
-    summary.className = "cgpt-helper-heading-summary";
+    summary.className = "cgpt-helper-fold-summary cgpt-helper-heading-summary";
     summary.textContent = heading.textContent || "(untitled)";
     details.appendChild(summary);
 
     const content = heading.ownerDocument.createElement("div");
-    content.className = "cgpt-helper-heading-content";
+    content.className = "cgpt-helper-fold-body cgpt-helper-heading-content";
 
     const range = heading.ownerDocument.createRange();
     try {
@@ -296,43 +298,45 @@ function ensureChatLogFoldStyle() {
   if (chatLogFoldStyleInjected) return;
   const style = document.createElement("style");
   style.textContent = `
-    .cgpt-helper-response-fold {
-      border: 1px solid #374151;
+    .cgpt-helper-fold {
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 10px;
-      padding: 8px;
-      background: rgba(17, 24, 39, 0.6);
+      padding: 6px 8px;
       margin-top: 8px;
+      background: transparent;
+      width: 100%;
     }
-    .cgpt-helper-response-summary {
+    .cgpt-helper-fold[open] > .cgpt-helper-fold-summary::before {
+      transform: rotate(90deg);
+    }
+    .cgpt-helper-fold-summary {
       cursor: pointer;
       font-size: 12px;
-      color: #e5e7eb;
       list-style: none;
       display: flex;
       align-items: center;
       gap: 6px;
+      color: inherit;
+      text-align: left;
     }
-    .cgpt-helper-response-body {
+    .cgpt-helper-fold-summary::-webkit-details-marker {
+      display: none;
+    }
+    .cgpt-helper-fold-summary::before {
+      content: "▸";
+      display: inline-block;
+      transition: transform 0.15s ease;
+      font-size: 10px;
+    }
+    .cgpt-helper-fold-body {
       margin-top: 6px;
       display: flex;
       flex-direction: column;
       gap: 6px;
+      color: inherit;
     }
     .cgpt-helper-heading-fold {
-      border: 1px solid #4b5563;
-      border-radius: 8px;
-      padding: 6px;
-      margin-top: 6px;
-      background: rgba(15, 23, 42, 0.55);
-    }
-    .cgpt-helper-heading-summary {
-      cursor: pointer;
-      font-size: 12px;
-      color: #c7d2fe;
-      list-style: none;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      margin-left: 8px;
     }
     .cgpt-helper-heading-content {
       margin-top: 6px;
