@@ -22,6 +22,14 @@ function init() {
       next();
     };
 
+    const ensurePanelVisibilityLoaded = (next) => {
+      if (typeof cgptLoadPanelVisibility === "function") {
+        cgptLoadPanelVisibility(next);
+        return;
+      }
+      next();
+    };
+
     const ensureLightweightModeLoaded = (next) => {
       if (typeof cgptLoadLightweightMode === "function") {
         cgptLoadLightweightMode(next);
@@ -31,8 +39,10 @@ function init() {
     };
 
     const continueAfterViewSettings = () => {
-      ensureLightweightModeLoaded(() => {
-        ensureSaveOptionsLoaded(finalizeSetup);
+      ensurePanelVisibilityLoaded(() => {
+        ensureLightweightModeLoaded(() => {
+          ensureSaveOptionsLoaded(finalizeSetup);
+        });
       });
     };
 
