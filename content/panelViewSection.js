@@ -34,6 +34,7 @@ function createViewSection() {
   );
 
   viewSection.appendChild(viewButtons);
+  viewSection.appendChild(createHeadingViewSection());
   return viewSection;
 }
 
@@ -88,5 +89,85 @@ function getViewSettingsForPanel() {
 function applyViewModeToAll(mode) {
   if (typeof cgptApplyViewModeToAll === "function") {
     cgptApplyViewModeToAll(mode);
+  }
+}
+
+function createHeadingViewSection() {
+  const headingSection = document.createElement("div");
+  headingSection.appendChild(createSectionLabel("Headings"));
+
+  const levelList = document.createElement("div");
+  levelList.style.display = "flex";
+  levelList.style.flexDirection = "column";
+  levelList.style.gap = "6px";
+
+  [1, 2, 3, 4, 5, 6].forEach((level) => {
+    levelList.appendChild(createHeadingLevelRow(level));
+  });
+
+  headingSection.appendChild(levelList);
+  return headingSection;
+}
+
+function createHeadingLevelRow(level) {
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.alignItems = "center";
+  row.style.gap = "6px";
+
+  const label = document.createElement("span");
+  label.textContent = `Level ${level}`;
+  label.style.flex = "1";
+  label.style.fontWeight = "600";
+  label.style.color = getHeadingLevelColor(level);
+  row.appendChild(label);
+
+  const controls = document.createElement("div");
+  controls.style.display = "flex";
+  controls.style.gap = "4px";
+
+  const collapseButton = createPanelButton("Compact All", "muted");
+  applyHeadingButtonTheme(collapseButton, level);
+  collapseButton.addEventListener("click", () => requestHeadingFoldChange(level, false));
+  controls.appendChild(collapseButton);
+
+  const expandButton = createPanelButton("Expand All", "muted");
+  applyHeadingButtonTheme(expandButton, level);
+  expandButton.addEventListener("click", () => requestHeadingFoldChange(level, true));
+  controls.appendChild(expandButton);
+
+  row.appendChild(controls);
+  return row;
+}
+
+function applyHeadingButtonTheme(button, level) {
+  const color = getHeadingLevelColor(level);
+  if (!button || !color) return;
+  button.style.background = color;
+  button.style.borderColor = color;
+  button.style.color = "#0b172a";
+}
+
+function getHeadingLevelColor(level) {
+  if (typeof cgptGetFoldLevelColor === "function") {
+    return cgptGetFoldLevelColor(level);
+  }
+  const fallback = [
+    "#60a5fa",
+    "#a78bfa",
+    "#f472b6",
+    "#34d399",
+    "#f59e0b",
+    "#38bdf8",
+    "#c084fc",
+  ];
+  const parsed = Number.parseInt(level, 10);
+  const index = Math.min(Math.max(Number.isFinite(parsed) ? parsed : 0, 0), fallback.length - 1);
+  return fallback[index];
+}
+
+function requestHeadingFoldChange(level, shouldExpand) {
+  if (typeof cgptToggleHeadingFoldsAtLevel === "function") {
+    cgptToggleHeadingFoldsAtLevel(level, shouldExpand);
   }
 }

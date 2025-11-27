@@ -8,6 +8,50 @@ let chatLogHighlightStyleInjected = false;
 let chatLogTimestampStyleInjected = false;
 let chatLogFoldStyleInjected = false;
 let currentConversationKey = null;
+const CGPT_FOLD_LEVEL_COLORS = [
+  "#60a5fa",
+  "#a78bfa",
+  "#f472b6",
+  "#34d399",
+  "#f59e0b",
+  "#38bdf8",
+  "#c084fc",
+];
+
+function cgptGetFoldLevelColor(level) {
+  const paletteIndex = Math.min(
+    Math.max(Number.parseInt(level, 10) || 0, 0),
+    CGPT_FOLD_LEVEL_COLORS.length - 1
+  );
+  const color = CGPT_FOLD_LEVEL_COLORS[paletteIndex];
+  return color || CGPT_FOLD_LEVEL_COLORS[0];
+}
+
+function cgptApplyFoldState(foldElement, isOpen) {
+  if (!foldElement) return;
+  const open = isOpen !== false;
+  foldElement.dataset.cgptHelperFoldOpen = open ? "1" : "0";
+  foldElement.classList.toggle("cgpt-helper-fold-collapsed", !open);
+  foldElement.querySelectorAll(".cgpt-helper-fold-action-button").forEach((btn) => {
+    if (!btn.dataset.cgptHelperFoldAction) return;
+    const action = btn.dataset.cgptHelperFoldAction;
+    if (action === "compact") {
+      btn.disabled = !open;
+      btn.classList.toggle("cgpt-helper-fold-action-disabled", !open);
+    }
+    if (action === "expand") {
+      btn.disabled = open;
+      btn.classList.toggle("cgpt-helper-fold-action-disabled", open);
+    }
+  });
+}
+
+function cgptApplyFoldToggleTheme(button) {
+  if (!button) return;
+  button.style.background = "var(--cgpt-helper-fold-color, #7c3aed)";
+  button.style.borderColor = "var(--cgpt-helper-fold-color, #7c3aed)";
+  button.style.color = "#0b172a";
+}
 
 function cgptCreateFoldSection({
   title,
@@ -23,6 +67,9 @@ function cgptCreateFoldSection({
   const clampedLevel = Math.min(numericLevel, 6);
   fold.style.setProperty("--cgpt-helper-fold-level", `${clampedLevel}`);
   fold.style.setProperty("--cgpt-helper-fold-indent", `${Math.max(0, clampedLevel - 1) * 6}px`);
+  fold.style.setProperty("--cgpt-helper-fold-line-offset", `${Math.max(0, clampedLevel - 1) * 8}px`);
+  fold.style.setProperty("--cgpt-helper-fold-color", cgptGetFoldLevelColor(clampedLevel));
+  fold.dataset.cgptHelperFoldLevel = `${clampedLevel}`;
   if (numericLevel > 0) {
     fold.classList.add("cgpt-helper-fold-nested");
   }
@@ -57,19 +104,7 @@ function cgptCreateFoldSection({
 
   let isOpen = initiallyOpen !== false;
   const updateState = () => {
-    fold.classList.toggle("cgpt-helper-fold-collapsed", !isOpen);
-    buttons.forEach((btn) => {
-      if (!btn.dataset.cgptHelperFoldAction) return;
-      const action = btn.dataset.cgptHelperFoldAction;
-      if (action === "compact") {
-        btn.disabled = !isOpen;
-        btn.classList.toggle("cgpt-helper-fold-action-disabled", !isOpen);
-      }
-      if (action === "expand") {
-        btn.disabled = isOpen;
-        btn.classList.toggle("cgpt-helper-fold-action-disabled", isOpen);
-      }
-    });
+    cgptApplyFoldState(fold, isOpen);
   };
 
   buttons.forEach((btn) => {
@@ -110,6 +145,10 @@ function cgptCreateFoldActionButtons(actionConfig = {}) {
     const button = cgptCreateFoldActionButton(label, variant);
     if (actionKey) {
       button.dataset.cgptHelperFoldAction = actionKey;
+    }
+    if (actionKey === "compact" || actionKey === "expand") {
+      button.classList.add("cgpt-helper-fold-toggle");
+      cgptApplyFoldToggleTheme(button);
     }
     if (typeof handler === "function") {
       button.addEventListener("click", handler);
@@ -531,6 +570,23 @@ function applyHeadingFold(root, baseLevel = 0) {
   });
 }
 
+function cgptFindHeadingFolds() {
+  if (!document || typeof document.querySelectorAll !== "function") return [];
+  return Array.from(document.querySelectorAll(".cgpt-helper-heading-fold"));
+}
+
+function cgptToggleHeadingFoldsAtLevel(level, shouldExpand = true) {
+  const parsed = Number.parseInt(level, 10);
+  if (!Number.isFinite(parsed)) return;
+  const targetLevel = Math.min(Math.max(parsed, 1), 6);
+  cgptFindHeadingFolds().forEach((fold) => {
+    const foldLevel = Number.parseInt(fold.dataset.cgptHelperFoldLevel, 10);
+    if (foldLevel === targetLevel) {
+      cgptApplyFoldState(fold, shouldExpand);
+    }
+  });
+}
+
 function ensureChatLogFoldStyle() {
   if (chatLogFoldStyleInjected) return;
   const style = document.createElement("style");
@@ -553,11 +609,10 @@ function ensureChatLogFoldStyle() {
       position: absolute;
       top: 8px;
       bottom: 8px;
-      left: 6px;
-      width: 2px;
-      background: rgba(124, 58, 237, 0.5);
-      box-shadow: var(--cgpt-helper-fold-indent, 0px) 0 0 rgba(124, 58, 237, 0.28);
-      border-radius: 4px;
+      left: calc(6px + var(--cgpt-helper-fold-line-offset, 0px));
+      width: 3px;
+      background: var(--cgpt-helper-fold-color, rgba(124, 58, 237, 0.65));
+      border-radius: 999px;
       pointer-events: none;
     }
     .cgpt-helper-fold-header {
@@ -614,6 +669,14 @@ function ensureChatLogFoldStyle() {
     .cgpt-helper-fold-action-disabled {
       opacity: 0.55;
       cursor: not-allowed;
+    }
+    .cgpt-helper-fold-toggle {
+      background: var(--cgpt-helper-fold-color, #7c3aed);
+      border-color: var(--cgpt-helper-fold-color, #7c3aed);
+      color: #0b172a;
+    }
+    .cgpt-helper-fold-toggle.cgpt-helper-fold-action-disabled {
+      opacity: 0.6;
     }
     .cgpt-helper-fold-body {
       margin-top: 8px;
