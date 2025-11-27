@@ -1,6 +1,6 @@
 # 開発者向けガイド
 
-このドキュメントでは gpt-code-saver-extension のアーキテクチャ、メッセージ フロー、開発時の注意点をまとめています。ユーザー向けの概要やセットアップは [README.md](README.md) を参照してください。
+このドキュメントでは gpt-code-saver-extension のアーキテクチャ、メッセージ フロー、開発時の注意点をまとめています。ユーザー向けの概要やセットアップは [README.md](README.md) を参照してください。README には利用に必要な情報のみを記載し、実装やリファクタリングの詳細は本ドキュメント側で管理します。
 
 ## リポジトリ構成
 ```
@@ -124,6 +124,11 @@ classDiagram
 - デバッグ時は DevTools > Sources > Service Workers で `background/index.js` のログや `chrome.runtime.sendMessage` のレスポンスを確認します。
 - 既定テンプレート文言は `content/state.js` の `DEFAULT_TEMPLATE_CONTENT` で定義されています。アクセサ (`cgptSetTemplates`, `cgptSetSelectedTemplateId` など) を経由して状態を更新し、単一責務を保ってください。
 - 権限を追加／削除する場合は `manifest.json` を更新し、README の「権限とプライバシー」節の整合性も確認します。
+
+### v0.2.0 リファクタリングのポイント
+- `background/applyCode.js` は入力バリデーション・ログ生成・ダウンロード実行をそれぞれ独立関数に分割し、単体で差し替えやすくしました。
+- `content/init.js` では、オプション読み込みごとのラッパー (`cgptEnsureLoaded` など) を追加して初期化手順を段階化し、読み込み順の可読性を向上させています。
+- バージョンは `manifest.json` と `package.json` を 0.2.0 にそろえています。双方の更新漏れがないか、リリース前に必ず確認してください。
 
 ## リリースとバージョン管理
 - 拡張の公開バージョンは `manifest.json` と `package.json` の両方で同じ値にそろえます。権限の追加・削除が伴う場合は、README の説明も合わせて見直してください。

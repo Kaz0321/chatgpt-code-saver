@@ -75,135 +75,165 @@ function cgptInferMimeTypeFromPath(filePath) {
   return CGPT_KNOWN_MIME_TYPES[ext] || "text/plain";
 }
 
-function cgptHandleApplyCodeBlock(message, sendResponse) {
-  const filePath = message.filePath;
+function cgptCreateApplyLogContext(rawFilePath, relativeFilePath, absoluteFilePath = "") {
+  return {
+    time: new Date().toISOString(),
+    kind: "apply",
+    filePath: rawFilePath,
+    filePathRelative: relativeFilePath,
+    filePathAbsolute: absoluteFilePath,
+  };
+}
+
+function cgptAppendAndRespond(logEntry, sendResponse, responsePayload) {
+  cgptAppendLog(logEntry, () => {
+    sendResponse(responsePayload);
+  });
+}
+
+function cgptHandleApplyValidation(message) {
+  const rawFilePath = typeof message.filePath === "string" ? message.filePath : "";
   const content = message.content;
   const saveAs = Boolean(message.saveAs);
   const overrideFolderPathRaw =
     typeof message.overrideFolderPath === "string" ? message.overrideFolderPath : "";
-  const rawFilePath = typeof filePath === "string" ? filePath : "";
-  let relativeFilePath = rawFilePath;
-  let absoluteFilePath = "";
-  let overrideFolderPath = "";
+
   if (typeof content !== "string") {
-    const errMsg = "invalid_content";
-    cgptAppendLog({
-      time: new Date().toISOString(),
-      kind: "apply",
+    return {
       ok: false,
-      filePath: rawFilePath,
-      filePathRelative: relativeFilePath,
-      filePathAbsolute: absoluteFilePath,
-      error: errMsg,
-    });
-    sendResponse({ ok: false, error: errMsg });
-    return false;
+      error: "invalid_content",
+      rawFilePath,
+      relativeFilePath: rawFilePath,
+      overrideFolderPath: "",
+      saveAs,
+      content: "",
+    };
   }
 
-  const validation = cgptValidateFilePath(filePath);
+  const validation = cgptValidateFilePath(rawFilePath);
   if (!validation.ok) {
-    const errMsg = validation.error || "invalid_filepath";
-    cgptAppendLog({
-      time: new Date().toISOString(),
-      kind: "apply",
+    return {
       ok: false,
-      filePath: rawFilePath,
-      filePathRelative: relativeFilePath,
-      filePathAbsolute: absoluteFilePath,
-      error: errMsg,
-    });
-    sendResponse({ ok: false, error: errMsg });
-    return false;
+      error: validation.error || "invalid_filepath",
+      rawFilePath,
+      relativeFilePath: rawFilePath,
+      overrideFolderPath: "",
+      saveAs,
+      content,
+    };
   }
 
-  const normalizedFilePath = validation.filePath;
-  if (typeof normalizedFilePath === "string") {
-    relativeFilePath = normalizedFilePath;
-  }
-
+  const normalizedFilePath = validation.filePath || rawFilePath;
+  let overrideFolderPath = "";
   if (overrideFolderPathRaw) {
     const overrideValidation = cgptValidateProjectFolderPath(overrideFolderPathRaw);
     if (!overrideValidation.ok) {
-      const errMsg = overrideValidation.error || "invalid_override_folder";
-      cgptAppendLog({
-        time: new Date().toISOString(),
-        kind: "apply",
+      return {
         ok: false,
-        filePath: rawFilePath,
-        filePathRelative: relativeFilePath,
-        filePathAbsolute: absoluteFilePath,
-        error: errMsg,
-      });
-      sendResponse({ ok: false, error: errMsg });
-      return false;
+        error: overrideValidation.error || "invalid_override_folder",
+        rawFilePath,
+        relativeFilePath: normalizedFilePath,
+        overrideFolderPath: "",
+        saveAs,
+        content,
+      };
     }
     overrideFolderPath = overrideValidation.folderPath;
   }
 
+  return {
+    ok: true,
+    rawFilePath,
+    relativeFilePath: normalizedFilePath,
+    normalizedFilePath,
+    overrideFolderPath,
+    saveAs,
+    content,
+  };
+}
+
+function cgptLogDownloadFailure(targetPath, relativeFilePath, absoluteFilePath, err, sendResponse) {
+  const logEntry = {
+    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath),
+    ok: false,
+    error: err,
+    downloadId: null,
+  };
+  cgptAppendAndRespond(logEntry, sendResponse, { ok: false, error: err });
+}
+
+function cgptLogDownloadSuccess(targetPath, relativeFilePath, absoluteFilePath, downloadId, sendResponse) {
+  const logEntry = {
+    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath),
+    ok: true,
+    error: "",
+    downloadId,
+  };
+  cgptAppendAndRespond(logEntry, sendResponse, {
+    ok: true,
+    downloadId,
+    filePath: targetPath,
+    filePathAbsolute: absoluteFilePath,
+  });
+}
+
+function cgptStartDownload(targetPath, relativeFilePath, content, saveAs, sendResponse) {
+  const encoded = encodeURIComponent(content);
+  const mimeType = cgptInferMimeTypeFromPath(relativeFilePath);
+  const url = `data:${mimeType};charset=utf-8,${encoded}`;
+
+  chrome.downloads.download(
+    {
+      url,
+      filename: targetPath,
+      conflictAction: "overwrite",
+      saveAs,
+    },
+    (downloadId) => {
+      if (chrome.runtime.lastError) {
+        const err = chrome.runtime.lastError.message || "unknown error";
+        console.error("downloads.download error:", chrome.runtime.lastError);
+        cgptLogDownloadFailure(targetPath, relativeFilePath, targetPath, err, sendResponse);
+        return;
+      }
+
+      console.log("Downloaded and overwrote:", targetPath, "id:", downloadId);
+      cgptResolveDownloadAbsolutePath(downloadId, (resolved) => {
+        const resolvedDownloadPath = resolved && resolved.ok && resolved.path ? resolved.path : "";
+        const finalAbsolutePath = targetPath || resolvedDownloadPath || "";
+        cgptLogDownloadSuccess(
+          targetPath,
+          relativeFilePath,
+          finalAbsolutePath,
+          downloadId,
+          sendResponse
+        );
+      });
+    }
+  );
+}
+
+function cgptHandleApplyCodeBlock(message, sendResponse) {
+  const validation = cgptHandleApplyValidation(message);
+  if (!validation.ok) {
+    const logEntry = {
+      ...cgptCreateApplyLogContext(
+        validation.rawFilePath,
+        validation.relativeFilePath,
+        ""
+      ),
+      ok: false,
+      error: validation.error,
+    };
+    cgptAppendAndRespond(logEntry, sendResponse, { ok: false, error: validation.error });
+    return false;
+  }
+
+  const { normalizedFilePath, overrideFolderPath, relativeFilePath, content, saveAs } = validation;
+
   const startDownloadWithFolder = (folderPath) => {
     const targetPath = cgptBuildFullFilePath(folderPath, normalizedFilePath);
-    absoluteFilePath = targetPath || "";
-    const encoded = encodeURIComponent(content);
-    const mimeType = cgptInferMimeTypeFromPath(relativeFilePath);
-    const url = `data:${mimeType};charset=utf-8,${encoded}`;
-
-    chrome.downloads.download(
-      {
-        url,
-        filename: targetPath,
-        conflictAction: "overwrite",
-        saveAs,
-      },
-      (downloadId) => {
-        if (chrome.runtime.lastError) {
-          const err = chrome.runtime.lastError.message || "unknown error";
-          console.error("downloads.download error:", chrome.runtime.lastError);
-          cgptAppendLog(
-            {
-              time: new Date().toISOString(),
-              kind: "apply",
-              ok: false,
-              filePath: targetPath,
-              filePathRelative: relativeFilePath,
-              filePathAbsolute: absoluteFilePath,
-              error: err,
-              downloadId: null,
-            },
-            () => {
-              sendResponse({ ok: false, error: err });
-            }
-          );
-        } else {
-          console.log("Downloaded and overwrote:", targetPath, "id:", downloadId);
-          cgptResolveDownloadAbsolutePath(downloadId, (resolved) => {
-            const resolvedDownloadPath =
-              resolved && resolved.ok && resolved.path ? resolved.path : "";
-            const finalAbsolutePath =
-              absoluteFilePath || targetPath || resolvedDownloadPath || "";
-            cgptAppendLog(
-              {
-                time: new Date().toISOString(),
-                kind: "apply",
-                ok: true,
-                filePath: targetPath,
-                filePathRelative: relativeFilePath,
-                filePathAbsolute: finalAbsolutePath,
-                error: "",
-                downloadId,
-              },
-              () => {
-                sendResponse({
-                  ok: true,
-                  downloadId,
-                  filePath: targetPath,
-                  filePathAbsolute: finalAbsolutePath,
-                });
-              }
-            );
-          });
-        }
-      }
-    );
+    cgptStartDownload(targetPath, relativeFilePath, content, saveAs, sendResponse);
   };
 
   if (overrideFolderPath) {

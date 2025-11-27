@@ -1,77 +1,63 @@
-function init() {
-  checkAndNotifyReloaded();
+function cgptEnsureLoaded(loader, next) {
+  if (typeof loader === "function") {
+    loader(next);
+    return;
+  }
+  next();
+}
 
-  const startHelper = () => {
-    loadTemplatesFromStorage(() => {
-      const finalizeSetup = () => {
-        createFloatingPanel();
-        if (typeof initChatLogTracker === "function") {
-          initChatLogTracker();
-        }
-        if (typeof cgptStartLightweightModeWatcher === "function") {
-          cgptStartLightweightModeWatcher();
-        }
-        decorateCodeBlocks(document);
-        setupMutationObserver();
-      };
+function cgptRenderExtensionIfEnabled(onEnabled) {
+  if (typeof cgptIsExtensionEnabled === "function" && !cgptIsExtensionEnabled()) {
+    if (typeof cgptRenderExtensionDisabledEntryPoint === "function") {
+      cgptRenderExtensionDisabledEntryPoint();
+    }
+    return;
+  }
+  onEnabled();
+}
 
-      const ensureSaveOptionsLoaded = (next) => {
-        if (typeof cgptLoadSaveOptions === "function") {
-          cgptLoadSaveOptions(next);
-          return;
-        }
-        next();
-      };
+function cgptInitializeUi() {
+  createFloatingPanel();
+  if (typeof initChatLogTracker === "function") {
+    initChatLogTracker();
+  }
+  if (typeof cgptStartLightweightModeWatcher === "function") {
+    cgptStartLightweightModeWatcher();
+  }
+  decorateCodeBlocks(document);
+  setupMutationObserver();
+}
 
-      const ensurePanelVisibilityLoaded = (next) => {
-        if (typeof cgptLoadPanelVisibility === "function") {
-          cgptLoadPanelVisibility(next);
-          return;
-        }
-        next();
-      };
+function cgptLoadPanelStateAndStart() {
+  const finalizeSetup = () => {
+    cgptInitializeUi();
+  };
 
-      const ensureLightweightModeLoaded = (next) => {
-        if (typeof cgptLoadLightweightMode === "function") {
-          cgptLoadLightweightMode(next);
-          return;
-        }
-        next();
-      };
-
-      const continueAfterViewSettings = () => {
-        ensurePanelVisibilityLoaded(() => {
-          ensureLightweightModeLoaded(() => {
-            ensureSaveOptionsLoaded(finalizeSetup);
-          });
-        });
-      };
-
-      if (typeof cgptLoadViewSettings === "function") {
-        cgptLoadViewSettings(continueAfterViewSettings);
-        return;
-      }
-
-      continueAfterViewSettings();
+  const continueAfterViewSettings = () => {
+    cgptEnsureLoaded(cgptLoadPanelVisibility, () => {
+      cgptEnsureLoaded(cgptLoadLightweightMode, () => {
+        cgptEnsureLoaded(cgptLoadSaveOptions, finalizeSetup);
+      });
     });
   };
 
+  cgptEnsureLoaded(cgptLoadViewSettings, continueAfterViewSettings);
+}
+
+function cgptStartHelper() {
+  loadTemplatesFromStorage(() => {
+    cgptLoadPanelStateAndStart();
+  });
+}
+
+function init() {
+  checkAndNotifyReloaded();
+
   const startWithExtensionState = () => {
-    if (typeof cgptIsExtensionEnabled === "function" && !cgptIsExtensionEnabled()) {
-      if (typeof cgptRenderExtensionDisabledEntryPoint === "function") {
-        cgptRenderExtensionDisabledEntryPoint();
-      }
-      return;
-    }
-    startHelper();
+    cgptRenderExtensionIfEnabled(cgptStartHelper);
   };
 
-  if (typeof cgptLoadExtensionEnabled === "function") {
-    cgptLoadExtensionEnabled(startWithExtensionState);
-    return;
-  }
-
-  startWithExtensionState();
+  cgptEnsureLoaded(cgptLoadExtensionEnabled, startWithExtensionState);
 }
 
 if (document.readyState === "loading") {
