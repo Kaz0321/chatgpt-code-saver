@@ -6,6 +6,7 @@ let chatLogTrackerInitialized = false;
 let chatLogRouteWatcher = null;
 let chatLogHighlightStyleInjected = false;
 let chatLogTimestampStyleInjected = false;
+let chatLogFoldStyleInjected = false;
 let currentConversationKey = null;
 
 function initChatLogTracker() {
@@ -145,6 +146,7 @@ function processChatMessageElement(el) {
 
   chatLogEntries.push(entry);
   renderChatMessageTimestamp(entry);
+  renderAssistantMessageFolding(entry);
 }
 
 function extractChatMessageTimestamp(el) {
@@ -190,6 +192,154 @@ function renderChatMessageTimestamp(entry) {
   wrapper.appendChild(label);
 
   entry.element.insertBefore(wrapper, entry.element.firstChild);
+}
+
+function renderAssistantMessageFolding(entry) {
+  if (!entry || entry.role !== "assistant" || !entry.element) return;
+  if (entry.element.dataset.cgptHelperFoldApplied === "1") return;
+
+  const messageElement = entry.element;
+  ensureChatLogFoldStyle();
+
+  const timestampNode = messageElement.querySelector(".cgpt-helper-chatlog-timestamp-wrapper");
+  const movableNodes = Array.from(messageElement.childNodes).filter((node) => node !== timestampNode);
+  if (!movableNodes.length) return;
+
+  const wrapper = document.createElement("details");
+  wrapper.className = "cgpt-helper-response-fold";
+  wrapper.open = true;
+
+  const summary = document.createElement("summary");
+  summary.className = "cgpt-helper-response-summary";
+  summary.textContent = "応答を表示/非表示";
+  wrapper.appendChild(summary);
+
+  const body = document.createElement("div");
+  body.className = "cgpt-helper-response-body";
+  movableNodes.forEach((node) => body.appendChild(node));
+  wrapper.appendChild(body);
+
+  if (timestampNode && timestampNode.parentNode === messageElement) {
+    messageElement.insertBefore(wrapper, timestampNode.nextSibling);
+  } else {
+    messageElement.insertBefore(wrapper, messageElement.firstChild);
+  }
+
+  entry.element.dataset.cgptHelperFoldApplied = "1";
+  applyHeadingFold(body);
+}
+
+function applyHeadingFold(root) {
+  if (!root || !(root.querySelectorAll instanceof Function)) return;
+  const headings = Array.from(root.querySelectorAll("h1, h2, h3, h4, h5, h6"));
+  if (!headings.length) return;
+
+  const getLevel = (headingElement) => {
+    const tag = headingElement && headingElement.tagName ? headingElement.tagName.toUpperCase() : "";
+    const match = tag.match(/^H(\d)$/);
+    if (!match) return 0;
+    const level = Number.parseInt(match[1], 10);
+    return Number.isFinite(level) ? level : 0;
+  };
+
+  headings.forEach((heading, index) => {
+    const level = getLevel(heading);
+    if (!level) return;
+
+    const nextHeading = (() => {
+      for (let i = index + 1; i < headings.length; i += 1) {
+        if (getLevel(headings[i]) <= level) {
+          return headings[i];
+        }
+      }
+      return null;
+    })();
+
+    const details = heading.ownerDocument.createElement("details");
+    details.className = "cgpt-helper-heading-fold";
+    details.open = level <= 2;
+
+    const summary = heading.ownerDocument.createElement("summary");
+    summary.className = "cgpt-helper-heading-summary";
+    summary.textContent = heading.textContent || "(untitled)";
+    details.appendChild(summary);
+
+    const content = heading.ownerDocument.createElement("div");
+    content.className = "cgpt-helper-heading-content";
+
+    const range = heading.ownerDocument.createRange();
+    try {
+      range.setStartAfter(heading);
+      if (nextHeading) {
+        range.setEndBefore(nextHeading);
+      } else if (heading.parentNode && heading.parentNode.lastChild) {
+        range.setEndAfter(heading.parentNode.lastChild);
+      } else {
+        range.setEndAfter(heading);
+      }
+      const extracted = range.extractContents();
+      content.appendChild(extracted);
+    } catch (e) {
+      // noop
+    } finally {
+      if (typeof range.detach === "function") {
+        range.detach();
+      }
+    }
+
+    details.appendChild(content);
+    heading.replaceWith(details);
+  });
+}
+
+function ensureChatLogFoldStyle() {
+  if (chatLogFoldStyleInjected) return;
+  const style = document.createElement("style");
+  style.textContent = `
+    .cgpt-helper-response-fold {
+      border: 1px solid #374151;
+      border-radius: 10px;
+      padding: 8px;
+      background: rgba(17, 24, 39, 0.6);
+      margin-top: 8px;
+    }
+    .cgpt-helper-response-summary {
+      cursor: pointer;
+      font-size: 12px;
+      color: #e5e7eb;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cgpt-helper-response-body {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cgpt-helper-heading-fold {
+      border: 1px solid #4b5563;
+      border-radius: 8px;
+      padding: 6px;
+      margin-top: 6px;
+      background: rgba(15, 23, 42, 0.55);
+    }
+    .cgpt-helper-heading-summary {
+      cursor: pointer;
+      font-size: 12px;
+      color: #c7d2fe;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cgpt-helper-heading-content {
+      margin-top: 6px;
+    }
+  `;
+  document.head.appendChild(style);
+  chatLogFoldStyleInjected = true;
 }
 
 function extractChatMessageText(el) {
