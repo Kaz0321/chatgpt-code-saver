@@ -9,7 +9,13 @@ let chatLogTimestampStyleInjected = false;
 let chatLogFoldStyleInjected = false;
 let currentConversationKey = null;
 
-function cgptCreateFoldSection({ title, initiallyOpen = true, level = 0, badgeText = "" }) {
+function cgptCreateFoldSection({
+  title,
+  initiallyOpen = true,
+  level = 0,
+  badgeText = "",
+  actions = {},
+}) {
   const fold = document.createElement("div");
   fold.className = "cgpt-helper-fold";
   const parsedLevel = Number.parseInt(level, 10);
@@ -35,13 +41,11 @@ function cgptCreateFoldSection({ title, initiallyOpen = true, level = 0, badgeTe
   titleWrapper.appendChild(titleText);
   header.appendChild(titleWrapper);
 
-  const actions = document.createElement("div");
-  actions.className = "cgpt-helper-fold-actions";
-  const toggleButton = document.createElement("button");
-  toggleButton.type = "button";
-  toggleButton.className = "cgpt-helper-fold-toggle";
-  actions.appendChild(toggleButton);
-  header.appendChild(actions);
+  const actionsWrapper = document.createElement("div");
+  actionsWrapper.className = "cgpt-helper-fold-actions";
+  const buttons = cgptCreateFoldActionButtons(actions);
+  buttons.forEach((btn) => actionsWrapper.appendChild(btn));
+  header.appendChild(actionsWrapper);
   fold.appendChild(header);
 
   const body = document.createElement("div");
@@ -49,19 +53,184 @@ function cgptCreateFoldSection({ title, initiallyOpen = true, level = 0, badgeTe
   fold.appendChild(body);
 
   let isOpen = initiallyOpen !== false;
-  const syncState = () => {
+  const updateState = () => {
     fold.classList.toggle("cgpt-helper-fold-collapsed", !isOpen);
-    toggleButton.textContent = isOpen ? "折りたたむ" : "展開する";
-    toggleButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    toggleButton.setAttribute("aria-label", `${title || "セクション"}を${isOpen ? "折りたたむ" : "展開"}`);
+    buttons.forEach((btn) => {
+      if (!btn.dataset.cgptHelperFoldAction) return;
+      const action = btn.dataset.cgptHelperFoldAction;
+      if (action === "compact") {
+        btn.disabled = !isOpen;
+        btn.classList.toggle("cgpt-helper-fold-action-disabled", !isOpen);
+      }
+      if (action === "expand") {
+        btn.disabled = isOpen;
+        btn.classList.toggle("cgpt-helper-fold-action-disabled", isOpen);
+      }
+    });
   };
-  toggleButton.addEventListener("click", () => {
-    isOpen = !isOpen;
-    syncState();
+
+  buttons.forEach((btn) => {
+    if (!btn.dataset.cgptHelperFoldAction) return;
+    const action = btn.dataset.cgptHelperFoldAction;
+    if (action === "compact") {
+      btn.addEventListener("click", () => {
+        isOpen = false;
+        updateState();
+      });
+    }
+    if (action === "expand") {
+      btn.addEventListener("click", () => {
+        isOpen = true;
+        updateState();
+      });
+    }
   });
-  syncState();
+
+  updateState();
 
   return { container: fold, body, titleWrapper };
+}
+
+function cgptCreateFoldActionButtons(actionConfig = {}) {
+  const buttons = [];
+  const {
+    onSave,
+    onSaveAs,
+    onCopy,
+    showSave = true,
+    showSaveAs = true,
+    showCopy = true,
+  } = actionConfig || {};
+
+  const addButton = (label, variant, actionKey, handler, shouldShow = true) => {
+    if (!shouldShow) return;
+    const button = cgptCreateFoldActionButton(label, variant);
+    if (actionKey) {
+      button.dataset.cgptHelperFoldAction = actionKey;
+    }
+    if (typeof handler === "function") {
+      button.addEventListener("click", handler);
+    } else if (actionKey !== "compact" && actionKey !== "expand") {
+      button.disabled = true;
+      button.classList.add("cgpt-helper-fold-action-disabled");
+    }
+    buttons.push(button);
+  };
+
+  addButton("Save", "muted", "save", onSave, showSave);
+  addButton("Save As", "accent", "saveAs", onSaveAs, showSaveAs);
+  addButton("Copy", "accent", "copy", onCopy, showCopy);
+  addButton("Compact", "accent", "compact", null, true);
+  addButton("Expand", "accent", "expand", null, true);
+
+  return buttons;
+}
+
+function cgptCreateFoldActionButton(label, variant = "secondary") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "cgpt-helper-fold-action-button";
+  button.textContent = label;
+  if (typeof cgptApplySharedButtonVariant === "function") {
+    cgptApplySharedButtonVariant(button, variant);
+  } else {
+    const palette = {
+      accent: { background: "#7c3aed", color: "#fff", border: "rgba(255,255,255,0.25)" },
+      muted: { background: "#4b5563", color: "#f3f4f6", border: "rgba(255,255,255,0.2)" },
+      secondary: { background: "#374151", color: "#e5e7eb", border: "rgba(255,255,255,0.15)" },
+    };
+    const paletteEntry = palette[variant] || palette.secondary;
+    button.style.background = paletteEntry.background;
+    button.style.color = paletteEntry.color;
+    button.style.border = `1px solid ${paletteEntry.border}`;
+  }
+  return button;
+}
+
+function cgptBuildChatFoldActions(entry) {
+  const textSupplier = () => (entry && entry.text ? entry.text : "");
+  const canSave = entry && entry.role === "assistant";
+  const resolvedCopy = () => cgptCopyPlainText(textSupplier());
+  const resolvedSave = () => cgptSaveChatResponseText(entry, textSupplier(), false);
+  const resolvedSaveAs = () => cgptSaveChatResponseText(entry, textSupplier(), true);
+  return {
+    onSave: canSave ? resolvedSave : null,
+    onSaveAs: canSave ? resolvedSaveAs : null,
+    onCopy: resolvedCopy,
+    showSave: canSave,
+    showSaveAs: canSave,
+    showCopy: true,
+  };
+}
+
+function cgptNormalizePlainText(text) {
+  if (typeof cgptNormalizeChatLogLineEndings === "function") {
+    return cgptNormalizeChatLogLineEndings(text);
+  }
+  return String(text || "");
+}
+
+function cgptSaveChatResponseText(entry, rawText, saveAs = false) {
+  const normalized = cgptNormalizePlainText(rawText || (entry && entry.text));
+  const trimmed = normalized.trim();
+  if (!trimmed) {
+    return;
+  }
+  const filePath = cgptBuildResponseFilePath(entry);
+  if (typeof cgptTriggerChatLogDownload === "function") {
+    cgptTriggerChatLogDownload(filePath, trimmed, { saveAs });
+    return;
+  }
+  cgptDownloadTextLocally(filePath, trimmed);
+}
+
+function cgptCopyPlainText(text) {
+  const normalized = cgptNormalizePlainText(text).trim();
+  if (!normalized) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(normalized);
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = normalized;
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+}
+
+function cgptBuildResponseFilePath(entry) {
+  const rolePrefix = entry && entry.role === "assistant" ? "response" : "message";
+  const timestamp = (() => {
+    if (entry && entry.timestamp) {
+      const date = new Date(entry.timestamp);
+      if (!Number.isNaN(date.getTime())) {
+        return date.toISOString();
+      }
+    }
+    return new Date().toISOString();
+  })();
+  const safe = timestamp.replace(/[:.]/g, "-");
+  return `${rolePrefix}-${safe}.txt`;
+}
+
+function cgptDownloadTextLocally(fileName, content) {
+  try {
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (e) {
+    // noop
+  }
 }
 
 function initChatLogTracker() {
@@ -265,6 +434,7 @@ function renderChatMessageFolding(entry) {
     initiallyOpen: true,
     level: 0,
     badgeText: entry.role === "assistant" ? "AI" : "USER",
+    actions: cgptBuildChatFoldActions(entry),
   });
 
   const body = fold.body;
@@ -314,6 +484,7 @@ function applyHeadingFold(root, baseLevel = 0) {
       initiallyOpen: level <= 2,
       level: baseLevel + Math.max(0, level - 1),
       badgeText: `H${level}`,
+      actions: { showSave: false, showSaveAs: false, showCopy: false },
     });
 
     headingFold.container.classList.add("cgpt-helper-heading-fold");
@@ -387,32 +558,28 @@ function ensureChatLogFoldStyle() {
       align-items: center;
       gap: 6px;
     }
-    .cgpt-helper-fold-toggle {
+    .cgpt-helper-fold-action-button {
       cursor: pointer;
-      display: flex;
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 4px;
       font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: rgba(55, 65, 81, 0.8);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: #4b5563;
       color: #f9fafb;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+      min-width: 70px;
+      transition: transform 0.1s ease, opacity 0.2s ease;
     }
-    .cgpt-helper-fold-toggle:hover {
-      background: rgba(75, 85, 99, 0.9);
+    .cgpt-helper-fold-action-button:hover:not(.cgpt-helper-fold-action-disabled) {
+      transform: translateY(-1px);
     }
-    .cgpt-helper-fold-toggle::before {
-      content: '▸';
-      display: inline-block;
-      transition: transform 0.15s ease;
-      font-size: 10px;
-    }
-    .cgpt-helper-fold-collapsed .cgpt-helper-fold-toggle::before {
-      transform: rotate(0deg);
-    }
-    .cgpt-helper-fold:not(.cgpt-helper-fold-collapsed) .cgpt-helper-fold-toggle::before {
-      transform: rotate(90deg);
+    .cgpt-helper-fold-action-disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
     .cgpt-helper-fold-body {
       margin-top: 8px;
@@ -429,8 +596,8 @@ function ensureChatLogFoldStyle() {
       padding-bottom: 8px;
     }
     .cgpt-helper-heading-content {
-      font-size: 12px;
-      line-height: 1.6;
+      font-size: inherit;
+      line-height: inherit;
       color: inherit;
     }
   `;
