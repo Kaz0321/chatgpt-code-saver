@@ -307,6 +307,7 @@ function cgptCreateHeadingNodeElement(node, depth) {
 
   const levelBadge = document.createElement("span");
   levelBadge.textContent = `H${node.level}`;
+  levelBadge.title = node.originalLevel ? `Original level: H${node.originalLevel}` : "";
   levelBadge.style.fontSize = "10px";
   levelBadge.style.fontWeight = "bold";
   levelBadge.style.padding = "2px 6px";

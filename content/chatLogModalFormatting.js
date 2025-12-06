@@ -104,20 +104,28 @@ function cgptExtractHeadingSectionsFromElement(element) {
   const headings = Array.from(element.querySelectorAll("h1, h2, h3, h4, h5, h6"));
   if (!headings.length) return results;
 
+  const headingInfos = headings
+    .map((heading) => ({ heading, level: cgptGetHeadingLevel(heading) }))
+    .filter((info) => info.level);
+  if (!headingInfos.length) return results;
+
+  const minLevel = headingInfos.reduce((acc, info) => Math.min(acc, info.level), Infinity);
+
   const roots = [];
   const stack = [];
-  headings.forEach((heading, index) => {
-    const level = cgptGetHeadingLevel(heading);
-    if (!level) return;
-    const nextHeading = headings[index + 1];
+  headingInfos.forEach((info, index) => {
+    const { heading, level } = info;
+    const nextHeading = headingInfos[index + 1] ? headingInfos[index + 1].heading : undefined;
+    const normalizedLevel = level - minLevel + 1;
     const content = cgptExtractHeadingContent(heading, nextHeading);
     const node = {
       title: (heading.textContent || "").trim(),
-      level,
+      level: normalizedLevel,
+      originalLevel: level,
       content,
       children: [],
     };
-    while (stack.length && stack[stack.length - 1].level >= level) {
+    while (stack.length && stack[stack.length - 1].level >= normalizedLevel) {
       stack.pop();
     }
     if (stack.length) {
