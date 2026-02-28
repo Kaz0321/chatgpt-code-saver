@@ -1,16 +1,16 @@
 {
   "name": "gpt-code-saver-extension",
   "version": "0.2.3",
-  "description": "Chrome 拡張「gpt-code-saver-extension」のソースです。ChatGPT が生成したコードブロックの 1 行目に `// file: path/to/file.ext` または `# file: path/to/file.ext` を記述すると、ボタン 1 つでローカル プロジェクトに直接保存できます。さらに、ChatGPT 入力欄に貼り付けるテンプレートの管理・貼り付け・編集 UI や、チャット履歴の収集・参照 UI も提供します。v0.0.3 ではコードブロック装飾ロジック・ビュー切替・保存ボタン処理を責務ごとにファイル分割し、背景とコンテンツの双方から共有できるファイルパスバリデータを導入しました。",
-  "main": "index.js",
+  "private": true,
+  "description": "MV3 workspace for gpt-code-saver-extension with unit tests and Playwright smoke coverage",
   "scripts": {
-    "test": "node --test"
+    "test": "npm run test:unit",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:e2e": "LD_LIBRARY_PATH=\"$PWD/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test",
+    "test:e2e:headed": "LD_LIBRARY_PATH=\"$PWD/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test --headed"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
+    "@playwright/test": "^1.51.0",
     "standard-version": "^9.5.0"
   }
 }

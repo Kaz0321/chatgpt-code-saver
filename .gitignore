@@ -1,0 +1,11 @@
+node_modules/
+.local-libs/
+playwright-report/
+test-results/
+artifacts/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.vscode/
+.idea/

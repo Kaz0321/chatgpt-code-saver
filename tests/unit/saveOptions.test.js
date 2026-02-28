@@ -2,8 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 function loadModule() {
-  delete require.cache[require.resolve('../content/saveOptions.js')];
-  return require('../content/saveOptions.js');
+  delete require.cache[require.resolve('../../extension/content/saveOptions.js')];
+  return require('../../extension/content/saveOptions.js');
 }
 
 test('cgptMergeSaveOptions ignores invalid input and preserves defaults', () => {

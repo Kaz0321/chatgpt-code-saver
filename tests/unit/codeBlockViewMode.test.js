@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { cgptCalculateCompactHeight } = require('../content/codeBlockViewMode.js');
+const { cgptCalculateCompactHeight } = require('../../extension/content/codeBlockViewMode.js');
 
 test('cgptCalculateCompactHeight enforces overlay offset as the minimum height', () => {
   const overlayOffset = 38; // derived from button height, top offset, and margin

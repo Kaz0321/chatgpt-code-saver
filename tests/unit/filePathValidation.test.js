@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const {
   CGPT_FILE_PATH_ERROR_MESSAGES,
   cgptValidateFilePath,
-} = require('../shared/filePathValidation.js');
+} = require('../../extension/shared/filePathValidation.js');
 
 test('cgptValidateFilePath rejects non-string input', () => {
   const result = cgptValidateFilePath();

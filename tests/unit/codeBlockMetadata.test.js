@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const {
   cgptParseCodeBlockMetadata,
   cgptGetNormalizedCodeText,
-} = require('../content/codeBlockMetadata.js');
+} = require('../../extension/content/codeBlockMetadata.js');
 
 test('cgptParseCodeBlockMetadata extracts path and content from // metadata', () => {
   const code = {
