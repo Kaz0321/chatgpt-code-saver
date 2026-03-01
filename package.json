@@ -6,8 +6,20 @@
   "scripts": {
     "test": "npm run test:unit",
     "test:unit": "node --test tests/unit/*.test.js",
-    "test:e2e": "LD_LIBRARY_PATH=\"$PWD/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test",
-    "test:e2e:headed": "LD_LIBRARY_PATH=\"$PWD/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test --headed"
+    "test:e2e": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test --config tests/playwright.config.js",
+    "test:e2e:headed": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test --config tests/playwright.config.js --headed",
+    "collect:headings": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" node tests/tools/collect-chatgpt-headings-anonymous.js",
+    "collect:headings:anonymous": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" node tests/tools/collect-chatgpt-headings-anonymous.js",
+    "collect:ui-patterns:x11": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" node tests/tools/collect-chatgpt-ui-patterns-x11.js",
+    "sync:ui-pattern-fixtures": "node tests/tools/sync-chatgpt-ui-pattern-fixtures.js",
+    "verify:offline-frame": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" node tests/tools/verify-offline-frame-requirements.js",
+    "test:e2e:ui-pattern-evidence": "node tests/tools/run-ui-pattern-evidence.js",
+    "capture:ui-pattern-evidence:x11": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" node tests/tools/capture-ui-pattern-evidence-x11.js",
+    "test:e2e:heading-fixtures": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test --config tests/playwright.config.js tests/e2e/heading-variations-offline.spec.js",
+    "test:e2e:ui-pattern-fixtures": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test --config tests/playwright.config.js tests/e2e/chatgpt-ui-patterns-offline.spec.js",
+    "test:e2e:ui-pattern-extension-fixtures": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test --config tests/playwright.config.js tests/e2e/chatgpt-ui-patterns-extension-offline.spec.js",
+    "open:chatgpt:gpu": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" node tests/tools/open-chatgpt-gpu.js",
+    "open:chatgpt:x11-ime": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" node tests/tools/open-chatgpt-x11-ime.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.0",

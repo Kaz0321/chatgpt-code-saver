@@ -4,7 +4,8 @@
 
 ## リポジトリ構成
 ```
-manifest.json (MV3)
+extension/
+├─ manifest.json (MV3)
 ├─ background/
 │  ├─ index.js          … ルート初期化。onInstalled 登録とメッセージハンドラ設定。
 │  ├─ applyCode.js      … ダウンロード API を呼び出して保存＆ログを記録。
@@ -31,6 +32,15 @@ manifest.json (MV3)
    ├─ chatLogModal.js   … チャット履歴と対応コードブロックを一覧化。
    ├─ toast.js          … 軽量トースト通知。
    └─ reloadNotifier.js … 拡張リロード通知の表示。
+
+tests/
+├─ e2e/                … Playwright の E2E / 収集系 spec
+├─ unit/               … Node 組み込み test による unit test
+├─ fixtures/           … 追跡する HTML fixture
+├─ helpers/            … テスト共通 helper
+├─ tools/              … 収集・検証・環境補助コマンド
+├─ config/             … Playwright 補助設定
+└─ artifacts/          … Git 管理しない証跡出力
 ```
 
 ## モジュール間の責務
@@ -120,10 +130,10 @@ classDiagram
 | content/logModal | background/index | `openDownloadedFile` | ダウンロード済みファイルを OS で開く |
 
 ## 開発フローのメモ
-- 依存する npm パッケージやビルドはなく、`content/` と `background/` を直接編集します。
-- デバッグ時は DevTools > Sources > Service Workers で `background/index.js` のログや `chrome.runtime.sendMessage` のレスポンスを確認します。
-- 既定テンプレート文言は `content/state.js` の `DEFAULT_TEMPLATE_CONTENT` で定義されています。アクセサ (`cgptSetTemplates`, `cgptSetSelectedTemplateId` など) を経由して状態を更新し、単一責務を保ってください。
-- 権限を追加／削除する場合は `manifest.json` を更新し、README の「権限とプライバシー」節の整合性も確認します。
+- 依存する npm パッケージやビルドはなく、拡張本体は `extension/content/` と `extension/background/` を直接編集します。
+- デバッグ時は DevTools > Sources > Service Workers で `extension/background/index.js` のログや `chrome.runtime.sendMessage` のレスポンスを確認します。
+- 既定テンプレート文言は `extension/content/state.js` の `DEFAULT_TEMPLATE_CONTENT` で定義されています。アクセサ (`cgptSetTemplates`, `cgptSetSelectedTemplateId` など) を経由して状態を更新し、単一責務を保ってください。
+- 権限を追加／削除する場合は `extension/manifest.json` を更新し、README の「権限とプライバシー」節の整合性も確認します。
 
 ### v0.2.0 リファクタリングのポイント
 - `background/applyCode.js` は入力バリデーション・ログ生成・ダウンロード実行をそれぞれ独立関数に分割し、単体で差し替えやすくしました。

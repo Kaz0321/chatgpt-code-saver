@@ -2,8 +2,10 @@ const fs = require("fs/promises");
 const path = require("path");
 const { test, expect, chromium } = require("@playwright/test");
 
-const extensionPath = path.join(__dirname, "..", "extension");
-const artifactsRoot = path.join(__dirname, "..", "artifacts");
+const repoRoot = path.join(__dirname, "..", "..");
+const testsRoot = path.join(__dirname, "..");
+const extensionPath = path.join(repoRoot, "extension");
+const artifactsRoot = path.join(testsRoot, "artifacts");
 
 async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
@@ -17,14 +19,16 @@ test("loads the extension service worker and records manifest metadata", async (
   const consoleDir = path.join(artifactsRoot, "console");
   const stateDir = path.join(artifactsRoot, "state");
   const traceDir = path.join(artifactsRoot, "traces");
-  const profileDir = path.join(artifactsRoot, "profile");
+  const profileBaseDir = path.join(artifactsRoot, "profiles");
 
   await Promise.all([
     ensureDir(consoleDir),
     ensureDir(stateDir),
     ensureDir(traceDir),
-    ensureDir(profileDir)
+    ensureDir(profileBaseDir)
   ]);
+
+  const profileDir = await fs.mkdtemp(path.join(profileBaseDir, "run-"));
 
   const context = await chromium.launchPersistentContext(profileDir, {
     channel: "chromium",

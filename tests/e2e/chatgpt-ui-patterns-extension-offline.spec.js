@@ -1,0 +1,174 @@
+const fs = require("fs");
+const fsp = require("fs/promises");
+const path = require("path");
+const { test, expect, chromium } = require("@playwright/test");
+const { probeExtensionContext } = require("../helpers/e2eEnvironment");
+
+const repoRoot = path.join(__dirname, "..", "..");
+const testsRoot = path.join(__dirname, "..");
+const extensionPath = path.join(repoRoot, "extension");
+const artifactsRoot = path.join(testsRoot, "artifacts", "chatgpt-ui-patterns-extension-offline");
+const fixtureRoot = path.join(testsRoot, "fixtures", "live-ui-patterns");
+const manifestPath = path.join(fixtureRoot, "manifest.json");
+
+async function ensureDir(dirPath) {
+  await fsp.mkdir(dirPath, { recursive: true });
+}
+
+function buildMockPageHtml({ prompt, assistantOuterHtml }) {
+  return `<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline ChatGPT UI Pattern Fixture</title>
+    <style>
+      body { margin: 0; font-family: sans-serif; background: #111827; color: #f9fafb; }
+      main { max-width: 960px; margin: 0 auto; padding: 32px 24px 120px; }
+      [data-message-author-role] { margin-bottom: 24px; padding: 20px; border-radius: 16px; background: #1f2937; }
+      pre { overflow: auto; padding: 18px 20px; border-radius: 12px; background: #0f172a; color: #f9fafb; }
+      code { font-family: "Courier New", monospace; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #94a3b8; padding: 8px; }
+      blockquote { margin: 16px 0; padding-left: 16px; border-left: 4px solid #94a3b8; }
+      textarea { width: 100%; min-height: 140px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div data-message-author-role="user" data-message-id="fixture-user-1">
+        <pre>${prompt.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>
+      </div>
+      ${assistantOuterHtml}
+      <textarea data-testid="chat-input" name="prompt-textarea"></textarea>
+    </main>
+  </body>
+</html>`;
+}
+
+test.describe("offline chatgpt ui pattern fixtures with extension", () => {
+  const manifest = fs.existsSync(manifestPath)
+    ? JSON.parse(fs.readFileSync(manifestPath, "utf8"))
+    : null;
+
+  const scenarios = (manifest?.scenarios || []).filter((scenario) => scenario.validated);
+
+  if (!scenarios.length) {
+    test("skips when no validated heading fixtures are collected", async () => {
+      test.skip(true, "Run `npm run collect:ui-patterns:x11` first to generate validated heading fixtures.");
+    });
+    return;
+  }
+
+  for (const scenario of scenarios) {
+    test(`replays ${scenario.id} with heading UI`, async () => {
+      const scenarioDir = path.join(artifactsRoot, scenario.id);
+      const screenshotDir = path.join(scenarioDir, "screenshots");
+      const stateDir = path.join(scenarioDir, "state");
+      const traceDir = path.join(scenarioDir, "traces");
+      const profileBaseDir = path.join(scenarioDir, "profiles");
+
+      await Promise.all([
+        ensureDir(screenshotDir),
+        ensureDir(stateDir),
+        ensureDir(traceDir),
+        ensureDir(profileBaseDir),
+      ]);
+
+      const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "run-"));
+      const assistantOuterHtml = await fsp.readFile(
+        path.join(fixtureRoot, scenario.responseOuterHtmlFile || scenario.responseHtmlFile),
+        "utf8"
+      );
+
+      const launchProbe = await probeExtensionContext({
+        chromium,
+        profileDir,
+        extensionPath,
+      });
+      test.skip(!launchProbe.ok, launchProbe.reason);
+      const context = launchProbe.context;
+
+      try {
+        await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+        const page = await context.newPage();
+        await page.route("https://chatgpt.com/**", async (route) => {
+          if (route.request().resourceType() !== "document") {
+            await route.fulfill({
+              status: 204,
+              contentType: "text/plain; charset=utf-8",
+              body: "",
+            });
+            return;
+          }
+          await route.fulfill({
+            status: 200,
+            contentType: "text/html; charset=utf-8",
+            body: buildMockPageHtml({
+            prompt: scenario.prompt,
+            assistantOuterHtml,
+          }),
+        });
+      });
+
+        await page.goto(`https://chatgpt.com/c/offline-${scenario.id}`, {
+          waitUntil: "domcontentloaded",
+        });
+
+        await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible();
+
+        const expectedLevels = scenario.summary.headingTags.map((tagName) =>
+          Number.parseInt(String(tagName).replace(/^h/i, ""), 10)
+        );
+        const expectedUniqueLevels = [...new Set(expectedLevels)].sort((a, b) => a - b);
+
+        await expect
+          .poll(async () => page.locator(".cgpt-helper-heading-fold").count(), { timeout: 10_000 })
+          .toBe(expectedLevels.length);
+
+        await expect
+          .poll(async () => page.locator(".cgpt-helper-heading-fold").evaluateAll((elements) => {
+            return elements.map((element) =>
+              Number.parseInt(element.getAttribute("data-cgpt-helper-fold-level") || "0", 10)
+            );
+          }), { timeout: 10_000 })
+          .toEqual(expectedLevels);
+
+        const actualLevels = await page.locator(".cgpt-helper-heading-fold").evaluateAll((elements) => {
+          return elements.map((element) =>
+            Number.parseInt(element.getAttribute("data-cgpt-helper-fold-level") || "0", 10)
+          );
+        });
+        expect(actualLevels).toEqual(expectedLevels);
+
+        for (const level of expectedUniqueLevels) {
+          const row = page.locator("#cgpt-code-helper-panel div").filter({
+            hasText: `Level ${level}`,
+          }).first();
+          await expect(row).toBeVisible();
+        }
+
+        if (scenario.id === "headings-h1-h6") {
+          for (const level of [1, 2, 3, 4, 5, 6]) {
+            await expect(page.locator("#cgpt-code-helper-panel")).toContainText(`Level ${level}`);
+          }
+        }
+
+        await Promise.all([
+          page.screenshot({
+            path: path.join(screenshotDir, `${scenario.id}.png`),
+            fullPage: true,
+          }),
+          fsp.writeFile(
+            path.join(stateDir, "levels.json"),
+            `${JSON.stringify({ expectedLevels, actualLevels }, null, 2)}\n`,
+            "utf8"
+          ),
+        ]);
+      } finally {
+        await context.tracing.stop({ path: path.join(traceDir, "trace.zip") });
+        await context.close();
+      }
+    });
+  }
+});

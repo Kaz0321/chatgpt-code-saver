@@ -1,0 +1,317 @@
+{
+  "collectedAt": "2026-03-01T03:49:06.180Z",
+  "source": "chatgpt.com",
+  "scenarios": [
+    {
+      "id": "headings-h1-h6",
+      "label": "Headings H1-H6",
+      "prompt": "Markdown本文のみで回答してください。\n次の見出しをこの順番で必ずすべて使ってください。\n# Level 1\n## Level 2\n### Level 3\n#### Level 4\n##### Level 5\n###### Level 6\n各見出しの下に1文ずつ書いてください。",
+      "responseHtmlFile": "headings-h1-h6.html",
+      "responseOuterHtmlFile": "headings-h1-h6.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6"
+        ],
+        "codeBlockCount": 0,
+        "inlineCodeCount": 0,
+        "linkCount": 0,
+        "blockquoteCount": 0,
+        "nestedBlockquoteCount": 0,
+        "checkboxCount": 0,
+        "tableCount": 0,
+        "tableRowCount": 0,
+        "unorderedListCount": 0,
+        "orderedListCount": 0,
+        "listItemCount": 0,
+        "paragraphCount": 6,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Level 1\n\nこれはレベル1の見出しの下に書かれた文章です。\n\nLevel 2\n\nこれはレベル2の見出しの下に書かれた文章です。\n\nLevel 3\n\nこれはレベル3の見出しの下に書かれた文章です。\n\nLevel 4\n\nこれはレベル4の見出しの下に書かれた文章です。\n\nLevel 5\n\nこれはレベル5の見出しの下に書かれた文章です。\n\nLevel 6\n\nこれはレベル6の見出しの下に書かれた文章です。",
+      "assistantMessageId": "4d4c008e-148f-4537-a80d-4f31a9566775",
+      "assistantModelSlug": "gpt-5-2"
+    },
+    {
+      "id": "headings-starts-at-h2",
+      "label": "Headings Start At H2",
+      "prompt": "Markdown本文のみで回答してください。\n# は使わず、次の見出しをこの順番で必ず使ってください。\n## Overview\n1文。\n### Details\n1文。\n### Risks\n1文。",
+      "responseHtmlFile": "headings-starts-at-h2.html",
+      "responseOuterHtmlFile": "headings-starts-at-h2.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h2",
+          "h3",
+          "h3"
+        ],
+        "codeBlockCount": 0,
+        "inlineCodeCount": 0,
+        "linkCount": 0,
+        "blockquoteCount": 0,
+        "nestedBlockquoteCount": 0,
+        "checkboxCount": 0,
+        "tableCount": 0,
+        "tableRowCount": 0,
+        "unorderedListCount": 0,
+        "orderedListCount": 0,
+        "listItemCount": 0,
+        "paragraphCount": 3,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Overview\n\nThis document provides a concise summary of the topic in a clear and structured format.\n\nDetails\n\nIt highlights the key aspects necessary for understanding while remaining brief and focused.\n\nRisks\n\nPotential misunderstandings may arise if important context or nuances are omitted.",
+      "assistantMessageId": "f633dc90-b55b-433b-9a43-65f00379f382",
+      "assistantModelSlug": "gpt-5-2"
+    },
+    {
+      "id": "headings-h2-siblings",
+      "label": "H2 Siblings",
+      "prompt": "Markdown本文のみで回答してください。\n次の見出しをこの順番で必ず使ってください。\n## Alpha\n1文。\n## Beta\n1文。\n## Gamma\n1文。",
+      "responseHtmlFile": "headings-h2-siblings.html",
+      "responseOuterHtmlFile": "headings-h2-siblings.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h2",
+          "h2",
+          "h2"
+        ],
+        "codeBlockCount": 0,
+        "inlineCodeCount": 0,
+        "linkCount": 0,
+        "blockquoteCount": 0,
+        "nestedBlockquoteCount": 0,
+        "checkboxCount": 0,
+        "tableCount": 0,
+        "tableRowCount": 0,
+        "unorderedListCount": 0,
+        "orderedListCount": 0,
+        "listItemCount": 0,
+        "paragraphCount": 3,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Alpha\n\nこれは最初のセクションです。\n\nBeta\n\nこれは二番目のセクションです。\n\nGamma\n\nこれは最後のセクションです。",
+      "assistantMessageId": "27fe63d1-f659-401b-b757-8febb062683f",
+      "assistantModelSlug": "gpt-5-2"
+    },
+    {
+      "id": "unordered-list-nested",
+      "label": "Nested Unordered List",
+      "prompt": "Markdown本文のみで回答してください。\n次の構造で出力してください。\n## Shopping List\n導入文を1文。\n- 箇条書き3個\n- 2個目の項目の下にネストした箇条書きを2個",
+      "responseHtmlFile": "unordered-list-nested.html",
+      "responseOuterHtmlFile": "unordered-list-nested.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h2"
+        ],
+        "codeBlockCount": 0,
+        "inlineCodeCount": 0,
+        "linkCount": 0,
+        "blockquoteCount": 0,
+        "nestedBlockquoteCount": 0,
+        "checkboxCount": 0,
+        "tableCount": 0,
+        "tableRowCount": 0,
+        "unorderedListCount": 2,
+        "orderedListCount": 0,
+        "listItemCount": 5,
+        "paragraphCount": 6,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Shopping List\n\n週末のために必要なものをまとめました。\n\n牛乳\n\nパン\n\n食パン\n\nバゲット\n\n卵",
+      "assistantMessageId": "6a27d604-26e5-47a3-98c1-b939a3a08810",
+      "assistantModelSlug": "gpt-5-2"
+    },
+    {
+      "id": "ordered-list-nested",
+      "label": "Nested Ordered List",
+      "prompt": "Markdown本文のみで回答してください。\n次の構造で出力してください。\n## Steps\n導入文を1文。\n1. 連番3個\n2. 1個目の項目の下にネストした連番を2個",
+      "responseHtmlFile": "ordered-list-nested.html",
+      "responseOuterHtmlFile": "ordered-list-nested.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h2"
+        ],
+        "codeBlockCount": 0,
+        "inlineCodeCount": 0,
+        "linkCount": 0,
+        "blockquoteCount": 0,
+        "nestedBlockquoteCount": 0,
+        "checkboxCount": 0,
+        "tableCount": 0,
+        "tableRowCount": 0,
+        "unorderedListCount": 0,
+        "orderedListCount": 2,
+        "listItemCount": 5,
+        "paragraphCount": 6,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Steps\n\n以下に手順を説明します。\n\n最初のステップを実行します。\n\n詳細な作業その1を行います。\n\n詳細な作業その2を行います。\n\n次のステップに進みます。\n\n最後のステップを完了します。",
+      "assistantMessageId": "682681c7-8362-4a18-900b-4ea3f051fd15",
+      "assistantModelSlug": "gpt-5-2"
+    },
+    {
+      "id": "code-block-javascript",
+      "label": "JavaScript Code Block",
+      "prompt": "Markdown本文のみで回答してください。\n次の構造で出力してください。\n## Sample\n短い説明を1文。\nJavaScriptのコードブロックを1つ。\nインラインコードで `npm test` を1回だけ含めてください。",
+      "responseHtmlFile": "code-block-javascript.html",
+      "responseOuterHtmlFile": "code-block-javascript.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h2"
+        ],
+        "codeBlockCount": 1,
+        "inlineCodeCount": 1,
+        "linkCount": 0,
+        "blockquoteCount": 0,
+        "nestedBlockquoteCount": 0,
+        "checkboxCount": 0,
+        "tableCount": 0,
+        "tableRowCount": 0,
+        "unorderedListCount": 0,
+        "orderedListCount": 0,
+        "listItemCount": 0,
+        "paragraphCount": 2,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Sample\n\nこれはシンプルなテスト用スクリプトの例です。\n\nJavaScript\nfunction greet(name) {\n  return `Hello, ${name}!`;\n}\n\nconsole.log(greet(\"World\"));\n\nテストを実行するには npm test を使用します。",
+      "assistantMessageId": "7fb50696-0fd7-417f-a8d8-18fe7986bc7d",
+      "assistantModelSlug": "gpt-5-2"
+    },
+    {
+      "id": "markdown-table",
+      "label": "Markdown Table",
+      "prompt": "Markdown本文のみで回答してください。\n次の構造で出力してください。\n## Comparison\n短い導入文を1文。\n3列2行のMarkdown表を1つ。",
+      "responseHtmlFile": "markdown-table.html",
+      "responseOuterHtmlFile": "markdown-table.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h2"
+        ],
+        "codeBlockCount": 0,
+        "inlineCodeCount": 0,
+        "linkCount": 0,
+        "blockquoteCount": 0,
+        "nestedBlockquoteCount": 0,
+        "checkboxCount": 0,
+        "tableCount": 1,
+        "tableRowCount": 2,
+        "unorderedListCount": 0,
+        "orderedListCount": 0,
+        "listItemCount": 0,
+        "paragraphCount": 1,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Comparison\n\n主要な違いを簡潔に比較します。\n\n項目\t製品A\t製品B\n価格と特徴\t低価格・基本機能のみ\t高価格・多機能",
+      "assistantMessageId": "d7a869fa-7d2e-4cd6-8242-9af6767d3f91",
+      "assistantModelSlug": "gpt-5-2"
+    },
+    {
+      "id": "blockquote-link",
+      "label": "Blockquote And Link",
+      "prompt": "Markdown本文のみで回答してください。\n次の構造で出力してください。\n## Notes\n2行の引用ブロックを1つ。\nその後に https://example.com へのMarkdownリンクを1つ。",
+      "responseHtmlFile": "blockquote-link.html",
+      "responseOuterHtmlFile": "blockquote-link.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h2"
+        ],
+        "codeBlockCount": 0,
+        "inlineCodeCount": 0,
+        "linkCount": 1,
+        "blockquoteCount": 1,
+        "nestedBlockquoteCount": 0,
+        "checkboxCount": 0,
+        "tableCount": 0,
+        "tableRowCount": 0,
+        "unorderedListCount": 0,
+        "orderedListCount": 0,
+        "listItemCount": 0,
+        "paragraphCount": 2,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Notes\n\nこれは1行目の引用です。\nこれは2行目の引用です。\n\nhttps://example.com",
+      "assistantMessageId": "aa60ec0e-2515-4863-a9c8-5dc266e7444e",
+      "assistantModelSlug": "gpt-5-2"
+    },
+    {
+      "id": "nested-blockquote",
+      "label": "Nested Blockquote",
+      "prompt": "Markdown本文のみで回答してください。\n次の構造で出力してください。\n## Quotes\n2階層のネストした引用ブロックを1つ。",
+      "responseHtmlFile": "nested-blockquote.html",
+      "responseOuterHtmlFile": "nested-blockquote.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h2"
+        ],
+        "codeBlockCount": 0,
+        "inlineCodeCount": 0,
+        "linkCount": 0,
+        "blockquoteCount": 2,
+        "nestedBlockquoteCount": 1,
+        "checkboxCount": 0,
+        "tableCount": 0,
+        "tableRowCount": 0,
+        "unorderedListCount": 0,
+        "orderedListCount": 0,
+        "listItemCount": 0,
+        "paragraphCount": 2,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Quotes\n\n人生とは旅である。\n\n目的地よりも、その道のりにこそ意味がある。",
+      "assistantMessageId": "931f1b99-2909-45c6-908a-b392832a8e7f",
+      "assistantModelSlug": "gpt-5-2"
+    },
+    {
+      "id": "mixed-markdown",
+      "label": "Mixed Markdown",
+      "prompt": "Markdown本文のみで回答してください。\n次の構造で出力してください。\n## Plan\n短い導入文を1文。\n### Tasks\n箇条書きを2個。\n### Example\n短いJavaScriptコードブロックを1つ。\n最後に短い引用ブロックを1つ。",
+      "responseHtmlFile": "mixed-markdown.html",
+      "responseOuterHtmlFile": "mixed-markdown.message.html",
+      "validated": true,
+      "validationErrors": [],
+      "summary": {
+        "headingTags": [
+          "h2",
+          "h3",
+          "h3"
+        ],
+        "codeBlockCount": 1,
+        "inlineCodeCount": 0,
+        "linkCount": 0,
+        "blockquoteCount": 1,
+        "nestedBlockquoteCount": 0,
+        "checkboxCount": 0,
+        "tableCount": 0,
+        "tableRowCount": 0,
+        "unorderedListCount": 1,
+        "orderedListCount": 0,
+        "listItemCount": 2,
+        "paragraphCount": 4,
+        "horizontalRuleCount": 0
+      },
+      "textPreview": "Plan\n\nシンプルな構造で要件どおりに出力します。\n\nTasks\n\n指定された見出し構造を守る\n\n例として短いJavaScriptコードを示す\n\nExample\nJavaScript\nconst greet = name => `Hello, ${name}!`;\nconsole.log(greet(\"World\"));\n\n継続は力なり。",
+      "assistantMessageId": "1a0a14a5-affa-4d76-8d07-0b9fdfb1c207",
+      "assistantModelSlug": "gpt-5-2"
+    }
+  ]
+}

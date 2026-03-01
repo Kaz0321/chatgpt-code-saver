@@ -1,0 +1,156 @@
+{
+  "collectedAt": "2026-03-01T12:48:13.014Z",
+  "source": "chatgpt.com",
+  "scenarios": [
+    {
+      "id": "h1-h3-basic",
+      "label": "H1 to H3",
+      "prompt": "Markdown本文のみで回答してください。\n# Overview\n短い説明を1文。\n## Details\n短い説明を1文。\n### Notes\n短い説明を1文。",
+      "responseHtmlFile": "h1-h3-basic.html",
+      "headings": [
+        {
+          "tagName": "h1",
+          "text": "Overview"
+        },
+        {
+          "tagName": "h2",
+          "text": "Details"
+        },
+        {
+          "tagName": "h3",
+          "text": "Notes"
+        }
+      ],
+      "codeBlockCount": 0,
+      "linkCount": 0,
+      "textPreview": "Overview\n\nこれは概要を簡潔に説明するための短い文章です。\n\nDetails\n\nこれは詳細情報を簡潔に説明するための短い文章です。\n\nNotes\n\nこれは補足事項を簡潔に説明するための短い文章です。"
+    },
+    {
+      "id": "starts-at-h2",
+      "label": "Starts At H2",
+      "prompt": "Markdown本文のみで回答してください。\n# は使わず、次の見出しだけをこの順で出してください。\n## Overview\n短い説明を1文。\n### Details\n短い説明を1文。\n### Risks\n短い説明を1文。",
+      "responseHtmlFile": "starts-at-h2.html",
+      "headings": [
+        {
+          "tagName": "h2",
+          "text": "Overview"
+        },
+        {
+          "tagName": "h3",
+          "text": "Details"
+        },
+        {
+          "tagName": "h3",
+          "text": "Risks"
+        }
+      ],
+      "codeBlockCount": 0,
+      "linkCount": 0,
+      "textPreview": "Overview\n\n人工知能は、人間の知的活動を模倣する技術分野であり、近年はOpenAIのような研究機関によって急速に発展しています。\n\nDetails\n\n機械学習や大規模言語モデルを活用することで、文章生成や画像認識など多様なタスクを高精度で実行できます。\n\nRisks\n\n一方で、誤情報の生成やプライバシー侵害などのリスクがあるため、適切な管理と倫理的配慮が不可欠です。"
+    },
+    {
+      "id": "skipped-levels",
+      "label": "Skipped Levels",
+      "prompt": "Markdown本文のみで回答してください。\n次の見出しをこの順で出してください。\n## Parent\n短い説明を1文。\n#### Deep child\n短い説明を1文。\n### Middle child\n短い説明を1文。",
+      "responseHtmlFile": "skipped-levels.html",
+      "headings": [
+        {
+          "tagName": "h2",
+          "text": "Parent"
+        },
+        {
+          "tagName": "h4",
+          "text": "Deep child"
+        },
+        {
+          "tagName": "h3",
+          "text": "Middle child"
+        }
+      ],
+      "codeBlockCount": 0,
+      "linkCount": 0,
+      "textPreview": "Parent\n\nこれは親要素を示す短い説明です。\n\nDeep child\n\nこれはより深い階層の子要素を示す短い説明です。\n\nMiddle child\n\nこれは中間の階層にある子要素を示す短い説明です。"
+    },
+    {
+      "id": "deep-h1-h6",
+      "label": "H1 to H6",
+      "prompt": "Markdown本文のみで回答してください。\n以下の見出しを順番どおりにすべて使ってください。\n# L1\n## L2\n### L3\n#### L4\n##### L5\n###### L6\n各見出しの下に1文ずつ付けてください。",
+      "responseHtmlFile": "deep-h1-h6.html",
+      "headings": [
+        {
+          "tagName": "h1",
+          "text": "L1"
+        },
+        {
+          "tagName": "h2",
+          "text": "L2"
+        },
+        {
+          "tagName": "h3",
+          "text": "L3"
+        },
+        {
+          "tagName": "h4",
+          "text": "L4"
+        },
+        {
+          "tagName": "h5",
+          "text": "L5"
+        },
+        {
+          "tagName": "h6",
+          "text": "L6"
+        }
+      ],
+      "codeBlockCount": 0,
+      "linkCount": 0,
+      "textPreview": "L1\n\nこれは最上位レベルの見出しに対応する説明文です。\n\nL2\n\nこれは2番目のレベルの見出しに対応する説明文です。\n\nL3\n\nこれは3番目のレベルの見出しに対応する説明文です。\n\nL4\n\nこれは4番目のレベルの見出しに対応する説明文です。\n\nL5\n\nこれは5番目のレベルの見出しに対応する説明文です。\n\nL6\n\nこれは6番目のレベルの見出しに対応する説明文です。"
+    },
+    {
+      "id": "h2-siblings",
+      "label": "H2 Siblings",
+      "prompt": "Markdown本文のみで回答してください。\n以下の見出しをこの順で出してください。\n## Alpha\n短い説明を1文。\n## Beta\n短い説明を1文。\n## Gamma\n短い説明を1文。",
+      "responseHtmlFile": "h2-siblings.html",
+      "headings": [
+        {
+          "tagName": "h2",
+          "text": "Alpha"
+        },
+        {
+          "tagName": "h2",
+          "text": "Beta"
+        },
+        {
+          "tagName": "h2",
+          "text": "Gamma"
+        }
+      ],
+      "codeBlockCount": 0,
+      "linkCount": 0,
+      "textPreview": "Alpha\n\n最初の段階や出発点を示す基本的な概念です。\n\nBeta\n\n次の段階として発展や調整を表す概念です。\n\nGamma\n\n最終的な段階や成熟を象徴する概念です。"
+    },
+    {
+      "id": "mixed-headings-and-code",
+      "label": "Mixed Content",
+      "prompt": "Markdown本文のみで回答してください。\n以下の構造で出力してください。\n## Plan\n短い導入文を1文。\n### Step 1\n箇条書きを2個。\n### Step 2\n短いJavaScriptコードブロックを1つ。",
+      "responseHtmlFile": "mixed-headings-and-code.html",
+      "headings": [
+        {
+          "tagName": "h2",
+          "text": "Plan"
+        },
+        {
+          "tagName": "h3",
+          "text": "Step 1"
+        },
+        {
+          "tagName": "h3",
+          "text": "Step 2"
+        }
+      ],
+      "codeBlockCount": 0,
+      "linkCount": 0,
+      "textPreview": "Plan\n\nシンプルなタスク実行のための基本的な流れを示します。\n\nStep 1\n\n必要なデータを定義する。\n\n処理の流れを整理する。\n\nStep 2\nJavaScript\nconst greet = (name) => {\n  return `Hello, ${name}!`;\n};\n\nconsole.log(greet(\"World\"));"
+    }
+  ]
+}
