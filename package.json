@@ -1,6 +1,6 @@
 {
   "name": "gpt-code-saver-extension",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "MV3 workspace for gpt-code-saver-extension with unit tests and Playwright smoke coverage",
   "scripts": {
