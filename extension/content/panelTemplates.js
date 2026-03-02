@@ -83,7 +83,7 @@ function createTemplateSection() {
 function createTemplateActionRow(refreshTemplateList) {
   const manageRow = createButtonRow();
 
-  const editBtn = createPanelButton("Edit", "success");
+  const editBtn = createPanelButton("Edit", "secondary");
   editBtn.style.flex = "1";
   editBtn.addEventListener("click", () => {
     const tpl = getSelectedTemplate();
@@ -97,7 +97,7 @@ function createTemplateActionRow(refreshTemplateList) {
   });
   manageRow.appendChild(editBtn);
 
-  const addBtn = createPanelButton("Add", "success");
+  const addBtn = createPanelButton("Add", "secondary");
   addBtn.style.flex = "1";
   addBtn.addEventListener("click", () => {
     openTemplateEditor("new", null, () => {
@@ -106,7 +106,7 @@ function createTemplateActionRow(refreshTemplateList) {
   });
   manageRow.appendChild(addBtn);
 
-  const insertBtn = createPanelButton("Insert", "accent");
+  const insertBtn = createPanelButton("Insert", "primary");
   insertBtn.style.flex = "1";
   insertBtn.addEventListener("click", () => {
     const tpl = getSelectedTemplate();

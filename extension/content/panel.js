@@ -53,4 +53,12 @@ function createFloatingPanel() {
     });
     document.body.appendChild(toggleButton);
   }
+
+  if (typeof cgptSyncPanelLayoutState === "function") {
+    cgptSyncPanelLayoutState({
+      panel,
+      toggleButton,
+      hidden: visibilityState.hidden,
+    });
+  }
 }

@@ -46,6 +46,11 @@ function buildMockPageHtml({ prompt, assistantOuterHtml }) {
 </html>`;
 }
 
+function shouldExpectHeadingFolds(summary) {
+  const headingCount = Array.isArray(summary?.headingTags) ? summary.headingTags.length : 0;
+  return headingCount > 0;
+}
+
 test.describe("offline chatgpt ui pattern fixtures with extension", () => {
   const manifest = fs.existsSync(manifestPath)
     ? JSON.parse(fs.readFileSync(manifestPath, "utf8"))
@@ -121,34 +126,39 @@ test.describe("offline chatgpt ui pattern fixtures with extension", () => {
           Number.parseInt(String(tagName).replace(/^h/i, ""), 10)
         );
         const expectedUniqueLevels = [...new Set(expectedLevels)].sort((a, b) => a - b);
+        const expectsHeadingFolds = shouldExpectHeadingFolds(scenario.summary);
 
         await expect
           .poll(async () => page.locator(".cgpt-helper-heading-fold").count(), { timeout: 10_000 })
-          .toBe(expectedLevels.length);
+          .toBe(expectsHeadingFolds ? expectedLevels.length : 0);
 
-        await expect
-          .poll(async () => page.locator(".cgpt-helper-heading-fold").evaluateAll((elements) => {
-            return elements.map((element) =>
-              Number.parseInt(element.getAttribute("data-cgpt-helper-fold-level") || "0", 10)
-            );
-          }), { timeout: 10_000 })
-          .toEqual(expectedLevels);
+        if (expectsHeadingFolds) {
+          await expect
+            .poll(async () => page.locator(".cgpt-helper-heading-fold").evaluateAll((elements) => {
+              return elements.map((element) =>
+                Number.parseInt(element.getAttribute("data-cgpt-helper-fold-level") || "0", 10)
+              );
+            }), { timeout: 10_000 })
+            .toEqual(expectedLevels);
+        }
 
         const actualLevels = await page.locator(".cgpt-helper-heading-fold").evaluateAll((elements) => {
           return elements.map((element) =>
             Number.parseInt(element.getAttribute("data-cgpt-helper-fold-level") || "0", 10)
           );
         });
-        expect(actualLevels).toEqual(expectedLevels);
+        expect(actualLevels).toEqual(expectsHeadingFolds ? expectedLevels : []);
 
-        for (const level of expectedUniqueLevels) {
-          const row = page.locator("#cgpt-code-helper-panel div").filter({
-            hasText: `Level ${level}`,
-          }).first();
-          await expect(row).toBeVisible();
+        if (expectsHeadingFolds) {
+          for (const level of expectedUniqueLevels) {
+            const row = page.locator("#cgpt-code-helper-panel div").filter({
+              hasText: `Level ${level}`,
+            }).first();
+            await expect(row).toBeVisible();
+          }
         }
 
-        if (scenario.id === "headings-h1-h6") {
+        if (expectsHeadingFolds && scenario.id === "headings-h1-h6") {
           for (const level of [1, 2, 3, 4, 5, 6]) {
             await expect(page.locator("#cgpt-code-helper-panel")).toContainText(`Level ${level}`);
           }

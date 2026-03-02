@@ -1,6 +1,7 @@
 const fs = require("fs/promises");
 const path = require("path");
 const { test, expect, chromium } = require("@playwright/test");
+const { getBrowserLaunchEnv } = require("../helpers/browserLaunchEnv");
 
 const repoRoot = path.join(__dirname, "..", "..");
 const testsRoot = path.join(__dirname, "..");
@@ -87,6 +88,7 @@ test("verifies README workflow on a mocked ChatGPT page", async () => {
   const context = await chromium.launchPersistentContext(profileDir, {
     channel: "chromium",
     headless: true,
+    env: getBrowserLaunchEnv(),
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
@@ -114,6 +116,24 @@ test("verifies README workflow on a mocked ChatGPT page", async () => {
     });
 
     await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible();
+    const initialLayout = await page.evaluate(() => {
+      const main = document.querySelector("main");
+      const panel = document.getElementById("cgpt-code-helper-panel");
+      if (!main || !panel) {
+        return null;
+      }
+
+      const mainRect = main.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      return {
+        mainRight: mainRect.right,
+        panelLeft: panelRect.left,
+        marginRight: window.getComputedStyle(main).marginRight,
+        paddingBottom: window.getComputedStyle(main).paddingBottom,
+      };
+    });
+    expect(initialLayout).toBeTruthy();
+    expect(initialLayout.mainRight).toBeLessThanOrEqual(initialLayout.panelLeft - 8);
     const saveButton = page.locator(
       "[data-cgpt-code-wrapper='1'] button[data-cgpt-button-role='save']"
     );

@@ -29,6 +29,7 @@ function cgptTriggerChatLogDownload(filePath, content, options = {}) {
 function cgptCreateBatchSaveAllButton(blocks) {
   return cgptCreateBatchSaveButton(blocks, {
     label: "Save All",
+    variant: "primary",
     pendingLabel: "Saving...",
   });
 }
@@ -47,7 +48,7 @@ function cgptCreateBatchSaveAsAllButton(blocks) {
 }
 
 function cgptCreateBatchSaveButton(blocks, options = {}) {
-  const { label = "Save All", variant = "success", pendingLabel = "Saving..." } = options;
+  const { label = "Save All", variant = "primary", pendingLabel = "Saving..." } = options;
   const button = cgptCreateChatLogButton(label, variant, "sm");
   cgptSetChatLogButtonDisabled(button, !blocks || !blocks.length);
   if (!blocks || !blocks.length) {
@@ -98,31 +99,44 @@ async function cgptHandleBatchSaveAsAll(button, blocks) {
 }
 
 function cgptCreateChatLogButton(label, variant = "secondary", size = "md") {
-  const button = document.createElement("button");
-  button.textContent = label;
-  button.style.fontSize = size === "sm" ? "11px" : "12px";
-  button.style.padding = size === "sm" ? "2px 8px" : "4px 10px";
-  button.style.borderRadius = "4px";
-  button.style.border = "1px solid rgba(255,255,255,0.3)";
-  button.style.cursor = "pointer";
-  button.style.transition = "opacity 0.2s ease";
-  if (typeof cgptApplySharedButtonVariant === "function") {
-    cgptApplySharedButtonVariant(button, variant);
-  } else {
-    const fallback = {
-      accent: "#2563eb",
-      success: "#059669",
-      muted: "#4b5563",
-      secondary: "#374151",
-    };
-    button.style.background = fallback[variant] || fallback.secondary;
-    button.style.color = "#fff";
+  const button =
+    typeof cgptCreateSharedButton === "function"
+      ? cgptCreateSharedButton(label, variant, size)
+      : document.createElement("button");
+  if (!button.textContent) {
+    button.textContent = label;
+  }
+  if (typeof cgptCreateSharedButton !== "function") {
+    button.style.fontSize = size === "sm" ? "11px" : "12px";
+    button.style.padding = size === "sm" ? "0 8px" : "0 10px";
+    button.style.minHeight = size === "sm" ? "28px" : "32px";
+    button.style.borderRadius = "6px";
+    button.style.border = "1px solid rgba(255,255,255,0.3)";
+    button.style.cursor = "pointer";
+    button.style.transition = "opacity 0.2s ease";
+    if (typeof cgptApplySharedButtonVariant === "function") {
+      cgptApplySharedButtonVariant(button, variant);
+    } else {
+      const fallback = {
+        primary: "#2563eb",
+        success: "#047857",
+        danger: "#b91c1c",
+        secondary: "#475569",
+        ghost: "rgba(15, 23, 42, 0.82)",
+      };
+      button.style.background = fallback[variant] || fallback.secondary;
+      button.style.color = "#fff";
+    }
   }
   return button;
 }
 
 function cgptSetChatLogButtonDisabled(button, disabled) {
   if (!button) return;
+  if (typeof cgptSetSharedButtonDisabled === "function") {
+    cgptSetSharedButtonDisabled(button, disabled);
+    return;
+  }
   button.disabled = disabled;
   button.style.opacity = disabled ? "0.5" : "1";
   button.style.cursor = disabled ? "not-allowed" : "pointer";
@@ -188,7 +202,7 @@ function cgptJumpToCodeBlock(targetElement) {
 }
 
 function cgptCreateBlockSaveButton(block) {
-  const button = cgptCreateChatLogButton("Save", "success", "sm");
+  const button = cgptCreateChatLogButton("Save", "primary", "sm");
   if (!block || !block.filePath) {
     cgptSetChatLogButtonDisabled(button, true);
     button.title = "File path not detected";

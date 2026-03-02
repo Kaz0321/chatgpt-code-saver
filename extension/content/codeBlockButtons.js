@@ -15,13 +15,17 @@ function cgptCreateButtonContainer() {
 
 function cgptCreateBaseButtonElement(placement = "overlay") {
   const button = document.createElement("button");
-  button.style.fontSize = "11px";
-  button.style.padding = "2px 10px";
-  button.style.borderRadius = "4px";
-  button.style.border = "1px solid rgba(255,255,255,0.4)";
-  button.style.cursor = "pointer";
-  button.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-  button.style.transition = "opacity 0.2s ease";
+  if (typeof cgptApplySharedButtonStyle === "function") {
+    cgptApplySharedButtonStyle(button, { variant: "secondary", size: "sm" });
+  } else {
+    button.style.fontSize = "11px";
+    button.style.padding = "0 8px";
+    button.style.minHeight = "28px";
+    button.style.borderRadius = "6px";
+    button.style.border = "1px solid rgba(148,163,184,0.72)";
+    button.style.cursor = "pointer";
+    button.style.transition = "opacity 0.2s ease";
+  }
   button.style.position = placement === "toolbar" ? "relative" : "relative";
   button.style.zIndex = placement === "toolbar" ? "1" : "2";
   return button;
@@ -34,12 +38,12 @@ function cgptApplyButtonVariant(button, variant) {
   }
   const palette = {
     primary: "rgba(37, 99, 235, 1)",
-    warning: "rgba(245, 158, 11, 1)",
-    neutral: "rgba(75, 85, 99, 1)",
-    muted: "rgba(55, 65, 81, 1)",
-    accent: "rgba(16, 185, 129, 1)",
+    secondary: "rgba(71, 85, 105, 1)",
+    success: "rgba(4, 120, 87, 1)",
+    danger: "rgba(185, 28, 28, 1)",
+    ghost: "rgba(15, 23, 42, 0.82)",
   };
-  const color = palette[variant] || palette.neutral;
+  const color = palette[variant] || palette.secondary;
   button.style.background = color;
   button.style.color = "#fff";
   button.style.border = "1px solid rgba(255,255,255,0.4)";
@@ -49,7 +53,7 @@ function cgptCreateSaveButtonElement(hasMetadata = true) {
   const button = cgptCreateBaseButtonElement("overlay");
   button.textContent = "Save";
   button.title = "Save code";
-  cgptApplyButtonVariant(button, hasMetadata ? "primary" : "muted");
+  cgptApplyButtonVariant(button, hasMetadata ? "primary" : "secondary");
   cgptSetButtonDisabled(button, !hasMetadata);
   return button;
 }
@@ -58,7 +62,7 @@ function cgptCreateSaveAsButtonElement() {
   const button = cgptCreateBaseButtonElement("overlay");
   button.textContent = "Save As";
   button.title = "Save code with a custom filename";
-  cgptApplyButtonVariant(button, "accent");
+  cgptApplyButtonVariant(button, "secondary");
   return button;
 }
 
@@ -66,7 +70,7 @@ function cgptCreateCopyButtonElement() {
   const button = cgptCreateBaseButtonElement("overlay");
   button.textContent = "Copy";
   button.title = "Copy code";
-  cgptApplyButtonVariant(button, "neutral");
+  cgptApplyButtonVariant(button, "ghost");
   return button;
 }
 
@@ -74,7 +78,7 @@ function cgptCreateShrinkButtonElement() {
   const button = cgptCreateBaseButtonElement("overlay");
   button.textContent = "Compact";
   button.title = "Show a single line";
-  cgptApplyButtonVariant(button, "muted");
+  cgptApplyButtonVariant(button, "secondary");
   return button;
 }
 
@@ -82,7 +86,7 @@ function cgptCreateExpandButtonElement() {
   const button = cgptCreateBaseButtonElement("overlay");
   button.textContent = "Expand";
   button.title = "Show all lines";
-  cgptApplyButtonVariant(button, "accent");
+  cgptApplyButtonVariant(button, "secondary");
   return button;
 }
 
@@ -297,7 +301,7 @@ function cgptRefreshSaveButtonState(pre, code, metadataOverride) {
   saveButton.title = hasMetadata
     ? "Save code"
     : "Add // file: path/to/file to the first line to enable Save";
-  cgptApplyButtonVariant(saveButton, hasMetadata ? "primary" : "muted");
+  cgptApplyButtonVariant(saveButton, hasMetadata ? "primary" : "secondary");
   cgptSetButtonDisabled(saveButton, !hasMetadata);
   pre.dataset.cgptHasMetadata = hasMetadata ? "1" : "0";
   pre.dataset.cgptFilePath = hasMetadata && metadata.filePath ? metadata.filePath : "";
@@ -306,6 +310,10 @@ function cgptRefreshSaveButtonState(pre, code, metadataOverride) {
 
 function cgptSetButtonDisabled(button, disabled) {
   if (!button) return;
+  if (typeof cgptSetSharedButtonDisabled === "function") {
+    cgptSetSharedButtonDisabled(button, disabled);
+    return;
+  }
   button.disabled = disabled;
   button.style.opacity = disabled ? "0.5" : "1";
   button.style.cursor = disabled ? "not-allowed" : "pointer";

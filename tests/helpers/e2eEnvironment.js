@@ -1,9 +1,12 @@
+const { getBrowserLaunchEnv } = require("./browserLaunchEnv");
+
 async function probeExtensionContext({ chromium, profileDir, extensionPath }) {
   let context;
   try {
     context = await chromium.launchPersistentContext(profileDir, {
       channel: "chromium",
       headless: true,
+      env: getBrowserLaunchEnv(),
       args: [
         `--disable-extensions-except=${extensionPath}`,
         `--load-extension=${extensionPath}`,

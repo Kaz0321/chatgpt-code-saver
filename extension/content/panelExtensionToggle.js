@@ -4,15 +4,20 @@ function createExtensionToggleSection() {
 
   const buttonRow = createButtonRow();
 
-  const enableButton = createPanelButton("Enable", "accent");
+  const enableButton = createPanelButton("Enable", "primary");
   enableButton.style.flex = "1";
-  const disableButton = createPanelButton("Disable", "muted");
+  const disableButton = createPanelButton("Disable", "secondary");
   disableButton.style.flex = "1";
 
   const updateStateControls = () => {
     const enabled = typeof cgptIsExtensionEnabled === "function" ? cgptIsExtensionEnabled() : true;
-    enableButton.disabled = enabled;
-    disableButton.disabled = !enabled;
+    if (typeof cgptSetSharedButtonDisabled === "function") {
+      cgptSetSharedButtonDisabled(enableButton, enabled);
+      cgptSetSharedButtonDisabled(disableButton, !enabled);
+    } else {
+      enableButton.disabled = enabled;
+      disableButton.disabled = !enabled;
+    }
   };
 
   enableButton.addEventListener("click", () => {

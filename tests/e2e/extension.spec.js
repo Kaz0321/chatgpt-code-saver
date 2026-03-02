@@ -1,6 +1,7 @@
 const fs = require("fs/promises");
 const path = require("path");
 const { test, expect, chromium } = require("@playwright/test");
+const { getBrowserLaunchEnv } = require("../helpers/browserLaunchEnv");
 
 const repoRoot = path.join(__dirname, "..", "..");
 const testsRoot = path.join(__dirname, "..");
@@ -33,6 +34,7 @@ test("loads the extension service worker and records manifest metadata", async (
   const context = await chromium.launchPersistentContext(profileDir, {
     channel: "chromium",
     headless: true,
+    env: getBrowserLaunchEnv(),
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`

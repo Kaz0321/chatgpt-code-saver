@@ -25,7 +25,7 @@ function createProjectFolderSection() {
   }
 
   const buttons = createButtonRow();
-  const saveBtn = createPanelButton("Set Folder", "success");
+  const saveBtn = createPanelButton("Set Folder", "primary");
   saveBtn.style.flex = "1";
   saveBtn.addEventListener("click", () => {
     commitProjectFolderInput(input);
@@ -67,4 +67,3 @@ function persistProjectFolderSelection(input, normalizedPath) {
     }
   });
 }
-

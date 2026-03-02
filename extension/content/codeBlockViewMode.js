@@ -17,10 +17,11 @@ function cgptNormalizePositiveNumber(value) {
   return parsed;
 }
 
-function cgptCalculateCompactHeight(lineCount, lineHeight, buttonOverlayOffset) {
+function cgptCalculateCompactHeight(lineCount, lineHeight, buttonOverlayOffset, verticalPadding = 0) {
   const safeLineCount = Math.max(0, Number.isFinite(lineCount) ? lineCount : 0);
   const safeLineHeight = cgptNormalizePositiveNumber(lineHeight);
-  const codeHeight = safeLineCount * safeLineHeight;
+  const safeVerticalPadding = Math.max(0, Number.isFinite(verticalPadding) ? verticalPadding : 0);
+  const codeHeight = safeLineCount * safeLineHeight + safeVerticalPadding;
   const safeOverlayOffset = Math.max(0, Number.isFinite(buttonOverlayOffset) ? buttonOverlayOffset : 0);
   return Math.max(codeHeight, safeOverlayOffset);
 }
@@ -133,7 +134,8 @@ function cgptNormalizeLineHeight(style) {
 }
 
 function cgptGetCodeLineHeight(pre) {
-  const code = pre.querySelector("code") || pre;
+  const code =
+    typeof cgptGetCodeTextContainer === "function" ? cgptGetCodeTextContainer(pre) || pre : pre;
   const style = window.getComputedStyle ? window.getComputedStyle(code) : null;
   const normalizedLineHeight = cgptNormalizeLineHeight(style);
   if (Number.isFinite(normalizedLineHeight) && normalizedLineHeight > 0) {
@@ -141,6 +143,19 @@ function cgptGetCodeLineHeight(pre) {
   }
   const fallbackFontSize = style ? parseFloat(style.fontSize) || 14 : 14;
   return fallbackFontSize * 1.4;
+}
+
+function cgptGetCodeBlockVerticalPadding(pre) {
+  if (!pre || typeof window === "undefined" || typeof window.getComputedStyle !== "function") {
+    return 0;
+  }
+  const style = window.getComputedStyle(pre);
+  if (!style) return 0;
+  const paddingTop = parseFloat(style.paddingTop) || 0;
+  const paddingBottom = parseFloat(style.paddingBottom) || 0;
+  const borderTopWidth = parseFloat(style.borderTopWidth) || 0;
+  const borderBottomWidth = parseFloat(style.borderBottomWidth) || 0;
+  return paddingTop + paddingBottom + borderTopWidth + borderBottomWidth;
 }
 
 function cgptSetCollapsedVisualState(element, isCollapsed) {
@@ -160,7 +175,11 @@ function cgptUpdateViewButtonStates(pre) {
   Object.keys(buttons).forEach((key) => {
     const btn = buttons[key];
     if (btn) {
-      btn.disabled = Boolean(disabledStates[key]);
+      if (typeof cgptSetSharedButtonDisabled === "function") {
+        cgptSetSharedButtonDisabled(btn, Boolean(disabledStates[key]));
+      } else {
+        btn.disabled = Boolean(disabledStates[key]);
+      }
     }
   });
 }
@@ -198,10 +217,12 @@ function cgptSetPreViewMode(pre, mode) {
       : FALLBACK_VIEW_SETTINGS.compactLineCount;
     const lineHeight = cgptGetCodeLineHeight(pre);
     const buttonOverlayOffset = cgptGetButtonOverlayOffset(pre);
+    const verticalPadding = cgptGetCodeBlockVerticalPadding(pre);
     const targetHeight = cgptCalculateCompactHeight(
       normalizedLines,
       lineHeight,
-      buttonOverlayOffset
+      buttonOverlayOffset,
+      verticalPadding
     );
     collapsibleEl.style.maxHeight = `${targetHeight}px`;
     collapsibleEl.style.overflow = "hidden";

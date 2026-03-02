@@ -44,6 +44,7 @@
         "content/chatLogModalActions.js",
         "content/chatLogModalFormatting.js",
         "content/chatLogModal.js",
+        "content/panelLayout.js",
         "content/panelVisibility.js",
         "content/panelComponents.js",
         "content/panelProjectFolder.js",

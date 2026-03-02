@@ -68,8 +68,8 @@ function createViewModeRow({
 
 function createViewModeButton(label, mode) {
   const variants = {
-    compact: "accent",
-    expanded: "accent",
+    compact: "secondary",
+    expanded: "secondary",
   };
   const variant = variants[mode] || "secondary";
   const button = createPanelButton(label, variant);
@@ -126,12 +126,12 @@ function createHeadingLevelRow(level) {
   controls.style.display = "flex";
   controls.style.gap = "4px";
 
-  const collapseButton = createPanelButton("Compact All", "muted");
+  const collapseButton = createPanelButton("Compact All", "secondary");
   applyHeadingButtonTheme(collapseButton, level);
   collapseButton.addEventListener("click", () => requestHeadingFoldChange(level, false));
   controls.appendChild(collapseButton);
 
-  const expandButton = createPanelButton("Expand All", "muted");
+  const expandButton = createPanelButton("Expand All", "secondary");
   applyHeadingButtonTheme(expandButton, level);
   expandButton.addEventListener("click", () => requestHeadingFoldChange(level, true));
   controls.appendChild(expandButton);
@@ -143,6 +143,19 @@ function createHeadingLevelRow(level) {
 function applyHeadingButtonTheme(button, level) {
   const color = getHeadingLevelColor(level);
   if (!button || !color) return;
+  if (typeof cgptSetSharedButtonCustomPalette === "function") {
+    cgptSetSharedButtonCustomPalette(button, {
+      background: color,
+      hoverBackground: color,
+      activeBackground: color,
+      border: color,
+      hoverBorder: color,
+      activeBorder: color,
+      color: "#0b172a",
+      focusRing: "rgba(255, 255, 255, 0.72)",
+    });
+    return;
+  }
   button.style.background = color;
   button.style.borderColor = color;
   button.style.color = "#0b172a";

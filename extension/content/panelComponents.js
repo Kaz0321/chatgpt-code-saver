@@ -5,6 +5,7 @@ function createPanelContainer() {
   panel.style.right = "16px";
   panel.style.bottom = "80px";
   panel.style.zIndex = "9999";
+  panel.style.boxSizing = "border-box";
   panel.style.background = "rgba(32, 33, 35, 0.95)";
   panel.style.border = "1px solid rgba(255,255,255,0.1)";
   panel.style.borderRadius = "8px";
@@ -15,7 +16,10 @@ function createPanelContainer() {
   panel.style.flexDirection = "column";
   panel.style.gap = "8px";
   panel.style.backdropFilter = "blur(8px)";
+  panel.style.width = "min(280px, calc(100vw - 32px))";
   panel.style.maxWidth = "280px";
+  panel.style.maxHeight = "calc(100vh - 112px)";
+  panel.style.overflowY = "auto";
   return panel;
 }
 
@@ -53,15 +57,23 @@ function createSectionLabel(text) {
   return label;
 }
 
-function createPanelButton(text, variant = "secondary") {
-  const button = document.createElement("button");
-  button.textContent = text;
-  button.style.fontSize = "11px";
-  button.style.padding = "4px 6px";
-  button.style.borderRadius = "4px";
-  button.style.cursor = "pointer";
+function createPanelButton(text, variant = "secondary", size = "sm") {
+  const button =
+    typeof cgptCreateSharedButton === "function"
+      ? cgptCreateSharedButton(text, variant, size)
+      : document.createElement("button");
+  if (!button.textContent) {
+    button.textContent = text;
+  }
+  if (typeof cgptCreateSharedButton !== "function") {
+    button.style.fontSize = "11px";
+    button.style.padding = "0 8px";
+    button.style.minHeight = "28px";
+    button.style.borderRadius = "6px";
+    button.style.cursor = "pointer";
+    applyPanelButtonVariant(button, variant);
+  }
   button.style.flexShrink = "0";
-  applyPanelButtonVariant(button, variant);
   return button;
 }
 
@@ -72,10 +84,10 @@ function applyPanelButtonVariant(button, variant) {
   }
   const palette = {
     primary: "rgba(37, 99, 235, 1)",
-    accent: "rgba(124, 58, 237, 1)",
+    accent: "rgba(37, 99, 235, 1)",
     success: "rgba(16, 185, 129, 1)",
-    secondary: "rgba(75, 85, 99, 1)",
-    muted: "rgba(55, 65, 81, 1)",
+    secondary: "rgba(71, 85, 105, 1)",
+    muted: "rgba(71, 85, 105, 1)",
   };
   const color = palette[variant] || palette.secondary;
   button.style.background = color;
@@ -117,16 +129,20 @@ function createLineCountControls({ initialValue, onCommit, min = 1, max = 200 })
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = label;
+    if (typeof cgptApplySharedButtonStyle === "function") {
+      cgptApplySharedButtonStyle(button, { variant: "secondary", size: "sm" });
+    } else {
+      button.style.borderRadius = "6px";
+      button.style.border = "1px solid rgba(148,163,184,0.72)";
+      button.style.background = "rgba(71, 85, 105, 0.96)";
+      button.style.color = "#fff";
+      button.style.cursor = "pointer";
+      button.style.display = "flex";
+      button.style.alignItems = "center";
+      button.style.justifyContent = "center";
+    }
     button.style.width = "28px";
-    button.style.height = "24px";
-    button.style.borderRadius = "4px";
-    button.style.border = "1px solid rgba(255,255,255,0.2)";
-    button.style.background = "rgba(55, 65, 81, 0.95)";
-    button.style.color = "#fff";
-    button.style.cursor = "pointer";
-    button.style.display = "flex";
-    button.style.alignItems = "center";
-    button.style.justifyContent = "center";
+    button.style.padding = "0";
     return button;
   };
 

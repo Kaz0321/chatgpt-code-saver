@@ -135,6 +135,14 @@ classDiagram
 - 既定テンプレート文言は `extension/content/state.js` の `DEFAULT_TEMPLATE_CONTENT` で定義されています。アクセサ (`cgptSetTemplates`, `cgptSetSelectedTemplateId` など) を経由して状態を更新し、単一責務を保ってください。
 - 権限を追加／削除する場合は `extension/manifest.json` を更新し、README の「権限とプライバシー」節の整合性も確認します。
 
+## UI 方針
+- ボタン UI は `WCAG 2.2` 準拠を前提に、`Fluent 2` の考え方をベースに統一します。最低限、十分なコントラスト、明確な `focus-visible`、`28px` 以上の押下領域を維持してください。
+- 新しいボタンは `extension/shared/uiStyles.js` の `cgptCreateSharedButton` / `cgptApplySharedButtonStyle` / `cgptSetSharedButtonDisabled` を使って実装します。コンテンツ側で色・角丸・文字サイズを直書きしないでください。
+- 新規コードで使う variant は `primary` / `secondary` / `ghost` / `danger` を基本とします。`success` は明確な成功操作に限定し、旧 variant 名 (`accent` / `muted` / `neutral` / `warning`) は互換用 alias としてのみ扱います。
+- ボタンサイズは `sm` / `md` / `lg` の token を使います。密度が高い一覧やコードブロック上は `sm`、モーダルの主要操作は `md` を既定とします。
+- 1 つの操作グループで `primary` は原則 1 個までにします。副次操作は `secondary`、軽い補助操作は `ghost`、破壊的操作は `danger` を使ってください。
+- disabled 状態は `button.disabled = true` のみで済ませず、共有ヘルパー経由で見た目も更新します。理由が分かりにくい場合は `title` などで無効理由を補足します。
+
 ### v0.2.0 リファクタリングのポイント
 - `background/applyCode.js` は入力バリデーション・ログ生成・ダウンロード実行をそれぞれ独立関数に分割し、単体で差し替えやすくしました。
 - `content/init.js` では、オプション読み込みごとのラッパー (`cgptEnsureLoaded` など) を追加して初期化手順を段階化し、読み込み順の可読性を向上させています。

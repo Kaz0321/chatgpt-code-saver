@@ -16,6 +16,14 @@ test('cgptCalculateCompactHeight matches ChatGPT code block pixels for 6 lines',
   assert.strictEqual(sixLineHeight, chatgptLineHeightPx * 6);
 });
 
+test('cgptCalculateCompactHeight includes code block vertical padding when provided', () => {
+  const lineHeightPx = 22.4;
+  const overlayOffsetPx = 40;
+  const verticalPaddingPx = 36; // 18px top + 18px bottom in the offline fixture
+  const compactHeight = cgptCalculateCompactHeight(6, lineHeightPx, overlayOffsetPx, verticalPaddingPx);
+  assert.strictEqual(compactHeight, lineHeightPx * 6 + verticalPaddingPx);
+});
+
 test('cgptCalculateCompactHeight ignores negative inputs', () => {
   const height = cgptCalculateCompactHeight(-3, -10, -5);
   assert.strictEqual(height, 0);

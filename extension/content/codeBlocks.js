@@ -1,16 +1,52 @@
 function decorateCodeBlocks(root = document) {
   if (!root || typeof root.querySelectorAll !== "function") return;
   cgptEnsureCodeBlockStyles();
-  const pres = root.querySelectorAll("pre code");
-  pres.forEach((code) => {
-    tryDecorateSingleCodeBlock(code);
+  const pres = cgptCollectDecoratablePres(root);
+  pres.forEach((pre) => {
+    tryDecorateSingleCodeBlock(pre);
   });
 }
 
-function tryDecorateSingleCodeBlock(code) {
-  if (!code) return;
-  const pre = code.closest("pre");
+function cgptGetDecoratableCodeContent(pre) {
+  if (!pre || typeof pre.querySelector !== "function") return null;
+  if (typeof cgptGetCodeTextContainer === "function") {
+    return cgptGetCodeTextContainer(pre);
+  }
+  return pre.querySelector("code, .cm-content");
+}
+
+function cgptCollectDecoratablePres(root) {
+  const collected = [];
+  const seen = new Set();
+
+  const addPre = (pre) => {
+    if (!pre || seen.has(pre)) return;
+    if (!cgptGetDecoratableCodeContent(pre)) return;
+    seen.add(pre);
+    collected.push(pre);
+  };
+
+  if (root.nodeType === Node.ELEMENT_NODE) {
+    if (root.matches("pre")) {
+      addPre(root);
+    }
+    const closestPre = root.closest("pre");
+    if (closestPre) {
+      addPre(closestPre);
+    }
+  }
+
+  root.querySelectorAll("pre").forEach((pre) => {
+    addPre(pre);
+  });
+
+  return collected;
+}
+
+function tryDecorateSingleCodeBlock(pre) {
   if (!pre) return;
+  const code = cgptGetDecoratableCodeContent(pre);
+  if (!code) return;
 
   const metadata = cgptParseCodeBlockMetadata(code);
   const isAlreadyDecorated = pre.dataset.cgptCodeHelperApplied === "1";
@@ -74,8 +110,10 @@ function tryDecorateSingleCodeBlock(code) {
 
 function setupMutationObserver() {
   const observer = new MutationObserver((mutations) => {
+    let shouldRefreshPanelLayout = false;
     for (const m of mutations) {
       if (m.type === "childList" && m.addedNodes && m.addedNodes.length > 0) {
+        shouldRefreshPanelLayout = true;
         m.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.DOCUMENT_NODE) {
             decorateCodeBlocks(node);
@@ -95,6 +133,9 @@ function setupMutationObserver() {
         tryDecorateFromTextNode(m.target);
       }
     }
+    if (shouldRefreshPanelLayout && typeof cgptSchedulePanelLayoutRefresh === "function") {
+      cgptSchedulePanelLayoutRefresh();
+    }
   });
   observer.observe(document.body, {
     childList: true,
@@ -107,7 +148,8 @@ function tryDecorateFromTextNode(node) {
   if (!node || node.nodeType !== Node.TEXT_NODE) return;
   const elementParent = node.parentElement;
   if (!elementParent) return;
-  const code = elementParent.closest("code");
-  if (!code) return;
-  tryDecorateSingleCodeBlock(code);
+  const content = elementParent.closest("code, .cm-content");
+  const pre = content ? content.closest("pre") : elementParent.closest("pre");
+  if (!pre) return;
+  tryDecorateSingleCodeBlock(pre);
 }

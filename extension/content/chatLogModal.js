@@ -80,7 +80,7 @@ function cgptCreateChatLogHeader(closeModal) {
   headerButtons.style.display = "flex";
   headerButtons.style.gap = "8px";
 
-  const closeBtn = cgptCreateChatLogButton("Close", "muted");
+  const closeBtn = cgptCreateChatLogButton("Close", "secondary");
   closeBtn.addEventListener("click", closeModal);
   headerButtons.appendChild(closeBtn);
 
@@ -162,7 +162,7 @@ function cgptCreateChatLogUserHeader(entry, closeModal) {
   info.textContent = `Sent ${cgptFormatChatLogTimestamp(entry.timestamp)}`;
   header.appendChild(info);
 
-  const jumpBtn = cgptCreateChatLogButton("Jump", "accent", "sm");
+  const jumpBtn = cgptCreateChatLogButton("Jump", "secondary", "sm");
   jumpBtn.addEventListener("click", () => {
     closeModal();
     if (typeof highlightChatMessageElement === "function") {
@@ -252,7 +252,7 @@ function cgptCreateChatLogCodeBlockCard(block, closeModal) {
   blockActionWrapper.appendChild(cgptCreateBlockSaveButton(block));
   blockActionWrapper.appendChild(cgptCreateBlockSaveAsButton(block));
 
-  const jumpBtn = cgptCreateChatLogButton("Jump", "accent", "sm");
+  const jumpBtn = cgptCreateChatLogButton("Jump", "secondary", "sm");
   jumpBtn.addEventListener("click", () => {
     closeModal();
     cgptJumpToCodeBlock(block.element);
@@ -442,7 +442,7 @@ function cgptCreateChatLogUrlCard(link) {
 
   urlHeaderRow.appendChild(urlLabelWrapper);
 
-  const openBtn = cgptCreateChatLogButton("Open Link", "accent", "sm");
+  const openBtn = cgptCreateChatLogButton("Open Link", "secondary", "sm");
   openBtn.addEventListener("click", () => {
     window.open(link.url, "_blank", "noopener,noreferrer");
   });

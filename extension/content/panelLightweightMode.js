@@ -16,9 +16,12 @@ function createLightweightModeSection() {
   const setActiveMode = (activeMode) => {
     buttons.forEach((button) => {
       const isActive = button.dataset.mode === activeMode;
-      button.disabled = isActive;
+      if (typeof cgptSetSharedButtonDisabled === "function") {
+        cgptSetSharedButtonDisabled(button, isActive);
+      } else {
+        button.disabled = isActive;
+      }
       applyPanelButtonVariant(button, isActive ? "primary" : "secondary");
-      button.style.opacity = isActive ? "1" : "0.9";
     });
   };
 

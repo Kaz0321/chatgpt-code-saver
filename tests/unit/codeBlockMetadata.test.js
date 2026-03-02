@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  cgptGetRawCodeText,
   cgptParseCodeBlockMetadata,
   cgptGetNormalizedCodeText,
 } = require('../../extension/content/codeBlockMetadata.js');
@@ -43,4 +44,34 @@ test('cgptParseCodeBlockMetadata ignores file: lines that are not first', () => 
 test('cgptGetNormalizedCodeText converts CRLF to LF', () => {
   const code = { innerText: 'line1\r\nline2' };
   assert.strictEqual(cgptGetNormalizedCodeText(code), 'line1\nline2');
+});
+
+test('cgptGetRawCodeText reads CodeMirror-style content containers', () => {
+  const cmContent = {
+    innerText: 'const answer = 42;\nconsole.log(answer);',
+  };
+  const pre = {
+    matches: () => false,
+    querySelector: (selector) => (selector === 'code, .cm-content' ? cmContent : null),
+  };
+  assert.strictEqual(
+    cgptGetRawCodeText(pre),
+    'const answer = 42;\nconsole.log(answer);'
+  );
+});
+
+test('cgptParseCodeBlockMetadata supports CodeMirror-style content containers', () => {
+  const cmContent = {
+    innerText: '// file: src/cm.js\nconsole.log("cm");',
+  };
+  const pre = {
+    matches: () => false,
+    querySelector: (selector) => (selector === 'code, .cm-content' ? cmContent : null),
+  };
+  const metadata = cgptParseCodeBlockMetadata(pre);
+  assert.deepStrictEqual(metadata, {
+    filePath: 'src/cm.js',
+    content: 'console.log("cm");',
+    metadataLine: '// file: src/cm.js',
+  });
 });

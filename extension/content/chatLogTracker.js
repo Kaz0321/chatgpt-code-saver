@@ -17,6 +17,10 @@ const CGPT_FOLD_LEVEL_COLORS = [
   "#38bdf8",
   "#c084fc",
 ];
+const CGPT_FOLD_INDENT_STEP_PX = 6;
+const CGPT_FOLD_LINE_LEFT_BASE_PX = 8;
+const CGPT_FOLD_CONTENT_LEFT_BASE_PX = 18;
+const CGPT_FOLD_LINE_WIDTH_PX = 1;
 
 function cgptGetFoldLevelColor(level) {
   const paletteIndex = Math.min(
@@ -36,11 +40,19 @@ function cgptApplyFoldState(foldElement, isOpen) {
     if (!btn.dataset.cgptHelperFoldAction) return;
     const action = btn.dataset.cgptHelperFoldAction;
     if (action === "compact") {
-      btn.disabled = !open;
+      if (typeof cgptSetSharedButtonDisabled === "function") {
+        cgptSetSharedButtonDisabled(btn, !open);
+      } else {
+        btn.disabled = !open;
+      }
       btn.classList.toggle("cgpt-helper-fold-action-disabled", !open);
     }
     if (action === "expand") {
-      btn.disabled = open;
+      if (typeof cgptSetSharedButtonDisabled === "function") {
+        cgptSetSharedButtonDisabled(btn, open);
+      } else {
+        btn.disabled = open;
+      }
       btn.classList.toggle("cgpt-helper-fold-action-disabled", open);
     }
   });
@@ -48,6 +60,19 @@ function cgptApplyFoldState(foldElement, isOpen) {
 
 function cgptApplyFoldToggleTheme(button) {
   if (!button) return;
+  if (typeof cgptSetSharedButtonCustomPalette === "function") {
+    cgptSetSharedButtonCustomPalette(button, {
+      background: "var(--cgpt-helper-fold-color, #7c3aed)",
+      hoverBackground: "var(--cgpt-helper-fold-color, #7c3aed)",
+      activeBackground: "var(--cgpt-helper-fold-color, #7c3aed)",
+      border: "var(--cgpt-helper-fold-color, #7c3aed)",
+      hoverBorder: "var(--cgpt-helper-fold-color, #7c3aed)",
+      activeBorder: "var(--cgpt-helper-fold-color, #7c3aed)",
+      color: "#0b172a",
+      focusRing: "rgba(255, 255, 255, 0.72)",
+    });
+    return;
+  }
   button.style.background = "var(--cgpt-helper-fold-color, #7c3aed)";
   button.style.borderColor = "var(--cgpt-helper-fold-color, #7c3aed)";
   button.style.color = "#0b172a";
@@ -57,6 +82,7 @@ function cgptCreateFoldSection({
   title,
   initiallyOpen = true,
   level = 0,
+  visualLevel = level,
   badgeText = "",
   actions = {},
 }) {
@@ -65,12 +91,18 @@ function cgptCreateFoldSection({
   const parsedLevel = Number.parseInt(level, 10);
   const numericLevel = Number.isFinite(parsedLevel) ? Math.max(0, parsedLevel) : 0;
   const clampedLevel = Math.min(numericLevel, 6);
-  fold.style.setProperty("--cgpt-helper-fold-level", `${clampedLevel}`);
-  fold.style.setProperty("--cgpt-helper-fold-indent", `${Math.max(0, clampedLevel - 1) * 6}px`);
-  fold.style.setProperty("--cgpt-helper-fold-line-offset", `${Math.max(0, clampedLevel - 1) * 8}px`);
+  const parsedVisualLevel = Number.parseInt(visualLevel, 10);
+  const numericVisualLevel = Number.isFinite(parsedVisualLevel) ? Math.max(0, parsedVisualLevel) : 0;
+  const clampedVisualLevel = Math.min(numericVisualLevel, 6);
+  fold.style.setProperty("--cgpt-helper-fold-level", `${clampedVisualLevel}`);
+  fold.style.setProperty(
+    "--cgpt-helper-fold-indent",
+    `${clampedVisualLevel > 1 ? CGPT_FOLD_INDENT_STEP_PX : 0}px`
+  );
+  fold.style.setProperty("--cgpt-helper-fold-line-offset", "0px");
   fold.style.setProperty("--cgpt-helper-fold-color", cgptGetFoldLevelColor(clampedLevel));
   fold.dataset.cgptHelperFoldLevel = `${clampedLevel}`;
-  if (numericLevel > 0) {
+  if (numericVisualLevel > 0) {
     fold.classList.add("cgpt-helper-fold-nested");
   }
 
@@ -159,11 +191,11 @@ function cgptCreateFoldActionButtons(actionConfig = {}) {
     buttons.push(button);
   };
 
-  addButton("Save", "muted", "save", onSave, showSave);
-  addButton("Save As", "accent", "saveAs", onSaveAs, showSaveAs);
-  addButton("Copy", "accent", "copy", onCopy, showCopy);
-  addButton("Compact", "accent", "compact", null, true);
-  addButton("Expand", "accent", "expand", null, true);
+  addButton("Save", "primary", "save", onSave, showSave);
+  addButton("Save As", "secondary", "saveAs", onSaveAs, showSaveAs);
+  addButton("Copy", "ghost", "copy", onCopy, showCopy);
+  addButton("Compact", "secondary", "compact", null, true);
+  addButton("Expand", "secondary", "expand", null, true);
 
   return buttons;
 }
@@ -173,13 +205,13 @@ function cgptCreateFoldActionButton(label, variant = "secondary") {
   button.type = "button";
   button.className = "cgpt-helper-fold-action-button";
   button.textContent = label;
-  if (typeof cgptApplySharedButtonVariant === "function") {
-    cgptApplySharedButtonVariant(button, variant);
+  if (typeof cgptApplySharedButtonStyle === "function") {
+    cgptApplySharedButtonStyle(button, { variant, size: "sm" });
   } else {
     const palette = {
-      accent: { background: "#7c3aed", color: "#fff", border: "rgba(255,255,255,0.25)" },
-      muted: { background: "#4b5563", color: "#f3f4f6", border: "rgba(255,255,255,0.2)" },
-      secondary: { background: "#374151", color: "#e5e7eb", border: "rgba(255,255,255,0.15)" },
+      primary: { background: "#2563eb", color: "#fff", border: "rgba(255,255,255,0.25)" },
+      secondary: { background: "#374151", color: "#f3f4f6", border: "rgba(255,255,255,0.2)" },
+      ghost: { background: "transparent", color: "#e5e7eb", border: "rgba(255,255,255,0.18)" },
     };
     const paletteEntry = palette[variant] || palette.secondary;
     button.style.background = paletteEntry.background;
@@ -490,9 +522,15 @@ function renderChatMessageFolding(entry) {
   }
 
   entry.element.dataset.cgptHelperFoldApplied = "1";
-  if (entry.role === "assistant") {
+  if (entry.role === "assistant" && cgptShouldApplyHeadingFold(body)) {
     applyHeadingFold(body, 1);
   }
+}
+
+function cgptShouldApplyHeadingFold(root) {
+  if (!root || !(root.querySelectorAll instanceof Function)) return false;
+  const headings = Array.from(root.querySelectorAll("h1, h2, h3, h4, h5, h6"));
+  return headings.length > 0;
 }
 
 function applyHeadingFold(root, baseLevel = 0) {
@@ -508,9 +546,17 @@ function applyHeadingFold(root, baseLevel = 0) {
     return Number.isFinite(level) ? level : 0;
   };
 
+  const headingStack = [];
+
   headings.forEach((heading, index) => {
     const level = getLevel(heading);
     if (!level) return;
+
+    while (headingStack.length && headingStack[headingStack.length - 1] >= level) {
+      headingStack.pop();
+    }
+    const visualLevel = baseLevel + headingStack.length + 1;
+    headingStack.push(level);
 
     const nextHeading = (() => {
       for (let i = index + 1; i < headings.length; i += 1) {
@@ -524,7 +570,8 @@ function applyHeadingFold(root, baseLevel = 0) {
     const headingFold = cgptCreateFoldSection({
       title: heading.textContent || "(untitled)",
       initiallyOpen: level <= 2,
-      level: baseLevel + Math.max(0, level - 1),
+      level,
+      visualLevel,
       badgeText: "",
       actions: { showSave: false, showSaveAs: false, showCopy: false },
     });
@@ -602,15 +649,15 @@ function ensureChatLogFoldStyle() {
       width: 100%;
     }
     .cgpt-helper-fold-nested {
-      padding-left: calc(14px + var(--cgpt-helper-fold-indent, 0px));
+      padding-left: calc(${CGPT_FOLD_CONTENT_LEFT_BASE_PX}px + var(--cgpt-helper-fold-indent, 0px));
     }
     .cgpt-helper-fold-nested::before {
       content: "";
       position: absolute;
       top: 8px;
       bottom: 8px;
-      left: calc(6px + var(--cgpt-helper-fold-line-offset, 0px));
-      width: 3px;
+      left: calc(${CGPT_FOLD_LINE_LEFT_BASE_PX}px + var(--cgpt-helper-fold-line-offset, 0px));
+      width: ${CGPT_FOLD_LINE_WIDTH_PX}px;
       background: var(--cgpt-helper-fold-color, rgba(124, 58, 237, 0.65));
       border-radius: 999px;
       pointer-events: none;

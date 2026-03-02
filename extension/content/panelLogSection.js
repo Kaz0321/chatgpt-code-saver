@@ -2,7 +2,7 @@ function createLogSection() {
   const logSection = document.createElement("div");
   logSection.appendChild(createSectionLabel("Logs"));
   const logButtons = createButtonRow();
-  const logButtonVariant = "accent";
+  const logButtonVariant = "secondary";
 
   const chatLogBtn = createPanelButton("Chat Log", logButtonVariant);
   chatLogBtn.style.flex = "1";

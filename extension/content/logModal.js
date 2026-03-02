@@ -48,7 +48,7 @@ function openLogViewer() {
     headerButtons.style.display = "flex";
     headerButtons.style.gap = "8px";
 
-    const clearBtn = createLogModalButton("Clear Logs", "warning", "sm");
+    const clearBtn = createLogModalButton("Clear Logs", "danger", "sm");
     clearBtn.addEventListener("click", () => {
       if (!confirm("Clear all logs?")) return;
       chrome.runtime.sendMessage({ type: "clearLogs" }, (res2) => {
@@ -62,7 +62,7 @@ function openLogViewer() {
     });
     headerButtons.appendChild(clearBtn);
 
-    const closeBtn = createLogModalButton("Close", "muted", "sm");
+    const closeBtn = createLogModalButton("Close", "secondary", "sm");
     closeBtn.addEventListener("click", () => {
       document.body.removeChild(overlay);
     });
@@ -111,15 +111,23 @@ function createLogModalButton(label, variant = "secondary", size = "sm") {
   if (typeof cgptCreateChatLogButton === "function") {
     return cgptCreateChatLogButton(label, variant, size);
   }
-  const button = document.createElement("button");
-  button.textContent = label;
-  button.style.fontSize = size === "sm" ? "11px" : "12px";
-  button.style.padding = size === "sm" ? "2px 8px" : "4px 10px";
-  button.style.borderRadius = "4px";
-  button.style.border = "1px solid rgba(255,255,255,0.3)";
-  button.style.cursor = "pointer";
-  if (typeof cgptApplySharedButtonVariant === "function") {
-    cgptApplySharedButtonVariant(button, variant);
+  const button =
+    typeof cgptCreateSharedButton === "function"
+      ? cgptCreateSharedButton(label, variant, size)
+      : document.createElement("button");
+  if (!button.textContent) {
+    button.textContent = label;
+  }
+  if (typeof cgptCreateSharedButton !== "function") {
+    button.style.fontSize = size === "sm" ? "11px" : "12px";
+    button.style.padding = size === "sm" ? "0 8px" : "0 10px";
+    button.style.minHeight = size === "sm" ? "28px" : "32px";
+    button.style.borderRadius = "6px";
+    button.style.border = "1px solid rgba(255,255,255,0.3)";
+    button.style.cursor = "pointer";
+    if (typeof cgptApplySharedButtonVariant === "function") {
+      cgptApplySharedButtonVariant(button, variant);
+    }
   }
   return button;
 }
@@ -230,14 +238,22 @@ function createLogEntryOpenButton(entry) {
   if (!entry || !entry.ok || typeof entry.downloadId !== "number") {
     return null;
   }
-  const button = createLogModalButton("Open", "accent", "sm");
+  const button = createLogModalButton("Open", "secondary", "sm");
   button.addEventListener("click", () => {
     if (button.disabled) return;
-    button.disabled = true;
+    if (typeof cgptSetSharedButtonDisabled === "function") {
+      cgptSetSharedButtonDisabled(button, true);
+    } else {
+      button.disabled = true;
+    }
     chrome.runtime.sendMessage(
       { type: "openDownloadedFile", downloadId: entry.downloadId },
       (resOpen) => {
-        button.disabled = false;
+        if (typeof cgptSetSharedButtonDisabled === "function") {
+          cgptSetSharedButtonDisabled(button, false);
+        } else {
+          button.disabled = false;
+        }
         if (!resOpen || !resOpen.ok) {
           const errMsg = (resOpen && resOpen.error) || "Unable to open the file.";
           showToast(errMsg, "error");

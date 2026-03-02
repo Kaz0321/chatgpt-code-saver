@@ -2,6 +2,7 @@ const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
 const { test, expect, chromium } = require("@playwright/test");
+const { getBrowserLaunchEnv } = require("../helpers/browserLaunchEnv");
 
 const testsRoot = path.join(__dirname, "..");
 const artifactsRoot = path.join(testsRoot, "artifacts", "chatgpt-ui-patterns-offline");
@@ -101,6 +102,7 @@ test.describe("offline chatgpt ui pattern fixtures", () => {
       const context = await chromium.launchPersistentContext(profileDir, {
         channel: "chromium",
         headless: true,
+        env: getBrowserLaunchEnv(),
       });
 
       try {

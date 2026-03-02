@@ -8,6 +8,25 @@ function cgptResolveDefaultTemplateContent() {
   return "";
 }
 
+function createTemplateEditorButton(label, variant = "secondary") {
+  if (typeof cgptCreateSharedButton === "function") {
+    return cgptCreateSharedButton(label, variant, "md");
+  }
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.style.fontSize = "12px";
+  button.style.padding = "0 10px";
+  button.style.minHeight = "32px";
+  button.style.borderRadius = "6px";
+  button.style.border = "1px solid rgba(255,255,255,0.3)";
+  button.style.cursor = "pointer";
+  if (typeof cgptApplySharedButtonVariant === "function") {
+    cgptApplySharedButtonVariant(button, variant);
+  }
+  return button;
+}
+
 function openTemplateEditor(mode, templateId, onSave) {
   if (document.getElementById("cgpt-helper-template-modal")) return;
 
@@ -103,14 +122,7 @@ function openTemplateEditor(mode, templateId, onSave) {
   leftButtons.style.gap = "8px";
 
   if (mode === "edit") {
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Delete";
-    deleteBtn.style.padding = "4px 10px";
-    deleteBtn.style.borderRadius = "4px";
-    deleteBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-    deleteBtn.style.background = "#b00020";
-    deleteBtn.style.color = "#fff";
-    deleteBtn.style.cursor = "pointer";
+    const deleteBtn = createTemplateEditorButton("Delete", "danger");
     deleteBtn.addEventListener("click", () => {
       if (confirm("Delete this template?")) {
         const templates = cgptGetTemplates().filter(
@@ -139,27 +151,13 @@ function openTemplateEditor(mode, templateId, onSave) {
   rightButtons.style.display = "flex";
   rightButtons.style.gap = "8px";
 
-  const cancelBtn = document.createElement("button");
-  cancelBtn.textContent = "Cancel";
-  cancelBtn.style.padding = "4px 10px";
-  cancelBtn.style.borderRadius = "4px";
-  cancelBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-  cancelBtn.style.background = "#444";
-  cancelBtn.style.color = "#fff";
-  cancelBtn.style.cursor = "pointer";
+  const cancelBtn = createTemplateEditorButton("Cancel", "secondary");
   cancelBtn.addEventListener("click", () => {
     document.body.removeChild(overlay);
   });
   rightButtons.appendChild(cancelBtn);
 
-  const saveBtn = document.createElement("button");
-  saveBtn.textContent = "Save";
-  saveBtn.style.padding = "4px 10px";
-  saveBtn.style.borderRadius = "4px";
-  saveBtn.style.border = "1px solid rgba(255,255,255,0.3)";
-  saveBtn.style.background = "rgba(16, 163, 127, 0.9)";
-  saveBtn.style.color = "#fff";
-  saveBtn.style.cursor = "pointer";
+  const saveBtn = createTemplateEditorButton("Save", "primary");
   saveBtn.addEventListener("click", () => {
     const newTitle = titleInput.value.trim();
     const newContent = textarea.value;

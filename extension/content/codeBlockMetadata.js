@@ -1,6 +1,23 @@
+function cgptGetCodeTextContainer(element) {
+  if (!element) return null;
+  if (element.matches && element.matches("code, .cm-content")) {
+    return element;
+  }
+  if (typeof element.querySelector === "function") {
+    return element.querySelector("code, .cm-content");
+  }
+  return null;
+}
+
+function cgptGetRawCodeText(element) {
+  const textContainer = cgptGetCodeTextContainer(element) || element;
+  if (!textContainer) return "";
+  return textContainer.innerText || textContainer.textContent || "";
+}
+
 function cgptParseCodeBlockMetadata(code) {
   if (!code) return null;
-  const normalized = (code.innerText || "").replace(/^\ufeff/, "").replace(/\r\n/g, "\n");
+  const normalized = cgptGetRawCodeText(code).replace(/^\ufeff/, "").replace(/\r\n/g, "\n");
   const { firstLineRaw, remainingText } = cgptExtractFirstLine(normalized);
   const match =
     firstLineRaw.trim().match(/^\/\/\s*file:\s*(.+)$/i) ||
@@ -22,12 +39,14 @@ function cgptExtractFirstLine(text) {
 
 function cgptGetNormalizedCodeText(code) {
   if (!code) return "";
-  const text = code.innerText || code.textContent || "";
+  const text = cgptGetRawCodeText(code);
   return text.replace(/\r\n/g, "\n");
 }
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
+    cgptGetCodeTextContainer,
+    cgptGetRawCodeText,
     cgptParseCodeBlockMetadata,
     cgptGetNormalizedCodeText,
   };

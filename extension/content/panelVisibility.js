@@ -52,7 +52,7 @@ function cgptCreatePanelHeader({ onHide }) {
   title.style.flex = "1";
   header.appendChild(title);
 
-  const hideButton = createPanelButton("Hide", "muted");
+  const hideButton = createPanelButton("Hide", "ghost");
   hideButton.style.padding = "2px 6px";
   hideButton.style.lineHeight = "1.3";
   hideButton.addEventListener("click", () => {
@@ -91,6 +91,9 @@ function cgptApplyPanelVisibility(panel, { hidden, toggleButton }) {
     panel.style.display = isHidden ? "none" : "flex";
     if (toggleButton) {
       toggleButton.style.display = isHidden ? "flex" : "none";
+    }
+    if (typeof cgptSyncPanelLayoutState === "function") {
+      cgptSyncPanelLayoutState({ panel, toggleButton, hidden: isHidden });
     }
   };
   applyHiddenState(hidden);
