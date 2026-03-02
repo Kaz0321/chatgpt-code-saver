@@ -47,15 +47,17 @@ function openTemplateEditor(mode, templateId, onSave) {
   overlay.style.left = "0";
   overlay.style.width = "100%";
   overlay.style.height = "100%";
-  overlay.style.background = "rgba(0, 0, 0, 0.6)";
+  if (typeof cgptGetUiTheme === "function") {
+    overlay.style.background = cgptGetUiTheme().overlayBackground;
+  } else {
+    overlay.style.background = "rgba(0, 0, 0, 0.6)";
+  }
   overlay.style.zIndex = "10000";
   overlay.style.display = "flex";
   overlay.style.alignItems = "center";
   overlay.style.justifyContent = "center";
 
   const dialog = document.createElement("div");
-  dialog.style.background = "#202123";
-  dialog.style.color = "#fff";
   dialog.style.borderRadius = "8px";
   dialog.style.padding = "12px";
   dialog.style.width = "80%";
@@ -64,7 +66,13 @@ function openTemplateEditor(mode, templateId, onSave) {
   dialog.style.display = "flex";
   dialog.style.flexDirection = "column";
   dialog.style.gap = "8px";
-  dialog.style.boxShadow = "0 4px 12px rgba(0,0,0,0.5)";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(dialog, "dialog");
+  } else {
+    dialog.style.background = "#202123";
+    dialog.style.color = "#fff";
+    dialog.style.boxShadow = "0 4px 12px rgba(0,0,0,0.5)";
+  }
 
   const title = document.createElement("div");
   title.textContent = mode === "edit" ? "Edit Template" : "Add Template";
@@ -82,9 +90,13 @@ function openTemplateEditor(mode, templateId, onSave) {
   titleInput.style.boxSizing = "border-box";
   titleInput.style.padding = "4px 6px";
   titleInput.style.borderRadius = "4px";
-  titleInput.style.border = "1px solid #555";
-  titleInput.style.background = "#343541";
-  titleInput.style.color = "#fff";
+  if (typeof cgptApplyInputStyle === "function") {
+    cgptApplyInputStyle(titleInput);
+  } else {
+    titleInput.style.border = "1px solid #555";
+    titleInput.style.background = "#343541";
+    titleInput.style.color = "#fff";
+  }
   titleInput.value =
     mode === "edit" && targetTemplate ? targetTemplate.title : "";
   dialog.appendChild(titleInput);
@@ -103,9 +115,13 @@ function openTemplateEditor(mode, templateId, onSave) {
   textarea.style.flex = "1";
   textarea.style.minHeight = "200px";
   textarea.style.resize = "both";
-  textarea.style.background = "#343541";
-  textarea.style.color = "#fff";
-  textarea.style.border = "1px solid #555";
+  if (typeof cgptApplyInputStyle === "function") {
+    cgptApplyInputStyle(textarea);
+  } else {
+    textarea.style.background = "#343541";
+    textarea.style.color = "#fff";
+    textarea.style.border = "1px solid #555";
+  }
   textarea.style.borderRadius = "4px";
   textarea.style.fontFamily = "monospace";
   textarea.style.fontSize = "12px";

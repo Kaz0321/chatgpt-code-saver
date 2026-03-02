@@ -33,7 +33,11 @@ function cgptCreateChatLogModalOverlay() {
   overlay.style.left = "0";
   overlay.style.width = "100%";
   overlay.style.height = "100%";
-  overlay.style.background = "rgba(0,0,0,0.6)";
+  if (typeof cgptGetUiTheme === "function") {
+    overlay.style.background = cgptGetUiTheme().overlayBackground;
+  } else {
+    overlay.style.background = "rgba(0,0,0,0.6)";
+  }
   overlay.style.zIndex = "10000";
   overlay.style.display = "flex";
   overlay.style.alignItems = "center";
@@ -50,8 +54,6 @@ function cgptCreateChatLogModalOverlay() {
 
 function cgptCreateChatLogDialog() {
   const dialog = document.createElement("div");
-  dialog.style.background = "#202123";
-  dialog.style.color = "#fff";
   dialog.style.borderRadius = "10px";
   dialog.style.padding = "16px";
   dialog.style.width = "80%";
@@ -60,7 +62,13 @@ function cgptCreateChatLogDialog() {
   dialog.style.display = "flex";
   dialog.style.flexDirection = "column";
   dialog.style.gap = "10px";
-  dialog.style.boxShadow = "0 10px 40px rgba(0,0,0,0.6)";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(dialog, "dialog");
+  } else {
+    dialog.style.background = "#202123";
+    dialog.style.color = "#fff";
+    dialog.style.boxShadow = "0 10px 40px rgba(0,0,0,0.6)";
+  }
   return dialog;
 }
 
@@ -100,7 +108,11 @@ function cgptCreateChatLogList(userEntries, allEntries, closeModal) {
   if (orderedUsers.length === 0) {
     const empty = document.createElement("div");
     empty.textContent = "No user messages found.";
-    empty.style.color = "#9ca3af";
+    if (typeof cgptApplyTextTone === "function") {
+      cgptApplyTextTone(empty, "muted");
+    } else {
+      empty.style.color = "#9ca3af";
+    }
     list.appendChild(empty);
     return list;
   }
@@ -116,33 +128,34 @@ function cgptCreateChatLogList(userEntries, allEntries, closeModal) {
 
 function cgptCreateChatLogUserCard(entry, nextEntry, allEntries, closeModal) {
   const card = document.createElement("div");
-  card.style.border = "1px solid #3f3f46";
   card.style.borderRadius = "8px";
   card.style.padding = "10px";
-  card.style.background = "#18181b";
   card.style.display = "flex";
   card.style.flexDirection = "column";
   card.style.gap = "6px";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(card, "card");
+  } else {
+    card.style.border = "1px solid #3f3f46";
+    card.style.background = "#18181b";
+  }
 
   card.appendChild(cgptCreateChatLogUserHeader(entry, closeModal));
   card.appendChild(cgptCreateChatLogMessageBody(entry));
 
+  const assistantEntries = cgptCollectAssistantEntriesForUserEntry(entry, nextEntry, allEntries);
   const headingSections = cgptCollectAssistantHeadingSections(entry, nextEntry, allEntries);
-  const headingSection = cgptCreateChatLogHeadingsSection(headingSections);
-  if (headingSection) {
-    card.appendChild(headingSection);
-  }
-
   const assistantBlocks = cgptCollectAssistantBlocksForEntry(entry, nextEntry, allEntries);
-  const blockSection = cgptCreateChatLogBlocksSection(assistantBlocks, closeModal);
-  if (blockSection) {
-    card.appendChild(blockSection);
-  }
-
   const assistantUrls = cgptCollectAssistantUrlsForEntry(entry, nextEntry, allEntries);
-  const urlSection = cgptCreateChatLogUrlsSection(assistantUrls);
-  if (urlSection) {
-    card.appendChild(urlSection);
+  const responseSection = cgptCreateChatLogAssistantSection(
+    assistantEntries,
+    headingSections,
+    assistantBlocks,
+    assistantUrls,
+    closeModal
+  );
+  if (responseSection) {
+    card.appendChild(responseSection);
   }
 
   return card;
@@ -155,12 +168,7 @@ function cgptCreateChatLogUserHeader(entry, closeModal) {
   header.style.alignItems = "center";
   header.style.gap = "8px";
 
-  const info = document.createElement("div");
-  info.style.flex = "1";
-  info.style.fontSize = "12px";
-  info.style.color = "#d1d5db";
-  info.textContent = `Sent ${cgptFormatChatLogTimestamp(entry.timestamp)}`;
-  header.appendChild(info);
+  header.appendChild(cgptCreateChatLogSectionTitle("User", entry && entry.timestamp));
 
   const jumpBtn = cgptCreateChatLogButton("Jump", "secondary", "sm");
   jumpBtn.addEventListener("click", () => {
@@ -176,12 +184,175 @@ function cgptCreateChatLogUserHeader(entry, closeModal) {
   return header;
 }
 
+function cgptCreateChatLogAssistantSection(
+  assistantEntries,
+  headingSections,
+  assistantBlocks,
+  assistantUrls,
+  closeModal
+) {
+  const headingSection = cgptCreateChatLogHeadingsSection(headingSections);
+  const blockSection = cgptCreateChatLogBlocksSection(assistantBlocks, closeModal);
+  const urlSection = cgptCreateChatLogUrlsSection(assistantUrls);
+  if (!headingSection && !blockSection && !urlSection) {
+    return null;
+  }
+
+  const section = document.createElement("div");
+  section.style.display = "flex";
+  section.style.flexDirection = "column";
+  section.style.gap = "6px";
+
+  section.appendChild(
+    cgptCreateChatLogSectionTitle(
+      cgptGetAssistantDisplayLabel(Array.isArray(assistantEntries) ? assistantEntries[0] : null),
+      Array.isArray(assistantEntries) && assistantEntries[0] ? assistantEntries[0].timestamp : ""
+    )
+  );
+
+  if (headingSection) {
+    section.appendChild(headingSection);
+  }
+  if (blockSection) {
+    section.appendChild(blockSection);
+  }
+  if (urlSection) {
+    section.appendChild(urlSection);
+  }
+
+  return section;
+}
+
+function cgptCreateChatLogSectionTitle(label, timestamp) {
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.alignItems = "center";
+  wrapper.style.flexWrap = "wrap";
+  wrapper.style.columnGap = "8px";
+  wrapper.style.rowGap = "2px";
+
+  const labelEl = document.createElement("div");
+  labelEl.textContent = label;
+  labelEl.style.fontSize = "12px";
+  labelEl.style.fontWeight = "bold";
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(labelEl, "secondary");
+  } else {
+    labelEl.style.color = "#d1d5db";
+  }
+  wrapper.appendChild(labelEl);
+
+  if (timestamp) {
+    const timeEl = document.createElement("div");
+    timeEl.textContent = cgptFormatChatLogTimestamp(timestamp);
+    timeEl.style.fontSize = "11px";
+    if (typeof cgptApplyTextTone === "function") {
+      cgptApplyTextTone(timeEl, "muted");
+    } else {
+      timeEl.style.color = "#9ca3af";
+    }
+    wrapper.appendChild(timeEl);
+  }
+
+  return wrapper;
+}
+
+function cgptGetAssistantDisplayLabel(entry) {
+  const candidates = [];
+
+  if (entry && typeof entry.modelLabel === "string") {
+    candidates.push(entry.modelLabel);
+  }
+
+  if (entry && entry.element) {
+    candidates.push(entry.element.getAttribute("data-model-slug"));
+    candidates.push(entry.element.getAttribute("data-model-name"));
+    candidates.push(entry.element.getAttribute("data-message-model-slug"));
+    candidates.push(entry.element.getAttribute("data-message-model-name"));
+    candidates.push(entry.element.dataset ? entry.element.dataset.modelSlug : "");
+    candidates.push(entry.element.dataset ? entry.element.dataset.modelName : "");
+    candidates.push(entry.element.dataset ? entry.element.dataset.messageModelSlug : "");
+    candidates.push(entry.element.dataset ? entry.element.dataset.messageModelName : "");
+  }
+
+  const domCandidates = [
+    "[data-testid='model-switcher-dropdown-button']",
+    "[data-testid='model-switcher']",
+    "button[id*='model']",
+    "button[aria-haspopup='menu']",
+  ];
+
+  domCandidates.forEach((selector) => {
+    const el = document.querySelector(selector);
+    if (el && el.textContent) {
+      candidates.push(el.textContent);
+    }
+  });
+
+  for (const candidate of candidates) {
+    const normalized = cgptNormalizeAssistantDisplayLabel(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return "AI";
+}
+
+function cgptNormalizeAssistantDisplayLabel(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+
+  const cleaned = text
+    .replace(/^chatgpt\s*/i, "")
+    .replace(/\btemporary chat\b/gi, "")
+    .replace(/\bnew chat\b/gi, "")
+    .replace(/\bshare\b/gi, "")
+    .replace(/\bsearch\b/gi, "")
+    .trim();
+
+  if (!cleaned) return "";
+
+  const slugMatch = cleaned.match(/^gpt-(\d+)(?:-(\d+))?(?:-(.+))?$/i);
+  if (slugMatch) {
+    const [, major, minor, suffix] = slugMatch;
+    const version = minor ? `${major}.${minor}` : major;
+    const suffixText = suffix
+      ? suffix
+          .split("-")
+          .filter(Boolean)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ")
+      : "";
+    return `GPT ${version}${suffixText ? ` ${suffixText}` : ""}`;
+  }
+
+  const gptMatch = cleaned.match(/\b(gpt[\s-]*\d(?:\.\d+)?(?:\s+[a-z0-9.-]+)*)\b/i);
+  if (gptMatch && gptMatch[1]) {
+    return gptMatch[1]
+      .replace(/-/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  if (/^(o\d|o\d-mini|o\d-pro)/i.test(cleaned)) {
+    return cleaned;
+  }
+
+  return cleaned.length <= 40 ? cleaned : cleaned.slice(0, 40).trim();
+}
+
 function cgptCreateChatLogMessageBody(entry) {
   const messageBody = document.createElement("div");
   messageBody.style.whiteSpace = "pre-wrap";
   messageBody.style.fontSize = "13px";
   messageBody.style.lineHeight = "1.5";
-  messageBody.style.color = "#f3f4f6";
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(messageBody, "primary");
+  } else {
+    messageBody.style.color = "#f3f4f6";
+  }
   const messageText = entry.text || "(no text)";
   messageBody.textContent = cgptCreateSingleLinePreview(messageText, CHAT_LOG_PREVIEW_LINE_LIMIT);
   return messageBody;
@@ -206,7 +377,11 @@ function cgptCreateChatLogBlocksSection(blocks, closeModal) {
   const blockHeaderLabel = document.createElement("div");
   blockHeaderLabel.textContent = `Code blocks (${blocks.length})`;
   blockHeaderLabel.style.fontSize = "12px";
-  blockHeaderLabel.style.color = "#a5b4fc";
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(blockHeaderLabel, "accent");
+  } else {
+    blockHeaderLabel.style.color = "#a5b4fc";
+  }
   blockHeader.appendChild(blockHeaderLabel);
 
   const blockHeaderActions = document.createElement("div");

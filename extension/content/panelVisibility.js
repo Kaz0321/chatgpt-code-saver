@@ -69,20 +69,29 @@ function cgptCreatePanelToggleButton() {
 
   const button = document.createElement("button");
   button.id = "cgpt-helper-panel-toggle";
-  button.textContent = "ヘルパーを表示";
+  button.textContent = "Tools";
   button.style.position = "fixed";
   button.style.right = "16px";
-  button.style.bottom = "80px";
+  button.style.bottom = "16px";
   button.style.zIndex = "9999";
-  button.style.padding = "8px 10px";
-  button.style.borderRadius = "8px";
-  button.style.border = "1px solid rgba(255,255,255,0.15)";
-  button.style.background = "rgba(32, 33, 35, 0.9)";
-  button.style.color = "#fff";
-  button.style.fontSize = "12px";
+  button.style.width = "48px";
+  button.style.height = "48px";
+  button.style.padding = "0";
+  button.style.borderRadius = "999px";
+  button.style.fontSize = "11px";
+  button.style.fontWeight = "600";
   button.style.cursor = "pointer";
-  button.style.boxShadow = "0 4px 12px rgba(0,0,0,0.35)";
-  button.style.display = "none";
+  button.style.display = "flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "center";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(button, "panel");
+  } else {
+    button.style.border = "1px solid rgba(255,255,255,0.15)";
+    button.style.background = "rgba(32, 33, 35, 0.9)";
+    button.style.color = "#fff";
+    button.style.boxShadow = "0 4px 12px rgba(0,0,0,0.35)";
+  }
   return button;
 }
 
@@ -90,7 +99,9 @@ function cgptApplyPanelVisibility(panel, { hidden, toggleButton }) {
   const applyHiddenState = (isHidden) => {
     panel.style.display = isHidden ? "none" : "flex";
     if (toggleButton) {
-      toggleButton.style.display = isHidden ? "flex" : "none";
+      toggleButton.style.display = "flex";
+      toggleButton.setAttribute("aria-pressed", isHidden ? "false" : "true");
+      toggleButton.title = isHidden ? "Show tools" : "Hide tools";
     }
     if (typeof cgptSyncPanelLayoutState === "function") {
       cgptSyncPanelLayoutState({ panel, toggleButton, hidden: isHidden });

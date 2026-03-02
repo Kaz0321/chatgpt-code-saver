@@ -15,15 +15,17 @@ function openLogViewer() {
     overlay.style.left = "0";
     overlay.style.width = "100%";
     overlay.style.height = "100%";
-    overlay.style.background = "rgba(0, 0, 0, 0.6)";
+    if (typeof cgptGetUiTheme === "function") {
+      overlay.style.background = cgptGetUiTheme().overlayBackground;
+    } else {
+      overlay.style.background = "rgba(0, 0, 0, 0.6)";
+    }
     overlay.style.zIndex = "10000";
     overlay.style.display = "flex";
     overlay.style.alignItems = "center";
     overlay.style.justifyContent = "center";
 
     const dialog = document.createElement("div");
-    dialog.style.background = "#202123";
-    dialog.style.color = "#fff";
     dialog.style.borderRadius = "8px";
     dialog.style.padding = "12px";
     dialog.style.width = "80%";
@@ -32,7 +34,13 @@ function openLogViewer() {
     dialog.style.display = "flex";
     dialog.style.flexDirection = "column";
     dialog.style.gap = "8px";
-    dialog.style.boxShadow = "0 4px 12px rgba(0,0,0,0.5)";
+    if (typeof cgptApplySurfaceStyle === "function") {
+      cgptApplySurfaceStyle(dialog, "dialog");
+    } else {
+      dialog.style.background = "#202123";
+      dialog.style.color = "#fff";
+      dialog.style.boxShadow = "0 4px 12px rgba(0,0,0,0.5)";
+    }
 
     const headerRow = document.createElement("div");
     headerRow.style.display = "flex";
@@ -83,7 +91,11 @@ function openLogViewer() {
       if (!entries || entries.length === 0) {
         const empty = document.createElement("div");
         empty.textContent = "No logs yet.";
-        empty.style.color = "#9ca3af";
+        if (typeof cgptApplyTextTone === "function") {
+          cgptApplyTextTone(empty, "muted");
+        } else {
+          empty.style.color = "#9ca3af";
+        }
         empty.style.textAlign = "center";
         list.appendChild(empty);
         return;
@@ -134,13 +146,17 @@ function createLogModalButton(label, variant = "secondary", size = "sm") {
 
 function createLogEntryCard(entry) {
   const card = document.createElement("div");
-  card.style.border = "1px solid #27272a";
   card.style.borderRadius = "8px";
-  card.style.background = "#111827";
   card.style.padding = "10px";
   card.style.display = "flex";
   card.style.flexDirection = "column";
   card.style.gap = "8px";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(card, "card");
+  } else {
+    card.style.border = "1px solid #27272a";
+    card.style.background = "#111827";
+  }
 
   const header = document.createElement("div");
   header.style.display = "flex";
@@ -153,7 +169,11 @@ function createLogEntryCard(entry) {
   const timestamp = document.createElement("div");
   timestamp.textContent = formatLogTimestamp(entry && entry.time);
   timestamp.style.fontSize = "12px";
-  timestamp.style.color = "#e5e7eb";
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(timestamp, "primary");
+  } else {
+    timestamp.style.color = "#e5e7eb";
+  }
   timestamp.style.flex = "1";
   header.appendChild(timestamp);
 
@@ -163,12 +183,20 @@ function createLogEntryCard(entry) {
   status.textContent = `${kind} • ${ok ? "Success" : "Failed"}`;
   status.style.fontSize = "11px";
   status.style.fontWeight = "600";
-  status.style.color = ok ? "#6ee7b7" : "#fca5a5";
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(status, ok ? "success" : "danger");
+  } else {
+    status.style.color = ok ? "#6ee7b7" : "#fca5a5";
+  }
   header.appendChild(status);
 
   const downloadInfo = document.createElement("div");
   downloadInfo.style.fontSize = "11px";
-  downloadInfo.style.color = "#a5b4fc";
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(downloadInfo, "accent");
+  } else {
+    downloadInfo.style.color = "#a5b4fc";
+  }
   downloadInfo.style.display = "flex";
   downloadInfo.style.flexWrap = "wrap";
   downloadInfo.style.gap = "4px";
@@ -196,7 +224,11 @@ function createLogEntryCard(entry) {
   fileNameText.textContent = getLogEntryFileName(entry);
   fileNameText.style.fontSize = "12px";
   fileNameText.style.fontWeight = "bold";
-  fileNameText.style.color = "#facc15";
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(fileNameText, "warning");
+  } else {
+    fileNameText.style.color = "#facc15";
+  }
   fileRow.appendChild(fileNameText);
 
   const metaInfoText = document.createElement("span");

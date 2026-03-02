@@ -1,10 +1,10 @@
 {
   "name": "gpt-code-saver-extension",
-  "version": "0.2.7",
+  "version": "0.3.0",
   "private": true,
   "description": "MV3 workspace for gpt-code-saver-extension with unit tests and Playwright smoke coverage",
   "scripts": {
-    "test": "npm run test:unit",
+    "test": "node --test tests/unit/*.test.js",
     "test:unit": "node --test tests/unit/*.test.js",
     "test:e2e": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test --config tests/playwright.config.js",
     "test:e2e:headed": "LD_LIBRARY_PATH=\"$PWD/tests/.local-libs/usr/lib/x86_64-linux-gnu\" playwright test --config tests/playwright.config.js --headed",

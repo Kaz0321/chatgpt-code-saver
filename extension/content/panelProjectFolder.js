@@ -9,9 +9,13 @@ function createProjectFolderSection() {
   input.style.padding = "4px 6px";
   input.style.fontSize = "11px";
   input.style.borderRadius = "4px";
-  input.style.border = "1px solid rgba(255,255,255,0.2)";
-  input.style.background = "#1f2937";
-  input.style.color = "#fff";
+  if (typeof cgptApplyPanelInputStyle === "function") {
+    cgptApplyPanelInputStyle(input);
+  } else {
+    input.style.border = "1px solid rgba(255,255,255,0.2)";
+    input.style.background = "#1f2937";
+    input.style.color = "#fff";
+  }
   section.appendChild(input);
 
   cgptGetProjectFolderPath((folderPath) => {

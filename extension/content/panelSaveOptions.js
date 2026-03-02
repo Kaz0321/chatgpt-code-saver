@@ -7,7 +7,11 @@ function createSaveOptionsSection() {
   checkboxRow.style.alignItems = "center";
   checkboxRow.style.gap = "8px";
   checkboxRow.style.fontSize = "11px";
-  checkboxRow.style.color = "rgba(255,255,255,0.8)";
+  if (typeof cgptApplyPanelTextTone === "function") {
+    cgptApplyPanelTextTone(checkboxRow, "secondary");
+  } else {
+    checkboxRow.style.color = "rgba(255,255,255,0.8)";
+  }
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";

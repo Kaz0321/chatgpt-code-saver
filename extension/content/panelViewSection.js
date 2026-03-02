@@ -119,7 +119,11 @@ function createHeadingLevelRow(level) {
   label.textContent = `Level ${level}`;
   label.style.flex = "1";
   label.style.fontWeight = "600";
-  label.style.color = getHeadingLevelColor(level);
+  if (typeof cgptApplyPanelTextTone === "function") {
+    cgptApplyPanelTextTone(label, "secondary");
+  } else {
+    label.style.color = getHeadingLevelColor(level);
+  }
   row.appendChild(label);
 
   const controls = document.createElement("div");
@@ -141,24 +145,23 @@ function createHeadingLevelRow(level) {
 }
 
 function applyHeadingButtonTheme(button, level) {
-  const color = getHeadingLevelColor(level);
-  if (!button || !color) return;
+  if (!button) return;
   if (typeof cgptSetSharedButtonCustomPalette === "function") {
     cgptSetSharedButtonCustomPalette(button, {
-      background: color,
-      hoverBackground: color,
-      activeBackground: color,
-      border: color,
-      hoverBorder: color,
-      activeBorder: color,
-      color: "#0b172a",
-      focusRing: "rgba(255, 255, 255, 0.72)",
+      background: "rgba(241, 245, 249, 0.92)",
+      hoverBackground: "rgba(226, 232, 240, 0.96)",
+      activeBackground: "rgba(226, 232, 240, 1)",
+      border: "rgba(148, 163, 184, 0.52)",
+      hoverBorder: "rgba(148, 163, 184, 0.64)",
+      activeBorder: "rgba(148, 163, 184, 0.72)",
+      color: "#334155",
+      focusRing: "rgba(147, 197, 253, 0.28)",
     });
     return;
   }
-  button.style.background = color;
-  button.style.borderColor = color;
-  button.style.color = "#0b172a";
+  button.style.background = "rgba(241, 245, 249, 0.92)";
+  button.style.borderColor = "rgba(148, 163, 184, 0.52)";
+  button.style.color = "#334155";
 }
 
 function getHeadingLevelColor(level) {

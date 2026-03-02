@@ -47,12 +47,16 @@ function cgptRenderExtensionDisabledEntryPoint() {
   button.style.zIndex = "9999";
   button.style.padding = "10px 12px";
   button.style.borderRadius = "10px";
-  button.style.border = "1px solid rgba(255,255,255,0.2)";
-  button.style.background = "rgba(32, 33, 35, 0.95)";
-  button.style.color = "#fff";
   button.style.fontSize = "12px";
   button.style.cursor = "pointer";
-  button.style.boxShadow = "0 6px 16px rgba(0,0,0,0.35)";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(button, "panel");
+  } else {
+    button.style.border = "1px solid rgba(255,255,255,0.2)";
+    button.style.background = "rgba(32, 33, 35, 0.95)";
+    button.style.color = "#fff";
+    button.style.boxShadow = "0 6px 16px rgba(0,0,0,0.35)";
+  }
 
   button.addEventListener("click", () => {
     cgptUpdateExtensionEnabled(true, () => {

@@ -7,6 +7,38 @@ const CGPT_BUTTON_BASE_TOKENS = {
   focusInset: "0 0 0 2px rgba(17, 24, 39, 0.96)",
 };
 
+const CGPT_UI_THEME = {
+  overlayBackground: "rgba(7, 11, 18, 0.66)",
+  panelBackground: "rgba(255, 255, 255, 0.96)",
+  panelBorder: "rgba(148, 163, 184, 0.3)",
+  panelShadow: "0 18px 42px rgba(15, 23, 42, 0.18)",
+  dialogBackground: "#0f172a",
+  dialogBorder: "rgba(148, 163, 184, 0.18)",
+  cardBackground: "#111827",
+  cardBorder: "rgba(71, 85, 105, 0.5)",
+  subtleBackground: "rgba(148, 163, 184, 0.08)",
+  subtleBorder: "rgba(148, 163, 184, 0.16)",
+  codeBackground: "#0b1324",
+  inputBackground: "rgba(15, 23, 42, 0.96)",
+  inputBorder: "rgba(148, 163, 184, 0.24)",
+  textPrimary: "#e5eefb",
+  textSecondary: "#bfd0ea",
+  textMuted: "#94a3b8",
+  textStrong: "#f8fbff",
+  chipBackground: "rgba(241, 245, 249, 0.92)",
+  chipBorder: "rgba(148, 163, 184, 0.52)",
+  chipText: "#334155",
+  accentText: "#93c5fd",
+  successText: "#86efac",
+  dangerText: "#fda4af",
+  warningText: "#fde68a",
+  panelTextPrimary: "#0f172a",
+  panelTextSecondary: "#334155",
+  panelTextMuted: "#64748b",
+  panelInputBackground: "#f8fafc",
+  panelInputBorder: "#cbd5e1",
+};
+
 const CGPT_BUTTON_SIZE_TOKENS = {
   sm: { minHeight: "28px", fontSize: "11px", padding: "0 8px" },
   md: { minHeight: "32px", fontSize: "12px", padding: "0 10px" },
@@ -15,64 +47,64 @@ const CGPT_BUTTON_SIZE_TOKENS = {
 
 const CGPT_BUTTON_PALETTE = {
   primary: {
-    background: "#2563eb",
-    hoverBackground: "#1d4ed8",
-    activeBackground: "#1e40af",
-    color: "#ffffff",
-    border: "#1d4ed8",
-    hoverBorder: "#1e40af",
-    activeBorder: "#1e3a8a",
-    focusRing: "#93c5fd",
+    background: "#dbeafe",
+    hoverBackground: "#bfdbfe",
+    activeBackground: "#93c5fd",
+    color: "#1e3a8a",
+    border: "#93c5fd",
+    hoverBorder: "#60a5fa",
+    activeBorder: "#3b82f6",
+    focusRing: "rgba(147, 197, 253, 0.32)",
   },
   secondary: {
-    background: "#475569",
-    hoverBackground: "#64748b",
-    activeBackground: "#334155",
-    color: "#f8fafc",
-    border: "#94a3b8",
-    hoverBorder: "#cbd5e1",
+    background: "#ffffff",
+    hoverBackground: "#f8fafc",
+    activeBackground: "#f1f5f9",
+    color: "#334155",
+    border: "#cbd5e1",
+    hoverBorder: "#94a3b8",
     activeBorder: "#94a3b8",
-    focusRing: "#cbd5e1",
+    focusRing: "rgba(191, 208, 234, 0.28)",
   },
   success: {
-    background: "#047857",
-    hoverBackground: "#065f46",
-    activeBackground: "#064e3b",
-    color: "#ffffff",
-    border: "#065f46",
-    hoverBorder: "#064e3b",
-    activeBorder: "#022c22",
-    focusRing: "#6ee7b7",
+    background: "rgba(22, 101, 52, 0.22)",
+    hoverBackground: "rgba(22, 101, 52, 0.28)",
+    activeBackground: "rgba(22, 101, 52, 0.34)",
+    color: CGPT_UI_THEME.successText,
+    border: "rgba(34, 197, 94, 0.3)",
+    hoverBorder: "rgba(34, 197, 94, 0.4)",
+    activeBorder: "rgba(34, 197, 94, 0.5)",
+    focusRing: "rgba(134, 239, 172, 0.28)",
   },
   danger: {
-    background: "#b91c1c",
-    hoverBackground: "#991b1b",
-    activeBackground: "#7f1d1d",
-    color: "#ffffff",
-    border: "#991b1b",
-    hoverBorder: "#7f1d1d",
-    activeBorder: "#7f1d1d",
-    focusRing: "#fca5a5",
+    background: "rgba(127, 29, 29, 0.24)",
+    hoverBackground: "rgba(127, 29, 29, 0.3)",
+    activeBackground: "rgba(127, 29, 29, 0.36)",
+    color: CGPT_UI_THEME.dangerText,
+    border: "rgba(244, 63, 94, 0.28)",
+    hoverBorder: "rgba(244, 63, 94, 0.4)",
+    activeBorder: "rgba(244, 63, 94, 0.48)",
+    focusRing: "rgba(253, 164, 175, 0.3)",
   },
   ghost: {
-    background: "rgba(15, 23, 42, 0.82)",
-    hoverBackground: "rgba(30, 41, 59, 0.92)",
-    activeBackground: "rgba(51, 65, 85, 0.96)",
-    color: "#f8fafc",
-    border: "rgba(148, 163, 184, 0.72)",
-    hoverBorder: "rgba(226, 232, 240, 0.9)",
-    activeBorder: "rgba(226, 232, 240, 0.96)",
-    focusRing: "#93c5fd",
+    background: "transparent",
+    hoverBackground: "#f8fafc",
+    activeBackground: "#f1f5f9",
+    color: "#475569",
+    border: "#dbe3ef",
+    hoverBorder: "#cbd5e1",
+    activeBorder: "#94a3b8",
+    focusRing: "rgba(147, 197, 253, 0.26)",
   },
   disabled: {
-    background: "#1f2937",
-    hoverBackground: "#1f2937",
-    activeBackground: "#1f2937",
-    color: "#9ca3af",
-    border: "#374151",
-    hoverBorder: "#374151",
-    activeBorder: "#374151",
-    focusRing: "#4b5563",
+    background: "#e2e8f0",
+    hoverBackground: "#e2e8f0",
+    activeBackground: "#e2e8f0",
+    color: "#94a3b8",
+    border: "#cbd5e1",
+    hoverBorder: "#cbd5e1",
+    activeBorder: "#cbd5e1",
+    focusRing: "rgba(75, 85, 99, 0.28)",
   },
 };
 
@@ -292,4 +324,95 @@ function cgptSetSharedButtonCustomPalette(button, palette) {
   if (!button) return;
   button.__cgptSharedButtonCustomPalette = palette || null;
   cgptRenderSharedButton(button);
+}
+
+function cgptGetUiTheme() {
+  return { ...CGPT_UI_THEME };
+}
+
+function cgptApplySurfaceStyle(element, variant = "panel") {
+  if (!element || !element.style) return element;
+  const theme = CGPT_UI_THEME;
+  if (variant === "dialog") {
+    element.style.background = theme.dialogBackground;
+    element.style.border = `1px solid ${theme.dialogBorder}`;
+    element.style.boxShadow = theme.panelShadow;
+    element.style.color = theme.textPrimary;
+    return element;
+  }
+  if (variant === "card") {
+    element.style.background = theme.cardBackground;
+    element.style.border = `1px solid ${theme.cardBorder}`;
+    element.style.color = theme.textPrimary;
+    return element;
+  }
+  if (variant === "subtle") {
+    element.style.background = theme.subtleBackground;
+    element.style.border = `1px solid ${theme.subtleBorder}`;
+    element.style.color = theme.textSecondary;
+    return element;
+  }
+  if (variant === "code") {
+    element.style.background = theme.codeBackground;
+    element.style.border = `1px solid ${theme.subtleBorder}`;
+    element.style.color = theme.textPrimary;
+    return element;
+  }
+  element.style.background = theme.panelBackground;
+  element.style.border = `1px solid ${theme.panelBorder}`;
+  element.style.boxShadow = theme.panelShadow;
+  element.style.color = theme.panelTextPrimary;
+  return element;
+}
+
+function cgptApplyTextTone(element, tone = "primary") {
+  if (!element || !element.style) return element;
+  const theme = CGPT_UI_THEME;
+  const colorMap = {
+    primary: theme.textPrimary,
+    strong: theme.textStrong,
+    secondary: theme.textSecondary,
+    muted: theme.textMuted,
+    accent: theme.accentText,
+    success: theme.successText,
+    danger: theme.dangerText,
+    warning: theme.warningText,
+    chip: theme.chipText,
+  };
+  element.style.color = colorMap[tone] || colorMap.primary;
+  return element;
+}
+
+function cgptApplyInputStyle(element) {
+  if (!element || !element.style) return element;
+  const theme = CGPT_UI_THEME;
+  element.style.background = theme.inputBackground;
+  element.style.border = `1px solid ${theme.inputBorder}`;
+  element.style.color = theme.textPrimary;
+  return element;
+}
+
+function cgptApplyPanelTextTone(element, tone = "primary") {
+  if (!element || !element.style) return element;
+  const theme = CGPT_UI_THEME;
+  const colorMap = {
+    primary: theme.panelTextPrimary,
+    secondary: theme.panelTextSecondary,
+    muted: theme.panelTextMuted,
+    accent: "#1d4ed8",
+    success: "#166534",
+    danger: "#b91c1c",
+    warning: "#92400e",
+  };
+  element.style.color = colorMap[tone] || colorMap.primary;
+  return element;
+}
+
+function cgptApplyPanelInputStyle(element) {
+  if (!element || !element.style) return element;
+  const theme = CGPT_UI_THEME;
+  element.style.background = theme.panelInputBackground;
+  element.style.border = `1px solid ${theme.panelInputBorder}`;
+  element.style.color = theme.panelTextPrimary;
+  return element;
 }

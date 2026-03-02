@@ -3,15 +3,12 @@ function createPanelContainer() {
   panel.id = "cgpt-code-helper-panel";
   panel.style.position = "fixed";
   panel.style.right = "16px";
-  panel.style.bottom = "80px";
+  panel.style.bottom = "72px";
   panel.style.zIndex = "9999";
   panel.style.boxSizing = "border-box";
-  panel.style.background = "rgba(32, 33, 35, 0.95)";
-  panel.style.border = "1px solid rgba(255,255,255,0.1)";
   panel.style.borderRadius = "8px";
   panel.style.padding = "12px";
   panel.style.fontSize = "12px";
-  panel.style.color = "#fff";
   panel.style.display = "flex";
   panel.style.flexDirection = "column";
   panel.style.gap = "8px";
@@ -20,6 +17,9 @@ function createPanelContainer() {
   panel.style.maxWidth = "280px";
   panel.style.maxHeight = "calc(100vh - 112px)";
   panel.style.overflowY = "auto";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(panel, "panel");
+  }
   return panel;
 }
 
@@ -53,7 +53,11 @@ function createSectionLabel(text) {
   label.style.fontSize = "11px";
   label.style.fontWeight = "bold";
   label.style.marginBottom = "2px";
-  label.style.color = "rgba(255,255,255,0.8)";
+  if (typeof cgptApplyPanelTextTone === "function") {
+    cgptApplyPanelTextTone(label, "secondary");
+  } else {
+    label.style.color = "rgba(255,255,255,0.8)";
+  }
   return label;
 }
 
@@ -119,11 +123,15 @@ function createLineCountControls({ initialValue, onCommit, min = 1, max = 200 })
   input.value = `${initialValue}`;
   input.style.width = "64px";
   input.style.borderRadius = "4px";
-  input.style.border = "1px solid rgba(255,255,255,0.2)";
-  input.style.background = "#1f2937";
-  input.style.color = "#fff";
   input.style.padding = "2px 4px";
   input.style.textAlign = "center";
+  if (typeof cgptApplyPanelInputStyle === "function") {
+    cgptApplyPanelInputStyle(input);
+  } else {
+    input.style.border = "1px solid rgba(255,255,255,0.2)";
+    input.style.background = "#1f2937";
+    input.style.color = "#fff";
+  }
 
   const createAdjustButton = (label) => {
     const button = document.createElement("button");
