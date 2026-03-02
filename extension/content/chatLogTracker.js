@@ -569,7 +569,7 @@ function applyHeadingFold(root, baseLevel = 0) {
 
     const headingFold = cgptCreateFoldSection({
       title: heading.textContent || "(untitled)",
-      initiallyOpen: level <= 2,
+      initiallyOpen: true,
       level,
       visualLevel,
       badgeText: "",
