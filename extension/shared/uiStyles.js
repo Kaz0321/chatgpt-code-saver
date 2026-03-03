@@ -13,30 +13,30 @@ const CGPT_BUTTON_SHAPE_TOKENS = {
 };
 
 const CGPT_UI_THEME = {
-  overlayBackground: "rgba(7, 11, 18, 0.66)",
-  panelBackground: "rgba(255, 255, 255, 0.96)",
-  panelBorder: "rgba(148, 163, 184, 0.3)",
-  panelShadow: "0 18px 42px rgba(15, 23, 42, 0.18)",
-  dialogBackground: "#0f172a",
-  dialogBorder: "rgba(148, 163, 184, 0.18)",
-  cardBackground: "#111827",
-  cardBorder: "rgba(71, 85, 105, 0.5)",
-  subtleBackground: "rgba(148, 163, 184, 0.08)",
-  subtleBorder: "rgba(148, 163, 184, 0.16)",
-  codeBackground: "#0b1324",
-  inputBackground: "rgba(15, 23, 42, 0.96)",
-  inputBorder: "rgba(148, 163, 184, 0.24)",
-  textPrimary: "#e5eefb",
-  textSecondary: "#bfd0ea",
-  textMuted: "#94a3b8",
-  textStrong: "#f8fbff",
+  overlayBackground: "rgba(15, 23, 42, 0.18)",
+  panelBackground: "rgba(255, 255, 255, 0.98)",
+  panelBorder: "rgba(203, 213, 225, 0.96)",
+  panelShadow: "0 24px 48px rgba(15, 23, 42, 0.12)",
+  dialogBackground: "#ffffff",
+  dialogBorder: "rgba(226, 232, 240, 0.96)",
+  cardBackground: "#f8fafc",
+  cardBorder: "rgba(226, 232, 240, 0.96)",
+  subtleBackground: "#f5f7fb",
+  subtleBorder: "rgba(203, 213, 225, 0.92)",
+  codeBackground: "#f3f4f6",
+  inputBackground: "#ffffff",
+  inputBorder: "rgba(203, 213, 225, 0.96)",
+  textPrimary: "#0f172a",
+  textSecondary: "#334155",
+  textMuted: "#64748b",
+  textStrong: "#020617",
   chipBackground: "rgba(241, 245, 249, 0.92)",
   chipBorder: "rgba(148, 163, 184, 0.52)",
   chipText: "#334155",
-  accentText: "#93c5fd",
-  successText: "#86efac",
-  dangerText: "#fda4af",
-  warningText: "#fde68a",
+  accentText: "#2563eb",
+  successText: "#15803d",
+  dangerText: "#dc2626",
+  warningText: "#a16207",
   panelTextPrimary: "#0f172a",
   panelTextSecondary: "#334155",
   panelTextMuted: "#64748b",
@@ -169,6 +169,26 @@ const CGPT_BUTTON_PALETTE = {
     activeBorder: "#64748b",
     focusRing: "rgba(147, 197, 253, 0.24)",
   },
+  userChip: {
+    background: "rgba(37, 99, 235, 0.16)",
+    hoverBackground: "rgba(37, 99, 235, 0.22)",
+    activeBackground: "rgba(37, 99, 235, 0.28)",
+    color: "#1e3a8a",
+    border: "rgba(59, 130, 246, 0.3)",
+    hoverBorder: "rgba(59, 130, 246, 0.4)",
+    activeBorder: "rgba(37, 99, 235, 0.48)",
+    focusRing: "rgba(96, 165, 250, 0.24)",
+  },
+  assistantChip: {
+    background: "rgba(234, 88, 12, 0.16)",
+    hoverBackground: "rgba(234, 88, 12, 0.22)",
+    activeBackground: "rgba(234, 88, 12, 0.28)",
+    color: "#9a3412",
+    border: "rgba(249, 115, 22, 0.3)",
+    hoverBorder: "rgba(249, 115, 22, 0.42)",
+    activeBorder: "rgba(234, 88, 12, 0.5)",
+    focusRing: "rgba(251, 146, 60, 0.24)",
+  },
   disabled: {
     background: "#e2e8f0",
     hoverBackground: "#e2e8f0",
@@ -187,6 +207,8 @@ const CGPT_BUTTON_VARIANT_ALIASES = {
   neutral: "secondary",
   warning: "danger",
   subtleChip: "chip",
+  user: "userChip",
+  assistant: "assistantChip",
 };
 
 function cgptNormalizeButtonVariant(variant = "secondary") {
@@ -576,4 +598,16 @@ function cgptApplyTextScale(element, variant = "body") {
   if (token.fontWeight) element.style.fontWeight = token.fontWeight;
   if (token.lineHeight) element.style.lineHeight = token.lineHeight;
   return element;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptGetUiTheme,
+    cgptApplySurfaceStyle,
+    cgptApplyTextTone,
+    cgptApplyInputStyle,
+    cgptGetSurfaceLayoutTokens,
+    cgptApplySurfaceLayout,
+    cgptApplyTextScale,
+  };
 }

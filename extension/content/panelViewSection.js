@@ -1,5 +1,5 @@
 function createViewSection() {
-  const viewSection = createPanelSection("Display Actions");
+  const viewSection = createPanelSection("View Controls");
   viewSection.appendChild(createDisplayActionsSubLabel("Code Blocks"));
   viewSection.appendChild(createViewModeButtonsRow());
   viewSection.appendChild(createHeadingViewSection());

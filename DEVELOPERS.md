@@ -180,3 +180,18 @@ classDiagram
 - `extension/content/codeBlocks.js` now focuses on code-block decoration, while `extension/content/codeBlockObserver.js` owns `setupCodeBlockMutationObserver()`.
 - `extension/content/chatLogTracker.js` now focuses on chat entry collection and rendering, while `extension/content/chatLogObserver.js` owns `startChatLogMutationObserver()` and route watching.
 - `package.json` keeps `test` aligned with `test:unit` without nesting `npm run`, so local unit test invocation stays simple.
+
+## Collaboration Notes
+- If a requested change is likely to become a large-scale modification, confirm with the user before proceeding with implementation.
+
+## 2026-03-04 Chat Log Generated Paths
+- Chat Log modal treats both file-backed code blocks and plain fenced code blocks as listable code blocks.
+- If a code block does not include a `file:` metadata line, the modal assigns a generated relative path under `chat-code-blocks/`.
+- Generated names follow `<language>-block-<n>.<ext>` when language detection is available, otherwise `code-block-<n>.txt`.
+- Detected extension mapping currently includes common languages such as `python -> .py`, `javascript -> .js`, `c -> .c`, `java -> .java`, and `powershell -> .ps1`.
+- Generated paths are valid save targets for `Save`, `Save As`, `Save All`, and `Save As All`.
+
+## 2026-03-04 Chat Log Regression Fixtures
+- Shared-page-style fenced code blocks without `file:` metadata are pinned by `tests/fixtures/chatgpt-share-code-blocks.html`.
+- Regression coverage for that case lives in `tests/e2e/chatgpt-share-code-blocks-offline.spec.js`.
+- The regression asserts generated filenames are shown in Chat Log and that per-block save buttons remain enabled.

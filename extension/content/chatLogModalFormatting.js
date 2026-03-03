@@ -91,7 +91,18 @@ function cgptCollectAssistantHeadingSections(entry, nextEntry, allEntries) {
 function cgptExtractFormattedCodeBlocksFromElement(element) {
   const results = [];
   if (!element) return results;
-  element.querySelectorAll("pre code").forEach((codeEl) => {
+  const seen = new Set();
+  const codeNodes = [];
+  ["pre code", "pre .cm-content"].forEach((selector) => {
+    if (!element.querySelectorAll) return;
+    element.querySelectorAll(selector).forEach((node) => {
+      if (!node || seen.has(node)) return;
+      seen.add(node);
+      codeNodes.push(node);
+    });
+  });
+
+  codeNodes.forEach((codeEl, index) => {
     const rawText = codeEl.textContent || "";
     const normalized = cgptNormalizeChatLogLineEndings(rawText);
     const lines = normalized.split("\n");
@@ -99,14 +110,102 @@ function cgptExtractFormattedCodeBlocksFromElement(element) {
     const firstLine = lines[0].trim();
     const match =
       firstLine.match(/^\/\/\s*file:\s*(.+)$/i) || firstLine.match(/^#\s*file:\s*(.+)$/i);
-    if (!match) return;
-    const filePath = match[1].trim();
-    if (!filePath) return;
-    const content = lines.slice(1).join("\n");
     const blockElement = codeEl.closest("pre") || codeEl;
-    results.push({ filePath, fileName: cgptDeriveFileName(filePath), content, element: blockElement });
+    const language = cgptExtractCodeBlockLanguage(codeEl, blockElement);
+    if (match) {
+      const filePath = match[1].trim();
+      if (!filePath) return;
+      const content = lines.slice(1).join("\n");
+      results.push({
+        filePath,
+        fileName: cgptDeriveFileName(filePath),
+        content,
+        element: blockElement,
+        language,
+        hasDetectedFilePath: true,
+      });
+      return;
+    }
+    const generatedFilePath = cgptBuildGeneratedCodeBlockPath(language, index);
+    results.push({
+      filePath: generatedFilePath,
+      fileName: cgptDeriveFileName(generatedFilePath),
+      content: normalized,
+      element: blockElement,
+      language,
+      hasDetectedFilePath: false,
+    });
   });
   return results;
+}
+
+function cgptExtractCodeBlockLanguage(codeElement, blockElement) {
+  const candidates = [];
+  if (codeElement && codeElement.classList) {
+    candidates.push(...Array.from(codeElement.classList));
+  }
+  if (blockElement && blockElement.classList) {
+    candidates.push(...Array.from(blockElement.classList));
+  }
+  for (const className of candidates) {
+    const match = String(className || "").match(/(?:language-|lang-)([a-z0-9_+-]+)/i);
+    if (match && match[1]) {
+      return match[1].toLowerCase();
+    }
+  }
+  return "";
+}
+
+function cgptBuildUnnamedCodeBlockLabel(language, index = 0) {
+  const order = Number.isFinite(index) ? index + 1 : 1;
+  if (language) {
+    return `${language}-block-${order}`;
+  }
+  return `code-block-${order}`;
+}
+
+function cgptBuildGeneratedCodeBlockPath(language, index = 0) {
+  const baseName = cgptBuildUnnamedCodeBlockLabel(language, index);
+  const extension = cgptGetCodeBlockExtension(language);
+  return `chat-code-blocks/${baseName}.${extension}`;
+}
+
+function cgptGetCodeBlockExtension(language) {
+  const normalized = String(language || "").trim().toLowerCase();
+  const extensionMap = {
+    bash: "sh",
+    c: "c",
+    cpp: "cpp",
+    csharp: "cs",
+    css: "css",
+    go: "go",
+    html: "html",
+    java: "java",
+    javascript: "js",
+    js: "js",
+    json: "json",
+    jsx: "jsx",
+    kotlin: "kt",
+    markdown: "md",
+    md: "md",
+    php: "php",
+    powershell: "ps1",
+    ps1: "ps1",
+    python: "py",
+    py: "py",
+    ruby: "rb",
+    rust: "rs",
+    shell: "sh",
+    sql: "sql",
+    swift: "swift",
+    ts: "ts",
+    typescript: "ts",
+    tsx: "tsx",
+    xml: "xml",
+    yaml: "yml",
+    yml: "yml",
+  };
+  return extensionMap[normalized] || "txt";
 }
 
 function cgptExtractHeadingSectionsFromElement(element) {
@@ -228,4 +327,13 @@ function cgptBuildCodeMetaInfoText(content) {
   summaryParts.push(`Non-empty: ${nonEmptyLines}`);
   summaryParts.push(`Characters: ${totalChars}`);
   return summaryParts.join(" • ");
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptExtractFormattedCodeBlocksFromElement,
+    cgptExtractCodeBlockLanguage,
+    cgptBuildUnnamedCodeBlockLabel,
+    cgptBuildGeneratedCodeBlockPath,
+    cgptGetCodeBlockExtension,
+  };
 }

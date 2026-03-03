@@ -167,8 +167,8 @@ function createLogEntryCard(entry) {
   if (typeof cgptApplySurfaceStyle === "function") {
     cgptApplySurfaceStyle(card, "card");
   } else {
-    card.style.border = "1px solid #27272a";
-    card.style.background = "#111827";
+    card.style.border = "1px solid #dbe4ee";
+    card.style.background = "#f8fafc";
   }
 
   const header = document.createElement("div");
@@ -189,7 +189,7 @@ function createLogEntryCard(entry) {
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(timestamp, "primary");
   } else {
-    timestamp.style.color = "#e5e7eb";
+    timestamp.style.color = "#0f172a";
   }
   timestamp.style.flex = "1";
   header.appendChild(timestamp);
@@ -197,7 +197,7 @@ function createLogEntryCard(entry) {
   const status = document.createElement("div");
   const kind = (entry && entry.kind ? entry.kind : "apply").toUpperCase();
   const ok = Boolean(entry && entry.ok);
-  status.textContent = `${kind} • ${ok ? "Success" : "Failed"}`;
+  status.textContent = `${kind} - ${ok ? "Success" : "Failed"}`;
   if (typeof cgptApplyTextScale === "function") {
     cgptApplyTextScale(status, "meta");
   } else {
@@ -207,7 +207,7 @@ function createLogEntryCard(entry) {
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(status, ok ? "success" : "danger");
   } else {
-    status.style.color = ok ? "#6ee7b7" : "#fca5a5";
+    status.style.color = ok ? "#15803d" : "#dc2626";
   }
   header.appendChild(status);
 
@@ -220,7 +220,7 @@ function createLogEntryCard(entry) {
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(downloadInfo, "accent");
   } else {
-    downloadInfo.style.color = "#a5b4fc";
+    downloadInfo.style.color = "#2563eb";
   }
   downloadInfo.style.display = "flex";
   downloadInfo.style.flexWrap = "wrap";
@@ -232,7 +232,7 @@ function createLogEntryCard(entry) {
   if (!ok && entry && entry.error) {
     downloadFragments.push(`Error: ${entry.error}`);
   }
-  downloadInfo.textContent = downloadFragments.join(" • ");
+  downloadInfo.textContent = downloadFragments.join(" - ");
   header.appendChild(downloadInfo);
 
   card.appendChild(header);
@@ -256,7 +256,7 @@ function createLogEntryCard(entry) {
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(fileNameText, "warning");
   } else {
-    fileNameText.style.color = "#facc15";
+    fileNameText.style.color = "#92400e";
   }
   fileRow.appendChild(fileNameText);
 
@@ -267,7 +267,7 @@ function createLogEntryCard(entry) {
   } else {
     metaInfoText.style.fontSize = "11px";
   }
-  metaInfoText.style.color = "#fef3c7";
+  metaInfoText.style.color = "#475569";
   metaInfoText.style.opacity = "0.85";
   fileRow.appendChild(metaInfoText);
 
@@ -289,7 +289,7 @@ function createLogEntryCard(entry) {
   } else {
     fullPathText.style.fontSize = "11px";
   }
-  fullPathText.style.color = "#d1d5db";
+  fullPathText.style.color = "#475569";
   fullPathText.style.wordBreak = "break-all";
   pathRow.appendChild(fullPathText);
 
@@ -365,7 +365,7 @@ function buildLogEntryMetaInfo(entry) {
   if (parts.length === 0) {
     return "No additional information.";
   }
-  return parts.join(" • ");
+  return parts.join(" - ");
 }
 
 function getLogEntrySourceLabel(entry) {

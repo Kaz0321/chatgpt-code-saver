@@ -7,13 +7,16 @@ function openChatLogModal() {
     return;
   }
 
+  if (typeof ensureChatLogFoldStyle === "function") {
+    ensureChatLogFoldStyle();
+  }
+
   const allEntries = getChatLogEntries();
-  const userEntries = allEntries.filter((entry) => entry.role === "user");
   const { overlay, closeModal } = cgptCreateChatLogModalOverlay();
   const dialog = cgptCreateChatLogDialog();
 
   dialog.appendChild(cgptCreateChatLogHeader(closeModal));
-  dialog.appendChild(cgptCreateChatLogList(userEntries, allEntries, closeModal));
+  dialog.appendChild(cgptCreateChatLogList(allEntries, closeModal));
 
   overlay.appendChild(dialog);
   document.body.appendChild(overlay);
@@ -126,7 +129,7 @@ function cgptCreateChatLogHeader(closeModal) {
   return wrapper;
 }
 
-function cgptCreateChatLogList(userEntries, allEntries, closeModal) {
+function cgptCreateChatLogList(entries, closeModal) {
   const list = document.createElement("div");
   list.style.flex = "1";
   list.style.overflow = "auto";
@@ -134,10 +137,10 @@ function cgptCreateChatLogList(userEntries, allEntries, closeModal) {
   list.style.flexDirection = "column";
   list.style.gap = "12px";
 
-  const orderedUsers = [...userEntries].sort((a, b) => a.order - b.order);
-  if (orderedUsers.length === 0) {
+  const orderedEntries = Array.isArray(entries) ? [...entries].sort((a, b) => a.order - b.order) : [];
+  if (orderedEntries.length === 0) {
     const empty = document.createElement("div");
-    empty.textContent = "No user messages found.";
+    empty.textContent = "No chat messages found.";
     if (typeof cgptApplyTextTone === "function") {
       cgptApplyTextTone(empty, "muted");
     } else {
@@ -147,64 +150,35 @@ function cgptCreateChatLogList(userEntries, allEntries, closeModal) {
     return list;
   }
 
-  orderedUsers.forEach((entry, index) => {
-    const nextEntry = orderedUsers[index + 1];
-    const card = cgptCreateChatLogUserCard(entry, nextEntry, allEntries, closeModal);
+  orderedEntries.forEach((entry) => {
+    const card = cgptCreateChatLogEntryCard(entry, closeModal);
     list.appendChild(card);
   });
 
   return list;
 }
 
-function cgptCreateChatLogUserCard(entry, nextEntry, allEntries, closeModal) {
-  const card = document.createElement("div");
-  card.style.display = "flex";
-  card.style.flexDirection = "column";
-  if (typeof cgptApplySurfaceLayout === "function") {
-    cgptApplySurfaceLayout(card, "card");
-  } else {
-    card.style.borderRadius = "14px";
-    card.style.padding = "12px";
-    card.style.gap = "8px";
-  }
-  if (typeof cgptApplySurfaceStyle === "function") {
-    cgptApplySurfaceStyle(card, "card");
-  } else {
-    card.style.border = "1px solid #3f3f46";
-    card.style.background = "#18181b";
+function cgptCreateChatLogEntryCard(entry, closeModal) {
+  const card = cgptCreateChatLogEntryFold(entry, closeModal);
+
+  if (entry && entry.role === "assistant") {
+    const responseSection = cgptCreateChatLogAssistantSection(entry, closeModal);
+    if (responseSection) {
+      card.body.appendChild(responseSection);
+    }
   }
 
-  card.appendChild(cgptCreateChatLogUserHeader(entry, closeModal));
-  card.appendChild(cgptCreateChatLogMessageBody(entry));
-
-  const assistantEntries = cgptCollectAssistantEntriesForUserEntry(entry, nextEntry, allEntries);
-  const headingSections = cgptCollectAssistantHeadingSections(entry, nextEntry, allEntries);
-  const assistantBlocks = cgptCollectAssistantBlocksForEntry(entry, nextEntry, allEntries);
-  const assistantUrls = cgptCollectAssistantUrlsForEntry(entry, nextEntry, allEntries);
-  const responseSection = cgptCreateChatLogAssistantSection(
-    assistantEntries,
-    headingSections,
-    assistantBlocks,
-    assistantUrls,
-    closeModal
-  );
-  if (responseSection) {
-    card.appendChild(responseSection);
-  }
-
-  return card;
+  return card.container;
 }
 
-function cgptCreateChatLogUserHeader(entry, closeModal) {
-  const header = document.createElement("div");
-  header.style.display = "flex";
-  header.style.justifyContent = "space-between";
-  header.style.alignItems = "center";
-  header.style.gap = "8px";
+function cgptCreateChatLogEntryFold(entry, closeModal) {
+  const container = document.createElement("div");
+  container.style.padding = "2px 0";
 
-  header.appendChild(cgptCreateChatLogSectionTitle("User", entry && entry.timestamp));
-
-  const jumpBtn = cgptCreateChatLogButton("Jump", "secondary", "sm");
+  const jumpBtn =
+    typeof cgptCreateFoldActionButton === "function"
+      ? cgptCreateFoldActionButton("Jump")
+      : cgptCreateChatLogButton("Jump", "secondary", "sm");
   jumpBtn.addEventListener("click", () => {
     closeModal();
     if (typeof highlightChatMessageElement === "function") {
@@ -213,22 +187,84 @@ function cgptCreateChatLogUserHeader(entry, closeModal) {
       cgptJumpToCodeBlock(entry.element);
     }
   });
-  header.appendChild(jumpBtn);
 
-  return header;
+  const foldShell =
+    typeof cgptCreateFoldShell === "function"
+      ? cgptCreateFoldShell({
+          title: "",
+          badgeText: "",
+          actionButtons: [jumpBtn],
+        })
+      : {
+          container: document.createElement("div"),
+          titleWrapper: document.createElement("div"),
+          body: document.createElement("div"),
+        };
+  const fold = foldShell.container;
+  fold.className = "cgpt-helper-fold";
+  fold.style.marginTop = "0";
+  fold.style.border = "1px solid rgba(203, 213, 225, 0.92)";
+  fold.style.borderRadius = "14px";
+  fold.style.background = "rgba(248, 250, 252, 0.92)";
+  fold.style.color = "#0f172a";
+  fold.style.padding = "12px 12px 12px 14px";
+  foldShell.titleWrapper.appendChild(cgptCreateChatLogEntryMeta(entry));
+  const body = foldShell.body;
+  body.style.marginTop = "10px";
+  body.appendChild(cgptCreateChatLogMessageBody(entry));
+
+  container.appendChild(fold);
+  return { container, body, fold };
 }
 
-function cgptCreateChatLogAssistantSection(
-  assistantEntries,
-  headingSections,
-  assistantBlocks,
-  assistantUrls,
-  closeModal
-) {
-  const headingSection = cgptCreateChatLogHeadingsSection(headingSections);
+function cgptCreateChatLogEntryMeta(entry) {
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.alignItems = "center";
+  wrapper.style.flexWrap = "wrap";
+  wrapper.style.columnGap = "8px";
+  wrapper.style.rowGap = "4px";
+
+  const badge = document.createElement("span");
+  badge.textContent = cgptGetChatEntryDisplayLabel(entry);
+  if (typeof cgptApplySharedChipStyle === "function") {
+    cgptApplySharedChipStyle(badge, {
+      variant: entry && entry.role === "user" ? "userChip" : "assistantChip",
+      size: "md",
+    });
+  } else {
+    badge.style.fontSize = "12px";
+    badge.style.fontWeight = "600";
+  }
+  wrapper.appendChild(badge);
+
+  if (entry && entry.timestamp) {
+    const timeEl = document.createElement("div");
+    timeEl.textContent = cgptFormatChatLogTimestamp(entry.timestamp);
+    if (typeof cgptApplyTextScale === "function") {
+      cgptApplyTextScale(timeEl, "meta");
+    } else {
+      timeEl.style.fontSize = "11px";
+    }
+    if (typeof cgptApplyTextTone === "function") {
+      cgptApplyTextTone(timeEl, "muted");
+    } else {
+      timeEl.style.color = "#9ca3af";
+    }
+    wrapper.appendChild(timeEl);
+  }
+
+  return wrapper;
+}
+
+function cgptCreateChatLogAssistantSection(entry, closeModal) {
+  const assistantBlocks =
+    entry && entry.element ? cgptExtractFormattedCodeBlocksFromElement(entry.element) : [];
+  const assistantUrls =
+    entry && entry.element ? cgptExtractStandaloneUrlsFromElement(entry.element) : [];
   const blockSection = cgptCreateChatLogBlocksSection(assistantBlocks, closeModal);
   const urlSection = cgptCreateChatLogUrlsSection(assistantUrls);
-  if (!headingSection && !blockSection && !urlSection) {
+  if (!blockSection && !urlSection) {
     return null;
   }
 
@@ -237,16 +273,6 @@ function cgptCreateChatLogAssistantSection(
   section.style.flexDirection = "column";
   section.style.gap = "6px";
 
-  section.appendChild(
-    cgptCreateChatLogSectionTitle(
-      cgptGetAssistantDisplayLabel(Array.isArray(assistantEntries) ? assistantEntries[0] : null),
-      Array.isArray(assistantEntries) && assistantEntries[0] ? assistantEntries[0].timestamp : ""
-    )
-  );
-
-  if (headingSection) {
-    section.appendChild(headingSection);
-  }
   if (blockSection) {
     section.appendChild(blockSection);
   }
@@ -299,105 +325,16 @@ function cgptCreateChatLogSectionTitle(label, timestamp) {
   return wrapper;
 }
 
-function cgptGetAssistantDisplayLabel(entry) {
-  const candidates = [];
-
-  if (entry && typeof entry.modelLabel === "string") {
-    candidates.push(entry.modelLabel);
-  }
-
-  if (entry && entry.element) {
-    candidates.push(entry.element.getAttribute("data-model-slug"));
-    candidates.push(entry.element.getAttribute("data-model-name"));
-    candidates.push(entry.element.getAttribute("data-message-model-slug"));
-    candidates.push(entry.element.getAttribute("data-message-model-name"));
-    candidates.push(entry.element.dataset ? entry.element.dataset.modelSlug : "");
-    candidates.push(entry.element.dataset ? entry.element.dataset.modelName : "");
-    candidates.push(entry.element.dataset ? entry.element.dataset.messageModelSlug : "");
-    candidates.push(entry.element.dataset ? entry.element.dataset.messageModelName : "");
-  }
-
-  const domCandidates = [
-    "[data-testid='model-switcher-dropdown-button']",
-    "[data-testid='model-switcher']",
-    "button[id*='model']",
-    "button[aria-haspopup='menu']",
-  ];
-
-  domCandidates.forEach((selector) => {
-    const el = document.querySelector(selector);
-    if (el && el.textContent) {
-      candidates.push(el.textContent);
-    }
-  });
-
-  for (const candidate of candidates) {
-    const normalized = cgptNormalizeAssistantDisplayLabel(candidate);
-    if (normalized) {
-      return normalized;
-    }
-  }
-
-  return "AI";
-}
-
-function cgptNormalizeAssistantDisplayLabel(value) {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
-  if (!text) return "";
-
-  const cleaned = text
-    .replace(/^chatgpt\s*/i, "")
-    .replace(/\btemporary chat\b/gi, "")
-    .replace(/\bnew chat\b/gi, "")
-    .replace(/\bshare\b/gi, "")
-    .replace(/\bsearch\b/gi, "")
-    .trim();
-
-  if (!cleaned) return "";
-
-  const slugMatch = cleaned.match(/^gpt-(\d+)(?:-(\d+))?(?:-(.+))?$/i);
-  if (slugMatch) {
-    const [, major, minor, suffix] = slugMatch;
-    const version = minor ? `${major}.${minor}` : major;
-    const suffixText = suffix
-      ? suffix
-          .split("-")
-          .filter(Boolean)
-          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(" ")
-      : "";
-    return `GPT ${version}${suffixText ? ` ${suffixText}` : ""}`;
-  }
-
-  const gptMatch = cleaned.match(/\b(gpt[\s-]*\d(?:\.\d+)?(?:\s+[a-z0-9.-]+)*)\b/i);
-  if (gptMatch && gptMatch[1]) {
-    return gptMatch[1]
-      .replace(/-/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-  }
-
-  if (/^(o\d|o\d-mini|o\d-pro)/i.test(cleaned)) {
-    return cleaned;
-  }
-
-  return cleaned.length <= 40 ? cleaned : cleaned.slice(0, 40).trim();
-}
-
 function cgptCreateChatLogMessageBody(entry) {
   const messageBody = document.createElement("div");
   messageBody.style.whiteSpace = "pre-wrap";
+  messageBody.style.paddingLeft = "2px";
+  messageBody.style.color = "inherit";
   if (typeof cgptApplyTextScale === "function") {
     cgptApplyTextScale(messageBody, "body");
   } else {
     messageBody.style.fontSize = "13px";
     messageBody.style.lineHeight = "1.5";
-  }
-  if (typeof cgptApplyTextTone === "function") {
-    cgptApplyTextTone(messageBody, "primary");
-  } else {
-    messageBody.style.color = "#f3f4f6";
   }
   const messageText = entry.text || "(no text)";
   messageBody.textContent = cgptCreateSingleLinePreview(messageText, CHAT_LOG_PREVIEW_LINE_LIMIT);
@@ -408,40 +345,15 @@ function cgptCreateChatLogBlocksSection(blocks, closeModal) {
   if (!blocks || !blocks.length) {
     return null;
   }
+  const savableBlocks = blocks.filter((block) => block && block.filePath);
 
-  const section = document.createElement("div");
-  section.style.display = "flex";
-  section.style.flexDirection = "column";
-  section.style.gap = "6px";
-
-  const blockHeader = document.createElement("div");
-  blockHeader.style.display = "flex";
-  blockHeader.style.alignItems = "center";
-  blockHeader.style.justifyContent = "space-between";
-  blockHeader.style.gap = "8px";
-
-  const blockHeaderLabel = document.createElement("div");
-  blockHeaderLabel.textContent = `Code blocks (${blocks.length})`;
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(blockHeaderLabel, "sectionLabel");
-  } else {
-    blockHeaderLabel.style.fontSize = "12px";
-  }
-  if (typeof cgptApplyTextTone === "function") {
-    cgptApplyTextTone(blockHeaderLabel, "accent");
-  } else {
-    blockHeaderLabel.style.color = "#a5b4fc";
-  }
-  blockHeader.appendChild(blockHeaderLabel);
-
+  const section = cgptCreateChatLogSectionContainer();
   const blockHeaderActions = document.createElement("div");
   blockHeaderActions.style.display = "flex";
   blockHeaderActions.style.gap = "6px";
-  blockHeaderActions.appendChild(cgptCreateBatchSaveAllButton(blocks));
-  blockHeaderActions.appendChild(cgptCreateBatchSaveAsAllButton(blocks));
-  blockHeader.appendChild(blockHeaderActions);
-
-  section.appendChild(blockHeader);
+  blockHeaderActions.appendChild(cgptCreateBatchSaveAllButton(savableBlocks));
+  blockHeaderActions.appendChild(cgptCreateBatchSaveAsAllButton(savableBlocks));
+  section.appendChild(cgptCreateChatLogSectionHeader(`Code blocks (${blocks.length})`, "accent", blockHeaderActions));
 
   blocks.forEach((block) => {
     section.appendChild(cgptCreateChatLogCodeBlockCard(block, closeModal));
@@ -451,28 +363,6 @@ function cgptCreateChatLogBlocksSection(blocks, closeModal) {
 }
 
 function cgptCreateChatLogCodeBlockCard(block, closeModal) {
-  const blockWrapper = document.createElement("div");
-  blockWrapper.style.border = "1px solid #27272a";
-  blockWrapper.style.background = "#111827";
-  blockWrapper.style.display = "flex";
-  blockWrapper.style.flexDirection = "column";
-  if (typeof cgptApplySurfaceLayout === "function") {
-    cgptApplySurfaceLayout(blockWrapper, "sectionCard");
-  } else {
-    blockWrapper.style.borderRadius = "12px";
-    blockWrapper.style.padding = "8px";
-    blockWrapper.style.gap = "6px";
-  }
-
-  const blockHeaderRow = document.createElement("div");
-  blockHeaderRow.style.display = "flex";
-  blockHeaderRow.style.justifyContent = "space-between";
-  blockHeaderRow.style.alignItems = "center";
-  blockHeaderRow.style.gap = "8px";
-
-  const fileInfoWrapper = cgptCreateChatLogBlockInfo(block);
-  blockHeaderRow.appendChild(fileInfoWrapper);
-
   const blockActionWrapper = document.createElement("div");
   blockActionWrapper.style.display = "flex";
   blockActionWrapper.style.gap = "6px";
@@ -488,176 +378,21 @@ function cgptCreateChatLogCodeBlockCard(block, closeModal) {
   });
   blockActionWrapper.appendChild(jumpBtn);
 
-  blockHeaderRow.appendChild(blockActionWrapper);
-  blockWrapper.appendChild(blockHeaderRow);
-
-  return blockWrapper;
-}
-
-function cgptCreateChatLogHeadingsSection(headingSections) {
-  const totalHeadings = cgptCountHeadingNodes(headingSections);
-  if (!totalHeadings) {
-    return null;
-  }
-
-  const section = document.createElement("div");
-  section.style.display = "flex";
-  section.style.flexDirection = "column";
-  section.style.gap = "6px";
-
-  const headingHeader = document.createElement("div");
-  headingHeader.textContent = `Markdown headings (${totalHeadings})`;
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(headingHeader, "sectionLabel");
-  } else {
-    headingHeader.style.fontSize = "12px";
-  }
-  headingHeader.style.color = "#f9a8d4";
-  section.appendChild(headingHeader);
-
-  headingSections.forEach((rootNode) => {
-    section.appendChild(cgptCreateHeadingNodeElement(rootNode, 0));
+  return cgptCreateChatLogDetailCard({
+    title: block.fileName || block.filePath,
+    titleTone: "accent",
+    metaText: cgptBuildCodeMetaInfoText(block && block.content),
+    detailText: block.filePath || cgptBuildUnnamedCodeBlockDetail(block),
+    actionNode: blockActionWrapper,
   });
-
-  return section;
-}
-
-function cgptCreateHeadingNodeElement(node, depth) {
-  const details = document.createElement("details");
-  details.open = depth === 0;
-  details.style.border = "1px solid #27272a";
-  details.style.background = "#0b1324";
-  details.style.marginLeft = `${Math.min(depth, 4) * 12}px`;
-  if (typeof cgptApplySurfaceLayout === "function") {
-    cgptApplySurfaceLayout(details, "sectionCard");
-  } else {
-    details.style.borderRadius = "12px";
-    details.style.padding = "8px";
-  }
-
-  const summary = document.createElement("summary");
-  summary.style.cursor = "pointer";
-  summary.style.display = "flex";
-  summary.style.alignItems = "center";
-  summary.style.gap = "6px";
-  summary.style.listStyle = "none";
-
-  const levelBadge = document.createElement("span");
-  levelBadge.textContent = `H${node.level}`;
-  levelBadge.title = node.originalLevel ? `Original level: H${node.originalLevel}` : "";
-  levelBadge.style.fontSize = "10px";
-  levelBadge.style.fontWeight = "bold";
-  levelBadge.style.padding = "2px 6px";
-  levelBadge.style.borderRadius = "999px";
-  levelBadge.style.background = "rgba(255,255,255,0.1)";
-  levelBadge.style.color = "#c084fc";
-  summary.appendChild(levelBadge);
-
-  const title = document.createElement("span");
-  title.textContent = node.title || "(untitled heading)";
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(title, "sectionLabel");
-  } else {
-    title.style.fontSize = "12px";
-  }
-  title.style.color = "#e5e7eb";
-  title.style.flex = "1";
-  summary.appendChild(title);
-
-  details.appendChild(summary);
-
-  const content = document.createElement("div");
-  content.style.marginTop = "6px";
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(content, "body");
-    content.style.fontSize = "12px";
-  } else {
-    content.style.fontSize = "12px";
-    content.style.lineHeight = "1.5";
-  }
-  content.style.color = "#f3f4f6";
-  content.style.whiteSpace = "pre-wrap";
-  content.textContent = node.content || "(no content under this heading)";
-  details.appendChild(content);
-
-  if (Array.isArray(node.children) && node.children.length) {
-    node.children.forEach((child) => {
-      details.appendChild(cgptCreateHeadingNodeElement(child, depth + 1));
-    });
-  }
-
-  return details;
-}
-
-function cgptCreateChatLogBlockInfo(block) {
-  const fileInfoWrapper = document.createElement("div");
-  fileInfoWrapper.style.flex = "1";
-  fileInfoWrapper.style.display = "flex";
-  fileInfoWrapper.style.flexDirection = "column";
-  fileInfoWrapper.style.gap = "2px";
-
-  const fileNameLabel = document.createElement("div");
-  fileNameLabel.style.display = "flex";
-  fileNameLabel.style.flexWrap = "wrap";
-  fileNameLabel.style.alignItems = "baseline";
-  fileNameLabel.style.columnGap = "6px";
-
-  const fileNameText = document.createElement("span");
-  fileNameText.textContent = block.fileName || block.filePath;
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(fileNameText, "sectionLabel");
-  } else {
-    fileNameText.style.fontSize = "12px";
-    fileNameText.style.fontWeight = "600";
-  }
-  fileNameText.style.color = "#facc15";
-  fileNameLabel.appendChild(fileNameText);
-
-  const metaInfoText = document.createElement("span");
-  metaInfoText.textContent = cgptBuildCodeMetaInfoText(block && block.content);
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(metaInfoText, "meta");
-  } else {
-    metaInfoText.style.fontSize = "11px";
-  }
-  metaInfoText.style.color = "#fef3c7";
-  metaInfoText.style.opacity = "0.85";
-  fileNameLabel.appendChild(metaInfoText);
-
-  fileInfoWrapper.appendChild(fileNameLabel);
-
-  const filePathLabel = document.createElement("div");
-  filePathLabel.textContent = block.filePath;
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(filePathLabel, "meta");
-  } else {
-    filePathLabel.style.fontSize = "11px";
-  }
-  filePathLabel.style.color = "#fef3c7";
-  filePathLabel.style.opacity = "0.9";
-  fileInfoWrapper.appendChild(filePathLabel);
-
-  return fileInfoWrapper;
 }
 
 function cgptCreateChatLogUrlsSection(assistantUrls) {
   if (!assistantUrls || !assistantUrls.length) {
     return null;
   }
-  const section = document.createElement("div");
-  section.style.display = "flex";
-  section.style.flexDirection = "column";
-  section.style.gap = "6px";
-
-  const urlHeader = document.createElement("div");
-  urlHeader.textContent = `Links Provided (${assistantUrls.length})`;
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(urlHeader, "sectionLabel");
-  } else {
-    urlHeader.style.fontSize = "12px";
-  }
-  urlHeader.style.color = "#7dd3fc";
-  section.appendChild(urlHeader);
+  const section = cgptCreateChatLogSectionContainer();
+  section.appendChild(cgptCreateChatLogSectionHeader(`Links Provided (${assistantUrls.length})`, "accent"));
 
   assistantUrls.forEach((link) => {
     section.appendChild(cgptCreateChatLogUrlCard(link));
@@ -667,61 +402,164 @@ function cgptCreateChatLogUrlsSection(assistantUrls) {
 }
 
 function cgptCreateChatLogUrlCard(link) {
-  const urlWrapper = document.createElement("div");
-  urlWrapper.style.border = "1px solid #1f2937";
-  urlWrapper.style.background = "#0f172a";
-  urlWrapper.style.display = "flex";
-  urlWrapper.style.flexDirection = "column";
-  if (typeof cgptApplySurfaceLayout === "function") {
-    cgptApplySurfaceLayout(urlWrapper, "sectionCard");
-  } else {
-    urlWrapper.style.borderRadius = "12px";
-    urlWrapper.style.padding = "8px";
-    urlWrapper.style.gap = "6px";
-  }
-
-  const urlHeaderRow = document.createElement("div");
-  urlHeaderRow.style.display = "flex";
-  urlHeaderRow.style.justifyContent = "space-between";
-  urlHeaderRow.style.alignItems = "center";
-  urlHeaderRow.style.gap = "8px";
-
-  const urlLabelWrapper = document.createElement("div");
-  urlLabelWrapper.style.flex = "1";
-  urlLabelWrapper.style.display = "flex";
-  urlLabelWrapper.style.flexDirection = "column";
-  urlLabelWrapper.style.gap = "2px";
-
-  const urlDisplayText = document.createElement("div");
-  urlDisplayText.textContent = link.text || link.url;
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(urlDisplayText, "sectionLabel");
-  } else {
-    urlDisplayText.style.fontSize = "12px";
-    urlDisplayText.style.fontWeight = "600";
-  }
-  urlDisplayText.style.color = "#bae6fd";
-  urlLabelWrapper.appendChild(urlDisplayText);
-
-  const urlValue = document.createElement("div");
-  urlValue.textContent = link.url;
-  if (typeof cgptApplyTextScale === "function") {
-    cgptApplyTextScale(urlValue, "meta");
-  } else {
-    urlValue.style.fontSize = "11px";
-  }
-  urlValue.style.color = "#e0f2fe";
-  urlValue.style.opacity = "0.9";
-  urlLabelWrapper.appendChild(urlValue);
-
-  urlHeaderRow.appendChild(urlLabelWrapper);
-
   const openBtn = cgptCreateChatLogButton("Open Link", "secondary", "sm");
   openBtn.addEventListener("click", () => {
     window.open(link.url, "_blank", "noopener,noreferrer");
   });
-  urlHeaderRow.appendChild(openBtn);
 
-  urlWrapper.appendChild(urlHeaderRow);
-  return urlWrapper;
+  return cgptCreateChatLogDetailCard({
+    title: link.text || link.url,
+    titleTone: "accent",
+    detailText: link.url,
+    actionNode: openBtn,
+  });
+}
+
+function cgptCreateChatLogSectionContainer() {
+  const section = document.createElement("div");
+  section.style.display = "flex";
+  section.style.flexDirection = "column";
+  section.style.gap = "6px";
+  return section;
+}
+
+function cgptCreateChatLogSectionHeader(title, tone = "accent", actionNode = null) {
+  const header = document.createElement("div");
+  header.style.display = "flex";
+  header.style.alignItems = "center";
+  header.style.justifyContent = "space-between";
+  header.style.gap = "8px";
+
+  const label = document.createElement("div");
+  label.textContent = title;
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(label, "sectionLabel");
+  } else {
+    label.style.fontSize = "12px";
+  }
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(label, tone);
+  } else {
+    label.style.color = tone === "accent" ? "#2563eb" : "#334155";
+  }
+  header.appendChild(label);
+
+  if (actionNode) {
+    header.appendChild(actionNode);
+  }
+
+  return header;
+}
+
+function cgptCreateChatLogDetailCard({
+  title,
+  titleTone = "accent",
+  metaText = "",
+  detailText = "",
+  actionNode = null,
+}) {
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexDirection = "column";
+  if (typeof cgptApplySurfaceLayout === "function") {
+    cgptApplySurfaceLayout(wrapper, "sectionCard");
+  } else {
+    wrapper.style.borderRadius = "12px";
+    wrapper.style.padding = "8px";
+    wrapper.style.gap = "6px";
+  }
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(wrapper, "subtle");
+  } else {
+    wrapper.style.border = "1px solid #dbe4ee";
+    wrapper.style.background = "#f8fafc";
+  }
+
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.justifyContent = "space-between";
+  row.style.alignItems = "center";
+  row.style.gap = "8px";
+
+  const labelWrapper = document.createElement("div");
+  labelWrapper.style.flex = "1";
+  labelWrapper.style.display = "flex";
+  labelWrapper.style.flexDirection = "column";
+  labelWrapper.style.gap = "2px";
+
+  const titleRow = document.createElement("div");
+  titleRow.style.display = "flex";
+  titleRow.style.flexWrap = "wrap";
+  titleRow.style.alignItems = "baseline";
+  titleRow.style.columnGap = "6px";
+
+  const titleEl = document.createElement("div");
+  titleEl.textContent = title || "";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(titleEl, "sectionLabel");
+  } else {
+    titleEl.style.fontSize = "12px";
+    titleEl.style.fontWeight = "600";
+  }
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(titleEl, titleTone);
+  } else {
+    titleEl.style.color = titleTone === "accent" ? "#2563eb" : "#334155";
+  }
+  titleRow.appendChild(titleEl);
+
+  if (metaText) {
+    const metaEl = document.createElement("span");
+    metaEl.textContent = metaText;
+    if (typeof cgptApplyTextScale === "function") {
+      cgptApplyTextScale(metaEl, "meta");
+    } else {
+      metaEl.style.fontSize = "11px";
+    }
+    if (typeof cgptApplyTextTone === "function") {
+      cgptApplyTextTone(metaEl, "muted");
+    } else {
+      metaEl.style.color = "#64748b";
+    }
+    metaEl.style.opacity = "0.9";
+    titleRow.appendChild(metaEl);
+  }
+
+  labelWrapper.appendChild(titleRow);
+
+  if (detailText) {
+    const detailEl = document.createElement("div");
+    detailEl.textContent = detailText;
+    if (typeof cgptApplyTextScale === "function") {
+      cgptApplyTextScale(detailEl, "meta");
+    } else {
+      detailEl.style.fontSize = "11px";
+    }
+    if (typeof cgptApplyTextTone === "function") {
+      cgptApplyTextTone(detailEl, "muted");
+    } else {
+      detailEl.style.color = "#475569";
+    }
+    detailEl.style.opacity = "0.9";
+    labelWrapper.appendChild(detailEl);
+  }
+
+  row.appendChild(labelWrapper);
+
+  if (actionNode) {
+    row.appendChild(actionNode);
+  }
+
+  wrapper.appendChild(row);
+  return wrapper;
+}
+
+function cgptBuildUnnamedCodeBlockDetail(block) {
+  if (block && block.filePath) {
+    return `Generated path: ${block.filePath}`;
+  }
+  if (block && block.language) {
+    return `Detected language: ${block.language}`;
+  }
+  return "File path not detected";
 }

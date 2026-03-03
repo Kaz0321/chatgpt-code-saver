@@ -85,7 +85,7 @@ async function main() {
       const args = [
         "test",
         "--config",
-        "tests/playwright.config.js",
+        "tests/playwright.full.config.js",
         target.spec,
         "-g",
         scenario.id,

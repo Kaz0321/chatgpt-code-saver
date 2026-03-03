@@ -16,49 +16,6 @@ function cgptGetCompactContentHost(pre) {
   return code;
 }
 
-function cgptCreateCompactPreviewElement() {
-  const preview = document.createElement("div");
-  preview.dataset.cgptCodePreview = "1";
-  preview.setAttribute("aria-hidden", "true");
-  preview.style.boxSizing = "border-box";
-  preview.style.overflow = "hidden";
-  preview.style.margin = "0";
-  preview.style.minWidth = "0";
-
-  const code = document.createElement("code");
-  code.dataset.cgptCodePreviewContent = "1";
-  code.style.display = "block";
-  preview.appendChild(code);
-  return preview;
-}
-
-function cgptApplyCompactPreviewStyles(preview, originalPre, originalHost, originalCode) {
-  if (!preview || typeof window === "undefined" || typeof window.getComputedStyle !== "function") {
-    return;
-  }
-  const preStyle = window.getComputedStyle(originalPre);
-  const hostStyle = originalHost ? window.getComputedStyle(originalHost) : null;
-  const codeStyle = originalCode ? window.getComputedStyle(originalCode) : null;
-  preview.style.padding = hostStyle ? hostStyle.padding : "0";
-  preview.style.borderRadius = hostStyle ? hostStyle.borderRadius : "0";
-  preview.style.background = "transparent";
-  preview.style.border = "0";
-  preview.style.boxShadow = "none";
-  preview.style.color = preStyle.color;
-
-  const code = preview.querySelector("[data-cgpt-code-preview-content='1']");
-  if (!code || !codeStyle) return;
-  code.style.fontFamily = codeStyle.fontFamily;
-  code.style.fontSize = codeStyle.fontSize;
-  code.style.fontWeight = codeStyle.fontWeight;
-  code.style.lineHeight = codeStyle.lineHeight;
-  code.style.letterSpacing = codeStyle.letterSpacing;
-  code.style.tabSize = codeStyle.tabSize;
-  code.style.whiteSpace = "pre-wrap";
-  code.style.wordBreak = "break-word";
-  code.style.color = codeStyle.color || preStyle.color;
-}
-
 function cgptFindNativeHeaderLabelContainer(pre) {
   if (!pre || typeof pre.querySelectorAll !== "function") return null;
   const buttons = Array.from(pre.querySelectorAll("button[aria-label]"));
@@ -72,7 +29,7 @@ function cgptFindNativeHeaderLabelContainer(pre) {
     return Boolean(
       element &&
       typeof element.querySelector === "function" &&
-      element.querySelector("pre, code, .cm-content, .cm-scroller, [data-cgpt-code-preview='1']")
+      element.querySelector("pre, code, .cm-content, .cm-scroller")
     );
   };
 
@@ -183,53 +140,6 @@ function cgptSyncCompactHeaderPath(pre, metadata, mode) {
   }
 }
 
-function cgptBuildCompactPreviewText(code, lineCount) {
-  const source =
-    typeof cgptGetDisplayCodeText === "function"
-      ? cgptGetDisplayCodeText(code)
-      : typeof cgptGetNormalizedCodeText === "function"
-        ? cgptGetNormalizedCodeText(code)
-        : "";
-  const normalized = source.replace(/\r\n/g, "\n").replace(/\n+$/, "");
-  if (!normalized) {
-    return "";
-  }
-  const lines = normalized.split("\n");
-  const safeLineCount = Number.isFinite(lineCount) ? Math.max(0, lineCount) : 0;
-  if (safeLineCount <= 0) {
-    return lines.length ? "..." : "";
-  }
-  const previewLines = lines.slice(0, safeLineCount);
-  if (lines.length > safeLineCount) {
-    previewLines.push("...");
-  }
-  return previewLines.join("\n");
-}
-
-function cgptSyncCompactPreview(pre, lineCount) {
-  if (!pre) return null;
-  const host = cgptGetCompactContentHost(pre);
-  if (!host || !host.parentElement) return null;
-  const code =
-    typeof cgptGetDecoratableCodeContent === "function" ? cgptGetDecoratableCodeContent(pre) : null;
-  if (!code) return null;
-
-  let preview = host.parentElement.querySelector(":scope > [data-cgpt-code-preview='1']");
-  if (!preview) {
-    preview = cgptCreateCompactPreviewElement();
-    host.insertAdjacentElement("afterend", preview);
-  }
-  cgptApplyCompactPreviewStyles(preview, pre, host, code);
-  const previewContent = preview.querySelector("[data-cgpt-code-preview-content='1']");
-  if (previewContent) {
-    const nextPreviewText = cgptBuildCompactPreviewText(code, lineCount);
-    if (previewContent.textContent !== nextPreviewText) {
-      previewContent.textContent = nextPreviewText;
-    }
-  }
-  return preview;
-}
-
 function cgptGetDecoratableCodeContent(pre) {
   if (!pre || typeof pre.querySelector !== "function") return null;
   if (typeof cgptGetCodeTextContainer === "function") {
@@ -273,6 +183,8 @@ function tryDecorateSingleCodeBlock(pre) {
 
   const metadata = cgptParseCodeBlockMetadata(code);
   const isAlreadyDecorated = pre.dataset.cgptCodeHelperApplied === "1";
+  const state =
+    typeof cgptGetCodeBlockState === "function" ? cgptGetCodeBlockState(pre) : null;
 
   if (!isAlreadyDecorated) {
     const wrapper = cgptWrapPreWithRelativeContainer(pre);
@@ -282,7 +194,9 @@ function tryDecorateSingleCodeBlock(pre) {
 
     const saveBtn = cgptCreateSaveButtonElement(Boolean(metadata));
     saveBtn.dataset.cgptButtonRole = "save";
-    pre.cgptSaveButton = saveBtn;
+    if (state) {
+      state.saveButton = saveBtn;
+    }
     saveBtn.addEventListener("click", () => {
       cgptHandleSaveButtonClick(saveBtn, code, pre);
     });
@@ -318,22 +232,26 @@ function tryDecorateSingleCodeBlock(pre) {
       cgptRefreshSaveButtonState(pre, code);
     });
 
-    pre.cgptButtonContainer = buttonContainer;
+    if (state) {
+      state.buttonContainer = buttonContainer;
+    }
     if (typeof cgptCalculateButtonOverlayOffset === "function") {
-      pre.cgptButtonOverlayOffset = cgptCalculateButtonOverlayOffset(buttonContainer);
+      const overlayOffset = cgptCalculateButtonOverlayOffset(buttonContainer);
+      if (state) {
+        state.buttonOverlayOffset = overlayOffset;
+      }
     }
 
     cgptEnsureCollapsibleState(pre);
-    pre.cgptViewButtons = { shrinkBtn, expandBtn };
-    pre.cgptMetadata = metadata || null;
-    cgptSyncCompactPreview(pre, 1);
+    if (state) {
+      state.viewButtons = { shrinkBtn, expandBtn };
+      state.metadata = metadata || null;
+    }
     cgptSetPreViewMode(pre, CGPT_VIEW_MODE.COMPACT);
   }
 
-  pre.cgptMetadata = metadata || null;
-  if (typeof cgptGetViewSettings === "function") {
-    const settings = cgptGetViewSettings();
-    cgptSyncCompactPreview(pre, settings.compactLineCount);
+  if (state) {
+    state.metadata = metadata || null;
   }
   cgptRefreshSaveButtonState(pre, code, metadata);
 }

@@ -2,6 +2,8 @@ const fs = require("fs/promises");
 const path = require("path");
 const { test, expect, chromium } = require("@playwright/test");
 const { probeExtensionContext } = require("../helpers/e2eEnvironment");
+const { ensureDir } = require("../helpers/e2eArtifacts");
+const { loadFixtureHtml, openStaticChatgptPage } = require("../helpers/mockChatgptPage");
 
 const repoRoot = path.join(__dirname, "..", "..");
 const testsRoot = path.join(__dirname, "..");
@@ -12,48 +14,28 @@ const artifactsRoot = path.join(testsRoot, "artifacts", "ui-screen-checks");
 const LOG_STORAGE_KEY = "cgptHelper.logs";
 const PROJECT_FOLDER_STORAGE_KEY = "cgptProjectFolderPath";
 
-async function ensureDir(dirPath) {
-  await fs.mkdir(dirPath, { recursive: true });
-}
-
-async function delay(ms) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function createMockContext(testInfo) {
   const profileBaseDir = path.join(artifactsRoot, "profiles");
   await ensureDir(profileBaseDir);
   const profileDir = await fs.mkdtemp(path.join(profileBaseDir, `${testInfo.title.replace(/[^\w-]+/g, "-")}-`));
-  const launchProbe = await probeExtensionContext({
+  return probeExtensionContext({
     chromium,
     profileDir,
     extensionPath,
   });
-  return launchProbe;
 }
 
 async function createMockPage(context) {
-  const fixtureHtml = await fs.readFile(fixturePath, "utf8");
+  const fixtureHtml = await loadFixtureHtml(fixturePath);
   const page = await context.newPage();
-  await page.route("https://chatgpt.com/**", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "text/html; charset=utf-8",
-      body: fixtureHtml,
-    });
+  await openStaticChatgptPage(page, "https://chatgpt.com/c/ui-screen-checks", fixtureHtml, {
+    documentOnly: false,
   });
-  await page.goto("https://chatgpt.com/c/ui-screen-checks", {
-    waitUntil: "domcontentloaded",
-  });
-  await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible({ timeout: 10_000 });
   return page;
 }
 
 async function getServiceWorker(context) {
-  return (
-    context.serviceWorkers()[0] ||
-    (await context.waitForEvent("serviceworker", { timeout: 20_000 }))
-  );
+  return context.serviceWorkers()[0] || (await context.waitForEvent("serviceworker", { timeout: 20_000 }));
 }
 
 async function readStorage(serviceWorker, areaName, keys) {
@@ -73,7 +55,8 @@ async function searchDownload(serviceWorker, downloadId) {
 }
 
 async function waitForLatestApplyLog(serviceWorker) {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
+  let latestResult = null;
+  await expect.poll(async () => {
     const storageState = await readStorage(serviceWorker, "local", [
       LOG_STORAGE_KEY,
       PROJECT_FOLDER_STORAGE_KEY,
@@ -83,27 +66,30 @@ async function waitForLatestApplyLog(serviceWorker) {
     if (latestLog && latestLog.ok && typeof latestLog.downloadId === "number") {
       const download = await searchDownload(serviceWorker, latestLog.downloadId);
       if (download && download.state === "complete" && download.filename) {
-        return { storageState, latestLog, download };
+        latestResult = { storageState, latestLog, download };
+        return true;
       }
     }
-    await delay(250);
-  }
-  throw new Error("Timed out while waiting for a completed download log.");
+    return false;
+  }, {
+    timeout: 10_000,
+    intervals: [100, 200, 250],
+    message: "Timed out while waiting for a completed download log.",
+  }).toBe(true);
+  return latestResult;
 }
 
 async function saveMockCodeBlock(page) {
   const projectFolderInput = page.locator("input[placeholder='e.g. dev/my-project']");
   await projectFolderInput.fill("workspace");
-  await page.getByRole("button", { name: "Set Folder" }).click();
+  await page.getByRole("button", { name: "Set Project Folder" }).click();
   await expect(page.locator("#cgpt-helper-toast")).toContainText("Project folder saved: workspace");
-  const saveButton = page.locator(
-    "[data-cgpt-code-wrapper='1'] button[data-cgpt-button-role='save']"
-  );
+  const saveButton = page.locator("[data-cgpt-code-wrapper='1'] button[data-cgpt-button-role='save']");
   await page.locator("[data-cgpt-code-wrapper='1']").hover();
   await saveButton.click();
 }
 
-test.describe("UI screen checks", () => {
+test.describe("UI screen checks @ui-evidence", () => {
   let sharedContext = null;
 
   test.beforeAll(async ({}, testInfo) => {
@@ -119,7 +105,7 @@ test.describe("UI screen checks", () => {
     }
   });
 
-  test("main panel shows the current panel sections", async ({}, testInfo) => {
+  test("main panel shows the current panel sections", async () => {
     test.setTimeout(120_000);
     const screenshotDir = path.join(artifactsRoot, "main-panel", "screenshots");
     await ensureDir(screenshotDir);
@@ -130,7 +116,7 @@ test.describe("UI screen checks", () => {
       await expect(panel).toContainText("Project Folder");
       await expect(panel).toContainText("Save Options");
       await expect(panel).toContainText("Display");
-      await expect(panel).toContainText("Display Actions");
+      await expect(panel).toContainText("View Controls");
       await expect(panel).toContainText("Logs");
       await panel.screenshot({ path: path.join(screenshotDir, "main-panel.png") });
     } finally {
@@ -138,7 +124,7 @@ test.describe("UI screen checks", () => {
     }
   });
 
-  test("templates panel opens from the floating Templates button", async ({}, testInfo) => {
+  test("templates panel opens from the floating Templates button", async () => {
     const screenshotDir = path.join(artifactsRoot, "templates-panel", "screenshots");
     await ensureDir(screenshotDir);
     const page = await createMockPage(sharedContext);
@@ -156,7 +142,7 @@ test.describe("UI screen checks", () => {
     }
   });
 
-  test("download log modal opens after a save and shows the latest download entry", async ({}, testInfo) => {
+  test("download log modal opens after a save and shows the latest download entry", async () => {
     const screenshotDir = path.join(artifactsRoot, "download-log-modal", "screenshots");
     await ensureDir(screenshotDir);
     const serviceWorker = await getServiceWorker(sharedContext);
@@ -176,7 +162,7 @@ test.describe("UI screen checks", () => {
     }
   });
 
-  test("chat log modal opens and shows the message/code summary UI", async ({}, testInfo) => {
+  test("chat log modal opens and shows the message/code summary UI", async () => {
     const screenshotDir = path.join(artifactsRoot, "chat-log-modal", "screenshots");
     await ensureDir(screenshotDir);
     const page = await createMockPage(sharedContext);
@@ -187,6 +173,7 @@ test.describe("UI screen checks", () => {
       await expect(modal).toContainText("Chat Log");
       await expect(modal).toContainText("Save uses the project folder");
       await expect(modal).toContainText("Generate a tiny app file and keep the answer concise.");
+      await expect(modal).toContainText("Implementation...");
       await expect(modal).toContainText("Code blocks (1)");
       await modal.screenshot({ path: path.join(screenshotDir, "chat-log-modal.png") });
     } finally {

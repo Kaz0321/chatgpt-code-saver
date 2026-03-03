@@ -41,11 +41,27 @@ export function demo${index}() {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Code Block Responsiveness</title>
     <style>
+      :root {
+        color-scheme: light;
+        --cgpt-page-bg: rgb(255, 255, 255);
+        --cgpt-surface-elevated: rgb(249, 249, 249);
+        --cgpt-border-light: rgba(13, 13, 13, 0.05);
+        --cgpt-text-primary: rgb(13, 13, 13);
+        --cgpt-button-hover: rgba(0, 0, 0, 0.05);
+      }
+      html.dark {
+        color-scheme: dark;
+        --cgpt-page-bg: rgb(33, 33, 33);
+        --cgpt-surface-elevated: rgb(24, 24, 24);
+        --cgpt-border-light: rgba(255, 255, 255, 0.05);
+        --cgpt-text-primary: rgb(255, 255, 255);
+        --cgpt-button-hover: rgba(255, 255, 255, 0.1);
+      }
       body {
         margin: 0;
-        font-family: sans-serif;
-        background: #111827;
-        color: #f9fafb;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--cgpt-page-bg);
+        color: var(--cgpt-text-primary);
       }
       main {
         max-width: 960px;
@@ -54,9 +70,7 @@ export function demo${index}() {
       }
       [data-message-author-role] {
         margin-bottom: 24px;
-        padding: 20px;
-        border-radius: 16px;
-        background: #1f2937;
+        padding: 20px 0;
       }
       pre {
         position: relative;
@@ -66,20 +80,21 @@ export function demo${index}() {
         background: transparent;
       }
       .cgpt-mock-code-shell {
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        border-radius: 20px;
-        background: #0f172a;
+        border: 1px solid var(--cgpt-border-light);
+        border-radius: 24px;
+        background: var(--cgpt-surface-elevated);
         overflow: hidden;
       }
       .cgpt-mock-code-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 8px 14px;
-        background: rgba(15, 23, 42, 0.92);
-        color: #e5eefb;
+        padding: 8px 14px 7px 16px;
+        background: var(--cgpt-surface-elevated);
+        color: var(--cgpt-text-primary);
         font-size: 14px;
         font-weight: 600;
+        border-bottom: 1px solid var(--cgpt-border-light);
       }
       .cgpt-mock-code-label {
         display: flex;
@@ -87,14 +102,28 @@ export function demo${index}() {
         gap: 8px;
         min-width: 0;
       }
+      .cgpt-mock-code-actions button {
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+      }
+      .cgpt-mock-code-actions button:hover {
+        background: var(--cgpt-button-hover);
+      }
       .cgpt-mock-code-body {
-        padding: 18px 20px;
+        padding: 0;
+        background: var(--cgpt-surface-elevated);
       }
       code {
         display: block;
         white-space: pre-wrap;
-        font-family: "Courier New", monospace;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
         line-height: 1.5;
+        color: var(--cgpt-text-primary);
+        padding: 0 20px 18px;
+        background: var(--cgpt-surface-elevated);
       }
       #status {
         margin-bottom: 24px;
@@ -123,6 +152,7 @@ test("code block observer stays responsive under repeated mutations", async ({ p
   const scripts = await Promise.all([
     readScript("extension/shared/uiStyles.js"),
     readScript("extension/content/codeBlockMetadata.js"),
+    readScript("extension/content/codeBlockState.js"),
     readScript("extension/content/codeBlockViewMode.js"),
     readScript("extension/content/codeBlockButtons.js"),
     readScript("extension/content/codeBlocks.js"),
@@ -140,7 +170,6 @@ test("code block observer stays responsive under repeated mutations", async ({ p
 
     const before = {
       wrappers: document.querySelectorAll("[data-cgpt-code-wrapper='1']").length,
-      previews: document.querySelectorAll("[data-cgpt-code-preview='1']").length,
       paths: document.querySelectorAll("[data-cgpt-code-file-path='1']").length,
     };
 
@@ -160,7 +189,6 @@ test("code block observer stays responsive under repeated mutations", async ({ p
     const durationMs = performance.now() - start;
     const after = {
       wrappers: document.querySelectorAll("[data-cgpt-code-wrapper='1']").length,
-      previews: document.querySelectorAll("[data-cgpt-code-preview='1']").length,
       paths: document.querySelectorAll("[data-cgpt-code-file-path='1']").length,
       status: status.textContent,
     };
@@ -174,8 +202,6 @@ test("code block observer stays responsive under repeated mutations", async ({ p
 
   expect(result.before.wrappers).toBe(20);
   expect(result.after.wrappers).toBe(20);
-  expect(result.before.previews).toBe(20);
-  expect(result.after.previews).toBe(20);
   expect(result.after.paths).toBe(20);
   expect(result.after.status).toBe("tick-199");
   expect(result.durationMs).toBeLessThan(5000);

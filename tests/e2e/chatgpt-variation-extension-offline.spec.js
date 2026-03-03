@@ -3,16 +3,14 @@ const path = require("path");
 const assert = require("node:assert/strict");
 const { test, expect } = require("@playwright/test");
 const { probeExtensionContext } = require("../helpers/e2eEnvironment");
+const { ensureArtifactDirs, writeJsonArtifact } = require("../helpers/e2eArtifacts");
+const { loadFixtureHtml, openStaticChatgptPage } = require("../helpers/mockChatgptPage");
+const { getSavedVariationFixture } = require("../helpers/savedVariationFixture");
 
 const repoRoot = path.join(__dirname, "..", "..");
 const testsRoot = path.join(__dirname, "..");
 const extensionPath = path.join(repoRoot, "extension");
-const fixturePath = path.join(repoRoot, "チャット内表現バリエーション.html");
 const artifactsRoot = path.join(testsRoot, "artifacts", "chatgpt-variation-extension-offline");
-
-async function ensureDir(dirPath) {
-  await fs.mkdir(dirPath, { recursive: true });
-}
 
 async function readVariationCoverage(page) {
   return page.evaluate(() => {
@@ -41,7 +39,6 @@ async function readVariationCoverage(page) {
     return {
       preCount: codeBlocks.length,
       saveButtonCount: document.querySelectorAll("button[data-cgpt-button-role='save']").length,
-      compactPreviewCount: document.querySelectorAll("[data-cgpt-code-preview='1']").length,
       missing,
     };
   });
@@ -51,17 +48,15 @@ test("adds save buttons to all code blocks in the variation fixture", async ({ b
   test.skip(browserName !== "chromium", "Extension coverage requires Chromium.");
   test.setTimeout(240_000);
 
+  const fixture = getSavedVariationFixture();
+  test.skip(!fixture, "Saved variation fixture was not found under tests/fixtures/saved-variation.");
+
   const screenshotDir = path.join(artifactsRoot, "screenshots");
   const stateDir = path.join(artifactsRoot, "state");
   const profileBaseDir = path.join(artifactsRoot, "profiles");
+  await ensureArtifactDirs(screenshotDir, stateDir, profileBaseDir);
 
-  await Promise.all([
-    ensureDir(screenshotDir),
-    ensureDir(stateDir),
-    ensureDir(profileBaseDir),
-  ]);
-
-  const fixtureHtml = await fs.readFile(fixturePath, "utf8");
+  const fixtureHtml = await loadFixtureHtml(fixture.htmlPath);
   const profileDir = await fs.mkdtemp(path.join(profileBaseDir, "run-"));
 
   const launchProbe = await probeExtensionContext({
@@ -74,28 +69,7 @@ test("adds save buttons to all code blocks in the variation fixture", async ({ b
 
   try {
     const page = await context.newPage();
-    await page.route("https://chatgpt.com/**", async (route) => {
-      if (route.request().resourceType() !== "document") {
-        await route.fulfill({
-          status: 204,
-          contentType: "text/plain; charset=utf-8",
-          body: "",
-        });
-        return;
-      }
-
-      await route.fulfill({
-        status: 200,
-        contentType: "text/html; charset=utf-8",
-        body: fixtureHtml,
-      });
-    });
-
-    await page.goto("https://chatgpt.com/c/variation-fixture", {
-      waitUntil: "domcontentloaded",
-    });
-
-    await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible();
+    await openStaticChatgptPage(page, "https://chatgpt.com/c/variation-fixture", fixtureHtml);
 
     await expect
       .poll(async () => {
@@ -111,15 +85,10 @@ test("adds save buttons to all code blocks in the variation fixture", async ({ b
         path: path.join(screenshotDir, "variation-fixture.png"),
         fullPage: true,
       }),
-      fs.writeFile(
-        path.join(stateDir, "variation-result.json"),
-        `${JSON.stringify(result, null, 2)}\n`,
-        "utf8"
-      ),
+      writeJsonArtifact(path.join(stateDir, "variation-result.json"), result),
     ]);
 
     assert.deepStrictEqual(result.missing, []);
-    assert.strictEqual(result.compactPreviewCount, result.preCount);
   } finally {
     await context.close();
   }

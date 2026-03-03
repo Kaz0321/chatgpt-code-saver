@@ -1,226 +1,13 @@
 const CHAT_LOG_SELECTOR = "[data-message-author-role]";
 const chatLogEntries = [];
 const chatLogTrackedIds = new Set();
+const chatLogPendingFoldTimers = new Map();
 let chatLogOrderCounter = 0;
 let chatLogTrackerInitialized = false;
 let chatLogHighlightStyleInjected = false;
 let chatLogTimestampStyleInjected = false;
-let chatLogFoldStyleInjected = false;
-const CGPT_FOLD_LEVEL_COLORS = [
-  "#60a5fa",
-  "#a78bfa",
-  "#f472b6",
-  "#34d399",
-  "#f59e0b",
-  "#38bdf8",
-  "#c084fc",
-];
-const CGPT_FOLD_INDENT_STEP_PX = 6;
-const CGPT_FOLD_GUIDE_STEP_PX = 12;
-const CGPT_FOLD_LINE_LEFT_BASE_PX = 8;
-const CGPT_FOLD_CONTENT_LEFT_BASE_PX = 18;
-const CGPT_FOLD_LINE_WIDTH_PX = 1;
-
-function cgptGetFoldLevelColor(level) {
-  const paletteIndex = Math.min(
-    Math.max(Number.parseInt(level, 10) || 0, 0),
-    CGPT_FOLD_LEVEL_COLORS.length - 1
-  );
-  const color = CGPT_FOLD_LEVEL_COLORS[paletteIndex];
-  return color || CGPT_FOLD_LEVEL_COLORS[0];
-}
-
-function cgptApplyFoldState(foldElement, isOpen) {
-  if (!foldElement) return;
-  const open = isOpen !== false;
-  foldElement.dataset.cgptHelperFoldOpen = open ? "1" : "0";
-  foldElement.classList.toggle("cgpt-helper-fold-collapsed", !open);
-  foldElement.querySelectorAll(".cgpt-helper-fold-action-button").forEach((btn) => {
-    if (!btn.dataset.cgptHelperFoldAction) return;
-    const action = btn.dataset.cgptHelperFoldAction;
-    if (action === "compact") {
-      if (typeof cgptSetSharedButtonDisabled === "function") {
-        cgptSetSharedButtonDisabled(btn, !open);
-      } else {
-        btn.disabled = !open;
-      }
-      btn.classList.toggle("cgpt-helper-fold-action-disabled", !open);
-    }
-    if (action === "expand") {
-      if (typeof cgptSetSharedButtonDisabled === "function") {
-        cgptSetSharedButtonDisabled(btn, open);
-      } else {
-        btn.disabled = open;
-      }
-      btn.classList.toggle("cgpt-helper-fold-action-disabled", open);
-    }
-  });
-}
-
-function cgptCreateFoldSection({
-  title,
-  initiallyOpen = true,
-  level = 0,
-  visualLevel = level,
-  badgeText = "",
-  actions = {},
-}) {
-  const fold = document.createElement("div");
-  fold.className = "cgpt-helper-fold";
-  const parsedLevel = Number.parseInt(level, 10);
-  const numericLevel = Number.isFinite(parsedLevel) ? Math.max(0, parsedLevel) : 0;
-  const clampedLevel = Math.min(numericLevel, 6);
-  const parsedVisualLevel = Number.parseInt(visualLevel, 10);
-  const numericVisualLevel = Number.isFinite(parsedVisualLevel) ? Math.max(0, parsedVisualLevel) : 0;
-  const clampedVisualLevel = Math.min(numericVisualLevel, 6);
-  fold.style.setProperty("--cgpt-helper-fold-level", `${clampedVisualLevel}`);
-  fold.style.setProperty(
-    "--cgpt-helper-fold-indent",
-    `${clampedVisualLevel > 1 ? CGPT_FOLD_INDENT_STEP_PX : 0}px`
-  );
-  fold.style.setProperty("--cgpt-helper-fold-line-offset", "0px");
-  fold.style.setProperty("--cgpt-helper-fold-color", cgptGetFoldLevelColor(clampedLevel));
-  fold.dataset.cgptHelperFoldLevel = `${clampedLevel}`;
-  if (numericVisualLevel > 0) {
-    fold.classList.add("cgpt-helper-fold-nested");
-  }
-
-  const header = document.createElement("div");
-  header.className = "cgpt-helper-fold-header";
-
-  const titleWrapper = document.createElement("div");
-  titleWrapper.className = "cgpt-helper-fold-title";
-  if (badgeText) {
-    const badge = document.createElement("span");
-    badge.className = "cgpt-helper-fold-title-badge";
-    badge.textContent = badgeText;
-    if (typeof cgptApplySharedChipStyle === "function") {
-      cgptApplySharedChipStyle(badge, { variant: "chip", size: "md" });
-    }
-    titleWrapper.appendChild(badge);
-  }
-  if (title) {
-    const titleText = document.createElement("span");
-    titleText.className = "cgpt-helper-fold-title-text";
-    titleText.textContent = title;
-    titleWrapper.appendChild(titleText);
-  }
-  header.appendChild(titleWrapper);
-
-  const actionsWrapper = document.createElement("div");
-  actionsWrapper.className = "cgpt-helper-fold-actions";
-  const buttons = cgptCreateFoldActionButtons(actions);
-  buttons.forEach((btn) => actionsWrapper.appendChild(btn));
-  header.appendChild(actionsWrapper);
-  fold.appendChild(header);
-
-  const body = document.createElement("div");
-  body.className = "cgpt-helper-fold-body";
-  fold.appendChild(body);
-
-  let isOpen = initiallyOpen !== false;
-  const updateState = () => {
-    cgptApplyFoldState(fold, isOpen);
-  };
-
-  buttons.forEach((btn) => {
-    if (!btn.dataset.cgptHelperFoldAction) return;
-    const action = btn.dataset.cgptHelperFoldAction;
-    if (action === "compact") {
-      btn.addEventListener("click", () => {
-        isOpen = false;
-        updateState();
-      });
-    }
-    if (action === "expand") {
-      btn.addEventListener("click", () => {
-        isOpen = true;
-        updateState();
-      });
-    }
-  });
-
-  updateState();
-
-  return { container: fold, body, titleWrapper };
-}
-
-function cgptCreateFoldActionButtons(actionConfig = {}) {
-  const buttons = [];
-  const {
-    onSave,
-    onSaveAs,
-    onCopy,
-    showSave = true,
-    showSaveAs = true,
-    showCopy = true,
-  } = actionConfig || {};
-
-  const addButton = (label, variant, actionKey, handler, shouldShow = true) => {
-    if (!shouldShow) return;
-    const button = cgptCreateFoldActionButton(label, variant);
-    if (actionKey) {
-      button.dataset.cgptHelperFoldAction = actionKey;
-      cgptApplyFoldActionTitle(button, actionKey);
-    }
-    if (typeof handler === "function") {
-      button.addEventListener("click", handler);
-    } else if (actionKey !== "compact" && actionKey !== "expand") {
-      button.disabled = true;
-      button.classList.add("cgpt-helper-fold-action-disabled");
-    }
-    buttons.push(button);
-  };
-
-  addButton("Save", "primary", "save", onSave, showSave);
-  addButton("Save As", "secondary", "saveAs", onSaveAs, showSaveAs);
-  addButton("Copy", "ghost", "copy", onCopy, showCopy);
-  addButton("Compact", "secondary", "compact", null, true);
-  addButton("Expand", "secondary", "expand", null, true);
-
-  return buttons;
-}
-
-function cgptApplyFoldActionTitle(button, actionKey) {
-  if (!button || !actionKey) return;
-  const titles = {
-    save: "Save to the project folder",
-    saveAs: "Choose where to save this text",
-    copy: "Copy this text",
-    compact: "Collapse this section",
-    expand: "Expand this section",
-  };
-  if (titles[actionKey]) {
-    button.title = titles[actionKey];
-  }
-}
-
-function cgptCreateFoldActionButton(label, variant = "secondary") {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "cgpt-helper-fold-action-button";
-  button.textContent = label;
-  if (typeof cgptApplySharedButtonStyle === "function") {
-    cgptApplySharedButtonStyle(button, { variant: "chip", size: "md", shape: "pill" });
-  } else {
-    button.style.display = "inline-flex";
-    button.style.alignItems = "center";
-    button.style.justifyContent = "center";
-    button.style.minHeight = "30px";
-    button.style.padding = "0 12px";
-    button.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", sans-serif';
-    button.style.fontWeight = "600";
-    button.style.fontSize = "12px";
-    button.style.lineHeight = "1";
-    button.style.borderRadius = "999px";
-    button.style.border = "1px solid rgba(148, 163, 184, 0.52)";
-    button.style.background = "rgba(241, 245, 249, 0.92)";
-    button.style.color = "#334155";
-  }
-  button.style.boxShadow = "none";
-  button.style.minWidth = "0";
-  return button;
-}
+const CHAT_LOG_FOLD_DELAY_MS = 120;
+const CHAT_LOG_FOLD_MAX_RETRIES = 8;
 
 function cgptBuildChatFoldActions(entry) {
   const textSupplier = () => (entry && entry.text ? entry.text : "");
@@ -348,6 +135,8 @@ function initChatLogTracker(root = document) {
 function resetChatLogEntries() {
   chatLogEntries.length = 0;
   chatLogTrackedIds.clear();
+  chatLogPendingFoldTimers.forEach((timerId) => clearTimeout(timerId));
+  chatLogPendingFoldTimers.clear();
   chatLogOrderCounter = 0;
   if (document && typeof document.querySelectorAll === "function") {
     document.querySelectorAll("[data-cgpt-helper-chat-tracked='1']").forEach((el) => {
@@ -413,6 +202,16 @@ function captureChatLogsFromNode(rootNode) {
 
   if (rootNode.nodeType !== Node.ELEMENT_NODE) return;
 
+  const ownerMessage =
+    rootNode.matches && rootNode.matches(CHAT_LOG_SELECTOR)
+      ? rootNode
+      : typeof rootNode.closest === "function"
+        ? rootNode.closest(CHAT_LOG_SELECTOR)
+        : null;
+  if (ownerMessage && ownerMessage.dataset.cgptHelperChatTracked === "1") {
+    cgptRefreshTrackedChatMessage(ownerMessage);
+  }
+
   if (rootNode.matches && rootNode.matches(CHAT_LOG_SELECTOR)) {
     processChatMessageElement(rootNode);
   }
@@ -452,7 +251,7 @@ function processChatMessageElement(el) {
 
   chatLogEntries.push(entry);
   renderChatMessageTimestamp(entry);
-  renderChatMessageFolding(entry);
+  cgptScheduleChatMessageFolding(entry);
 }
 
 function extractChatMessageTimestamp(el) {
@@ -465,6 +264,58 @@ function extractChatMessageTimestamp(el) {
     if (dt) return dt;
   }
   return new Date().toISOString();
+}
+
+function cgptGetTrackedChatEntry(element) {
+  if (!element) return null;
+  const entryId =
+    element.getAttribute("data-message-id") ||
+    element.dataset.messageId ||
+    element.getAttribute("data-id") ||
+    null;
+  if (entryId) {
+    const exactMatch = chatLogEntries.find((entry) => entry && entry.id === entryId);
+    if (exactMatch) return exactMatch;
+  }
+  return chatLogEntries.find((entry) => entry && entry.element === element) || null;
+}
+
+function cgptRefreshTrackedChatMessage(element) {
+  const entry = cgptGetTrackedChatEntry(element);
+  if (!entry) return;
+  entry.text = extractChatMessageText(element);
+  entry.timestamp = extractChatMessageTimestamp(element);
+  renderChatMessageTimestamp(entry);
+  if (element.dataset.cgptHelperFoldApplied !== "1") {
+    cgptScheduleChatMessageFolding(entry);
+  }
+}
+
+function cgptHasStableCodeBlocks(element) {
+  if (!element || typeof element.querySelectorAll !== "function") return true;
+  const preBlocks = Array.from(element.querySelectorAll("pre"));
+  if (!preBlocks.length) return true;
+  return preBlocks.every((pre) => pre.querySelector("code, .cm-content"));
+}
+
+function cgptScheduleChatMessageFolding(entry, attempt = 0) {
+  if (!entry || !entry.element) return;
+  if (entry.element.dataset.cgptHelperFoldApplied === "1") return;
+  const existingTimer = chatLogPendingFoldTimers.get(entry.id);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+  const timerId = setTimeout(() => {
+    chatLogPendingFoldTimers.delete(entry.id);
+    if (!cgptHasStableCodeBlocks(entry.element)) {
+      if (attempt < CHAT_LOG_FOLD_MAX_RETRIES) {
+        cgptScheduleChatMessageFolding(entry, attempt + 1);
+      }
+      return;
+    }
+    renderChatMessageFolding(entry);
+  }, CHAT_LOG_FOLD_DELAY_MS);
+  chatLogPendingFoldTimers.set(entry.id, timerId);
 }
 
 function renderChatMessageTimestamp(entry) {
@@ -516,8 +367,10 @@ function renderChatMessageFolding(entry) {
     initiallyOpen: true,
     level: 0,
     badgeText: cgptGetChatEntryDisplayLabel(entry),
+    badgeVariant: entry.role === "user" ? "userChip" : "assistantChip",
     actions: cgptBuildChatFoldActions(entry),
   });
+  fold.container.dataset.cgptHelperAuthorRole = entry.role || "";
 
   if (timestampNode) {
     fold.titleWrapper.appendChild(timestampNode);
@@ -530,404 +383,27 @@ function renderChatMessageFolding(entry) {
   messageElement.insertBefore(fold.container, messageElement.firstChild);
 
   entry.element.dataset.cgptHelperFoldApplied = "1";
+  const pendingTimer = chatLogPendingFoldTimers.get(entry.id);
+  if (pendingTimer) {
+    clearTimeout(pendingTimer);
+    chatLogPendingFoldTimers.delete(entry.id);
+  }
   if (entry.role === "assistant" && cgptShouldApplyHeadingFold(body)) {
     applyHeadingFold(body, 1);
   }
 }
 
-function cgptGetChatEntryDisplayLabel(entry) {
-  if (!entry) return "";
-  if (entry.role === "user") {
-    return "User";
-  }
-  const element = entry.element;
-  const candidates = [
-    element && element.getAttribute ? element.getAttribute("data-message-model-slug") : "",
-    element && element.getAttribute ? element.getAttribute("data-message-model-name") : "",
-    element && element.getAttribute ? element.getAttribute("data-model-slug") : "",
-    element && element.getAttribute ? element.getAttribute("data-model-name") : "",
-    element && element.dataset ? element.dataset.messageModelSlug : "",
-    element && element.dataset ? element.dataset.messageModelName : "",
-    element && element.dataset ? element.dataset.modelSlug : "",
-    element && element.dataset ? element.dataset.modelName : "",
-  ];
-  for (const candidate of candidates) {
-    const normalized = cgptNormalizeChatEntryDisplayLabel(candidate);
-    if (normalized) {
-      return normalized;
-    }
-  }
-  return "AI";
-}
-
-function cgptNormalizeChatEntryDisplayLabel(value) {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
-  if (!text) return "";
-
-  const slugMatch = text.match(/^gpt-(\d+)(?:-(\d+))?(?:-(.+))?$/i);
-  if (slugMatch) {
-    const [, major, minor, suffix] = slugMatch;
-    const version = minor ? `${major}.${minor}` : major;
-    const suffixText = suffix
-      ? suffix
-          .split("-")
-          .filter(Boolean)
-          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(" ")
-      : "";
-    return `GPT ${version}${suffixText ? ` ${suffixText}` : ""}`;
-  }
-
-  const cleaned = text.replace(/^chatgpt\s*/i, "").trim();
-  return cleaned || "";
-}
-
-function cgptShouldApplyHeadingFold(root) {
-  if (!root || !(root.querySelectorAll instanceof Function)) return false;
-  const headings = Array.from(root.querySelectorAll("h1, h2, h3, h4, h5, h6"));
-  return headings.length > 0;
-}
-
-function cgptGetHeadingLevel(headingElement) {
-  const tag = headingElement && headingElement.tagName ? headingElement.tagName.toUpperCase() : "";
-  const match = tag.match(/^H(\d)$/);
-  if (!match) return 0;
-  const level = Number.parseInt(match[1], 10);
-  return Number.isFinite(level) ? level : 0;
-}
-
-function cgptCollectHeadingSectionNodes(heading, nextHeading) {
-  if (!heading || !heading.parentNode) return [];
-  const nodes = [];
-  let cursor = heading.nextSibling;
-  while (cursor && cursor !== nextHeading) {
-    nodes.push(cursor);
-    cursor = cursor.nextSibling;
-  }
-  return nodes;
-}
-
-function cgptSetHeadingFoldOpen(heading, isOpen) {
-  if (!heading) return;
-  const open = isOpen !== false;
-  heading.dataset.cgptHelperFoldOpen = open ? "1" : "0";
-  heading.classList.toggle("cgpt-helper-heading-collapsed", !open);
-
-  const toggleButton = heading.querySelector(".cgpt-helper-heading-toggle");
-  if (toggleButton) {
-    toggleButton.setAttribute("aria-expanded", open ? "true" : "false");
-    toggleButton.setAttribute("aria-label", open ? "Collapse section" : "Expand section");
-    toggleButton.title = open ? "Collapse section" : "Expand section";
-  }
-}
-
-function cgptRefreshHeadingFoldVisibility(root) {
-  if (!root || !(root.querySelectorAll instanceof Function)) return;
-  const sections = Array.from(root.querySelectorAll(".cgpt-helper-heading-section"));
-  const collapsedStack = [];
-
-  sections.forEach((section) => {
-    const heading = section.querySelector(".cgpt-helper-heading-fold");
-    const body = section.querySelector(".cgpt-helper-heading-body");
-    if (!heading) return;
-    const level = Number.parseInt(heading.dataset.cgptHelperFoldLevel || "0", 10);
-    if (!Number.isFinite(level) || level < 1) return;
-
-    while (collapsedStack.length && collapsedStack[collapsedStack.length - 1].level >= level) {
-      collapsedStack.pop();
-    }
-
-    const hiddenByAncestor = collapsedStack.length > 0;
-    const isOpen = heading.dataset.cgptHelperFoldOpen !== "0";
-    section.classList.toggle("cgpt-helper-heading-section-hidden", hiddenByAncestor);
-    if (body) {
-      body.classList.toggle("cgpt-helper-heading-section-hidden", !hiddenByAncestor && !isOpen);
-    }
-
-    if (!hiddenByAncestor && !isOpen) {
-      collapsedStack.push({ level });
-    }
-  });
-}
-
-function applyHeadingFold(root, baseLevel = 0) {
-  if (!root || !(root.querySelectorAll instanceof Function)) return;
-  const headings = Array.from(root.querySelectorAll("h1, h2, h3, h4, h5, h6"));
-  if (!headings.length) return;
-
-  const headingStack = [];
-
-  headings.forEach((heading, index) => {
-    if (heading.dataset.cgptHelperHeadingFoldApplied === "1") return;
-
-    const level = cgptGetHeadingLevel(heading);
-    if (!level) return;
-
-    while (headingStack.length && headingStack[headingStack.length - 1] >= level) {
-      headingStack.pop();
-    }
-    const parentVisualDepth = headingStack.length;
-    const visualLevel = headingStack.length + 1;
-    headingStack.push(level);
-
-    const nextHeading = (() => {
-      for (let i = index + 1; i < headings.length; i += 1) {
-        if (cgptGetHeadingLevel(headings[i]) <= level) {
-          return headings[i];
-        }
-      }
-      return null;
-    })();
-
-    const headingId = `heading-${baseLevel}-${index}`;
-    const sectionNodes = cgptCollectHeadingSectionNodes(heading, nextHeading);
-    const section = document.createElement("section");
-    const body = document.createElement("div");
-    const guide = document.createElement("div");
-
-    section.className = "cgpt-helper-heading-section";
-    body.className = "cgpt-helper-heading-body";
-    guide.className = "cgpt-helper-heading-guide";
-
-    heading.dataset.cgptHelperHeadingId = headingId;
-    heading.dataset.cgptHelperHeadingFoldApplied = "1";
-    heading.classList.add("cgpt-helper-heading-fold", "cgpt-helper-heading-title");
-    section.style.setProperty("--cgpt-helper-fold-visual-level", `${visualLevel}`);
-    section.style.setProperty("--cgpt-helper-fold-guide-count", `${level}`);
-    section.style.setProperty("--cgpt-helper-fold-level", `${visualLevel}`);
-    section.style.setProperty(
-      "--cgpt-helper-fold-indent",
-      `${visualLevel > 1 ? CGPT_FOLD_INDENT_STEP_PX : 0}px`
-    );
-    section.style.setProperty("--cgpt-helper-fold-color", cgptGetFoldLevelColor(level));
-
-    heading.style.setProperty("--cgpt-helper-fold-visual-level", `${visualLevel}`);
-    heading.style.setProperty("--cgpt-helper-fold-guide-count", `${level}`);
-    heading.style.setProperty(
-      "--cgpt-helper-fold-indent",
-      `${visualLevel > 1 ? CGPT_FOLD_INDENT_STEP_PX : 0}px`
-    );
-    heading.style.setProperty("--cgpt-helper-fold-color", cgptGetFoldLevelColor(level));
-    heading.dataset.cgptHelperFoldLevel = `${level}`;
-    guide.dataset.cgptHelperFoldDepth = `${parentVisualDepth}`;
-    guide.dataset.cgptHelperFoldLevel = `${level}`;
-
-    if (!heading.querySelector(":scope > .cgpt-helper-heading-toggle")) {
-      const toggleButton = document.createElement("button");
-      toggleButton.type = "button";
-      toggleButton.className = "cgpt-helper-heading-toggle";
-      toggleButton.dataset.cgptHelperFoldAction = "toggle";
-      heading.insertBefore(toggleButton, heading.firstChild);
-      toggleButton.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const nextOpen = heading.dataset.cgptHelperFoldOpen === "0";
-        cgptSetHeadingFoldOpen(heading, nextOpen);
-        cgptRefreshHeadingFoldVisibility(root);
-      });
-    }
-
-    heading.parentNode.insertBefore(section, heading);
-    section.appendChild(guide);
-    section.appendChild(heading);
-    section.appendChild(body);
-    sectionNodes.forEach((node) => body.appendChild(node));
-
-    cgptSetHeadingFoldOpen(heading, true);
-  });
-
-  cgptRefreshHeadingFoldVisibility(root);
-}
-
-function cgptFindHeadingFolds() {
-  if (!document || typeof document.querySelectorAll !== "function") return [];
-  return Array.from(document.querySelectorAll(".cgpt-helper-heading-fold"));
-}
-
-function cgptToggleHeadingFoldsAtLevel(level, shouldExpand = true) {
-  const parsed = Number.parseInt(level, 10);
-  if (!Number.isFinite(parsed)) return;
-  const targetLevel = Math.min(Math.max(parsed, 1), 6);
-  const affectedRoots = new Set();
-  cgptFindHeadingFolds().forEach((fold) => {
-    const foldLevel = Number.parseInt(fold.dataset.cgptHelperFoldLevel, 10);
-    if (foldLevel === targetLevel) {
-      cgptSetHeadingFoldOpen(fold, shouldExpand);
-      const root = fold.closest(".cgpt-helper-message-body");
-      if (root) {
-        affectedRoots.add(root);
-      }
-    }
-  });
-  affectedRoots.forEach((root) => cgptRefreshHeadingFoldVisibility(root));
-}
-
-function ensureChatLogFoldStyle() {
-  if (chatLogFoldStyleInjected) return;
-  const style = document.createElement("style");
-  style.textContent = `
-    .cgpt-helper-fold {
-      position: relative;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 10px;
-      padding: 10px 10px 10px 14px;
-      margin-top: 10px;
-      background: transparent;
-      color: inherit;
-      width: 100%;
-    }
-    .cgpt-helper-fold-nested {
-      padding-left: calc(${CGPT_FOLD_CONTENT_LEFT_BASE_PX}px + var(--cgpt-helper-fold-indent, 0px));
-    }
-    .cgpt-helper-fold-nested::before {
-      content: "";
-      position: absolute;
-      top: 8px;
-      bottom: 8px;
-      left: calc(${CGPT_FOLD_LINE_LEFT_BASE_PX}px + var(--cgpt-helper-fold-line-offset, 0px));
-      width: ${CGPT_FOLD_LINE_WIDTH_PX}px;
-      background: var(--cgpt-helper-fold-color, rgba(124, 58, 237, 0.65));
-      border-radius: 999px;
-      pointer-events: none;
-    }
-    .cgpt-helper-fold-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      width: 100%;
-    }
-    .cgpt-helper-fold-title {
-      display: flex;
-      align-items: center;
-      flex: 1 1 auto;
-      min-width: 0;
-      flex-wrap: wrap;
-      gap: 8px;
-      row-gap: 4px;
-      font-size: 12px;
-      font-weight: 600;
-      color: inherit;
-    }
-    .cgpt-helper-fold-title-text {
-      display: inline-flex;
-      align-items: center;
-      color: inherit;
-    }
-    .cgpt-helper-fold-title-badge {
-      box-sizing: border-box;
-      white-space: nowrap;
-    }
-    .cgpt-helper-fold-actions {
-      display: flex;
-      align-items: center;
-      flex: 0 0 auto;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 6px;
-    }
-    .cgpt-helper-fold-action-button {
-      cursor: pointer;
-      gap: 4px;
-      min-width: 0;
-      transition: transform 0.1s ease, opacity 0.2s ease;
-    }
-    .cgpt-helper-fold-action-button:hover:not(.cgpt-helper-fold-action-disabled) {
-      transform: translateY(-1px);
-    }
-    .cgpt-helper-fold-action-disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-    .cgpt-helper-fold-body {
-      margin-top: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      color: inherit;
-    }
-    .cgpt-helper-fold-collapsed .cgpt-helper-fold-body {
-      display: none;
-    }
-    .cgpt-helper-heading-title {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding-left: calc(20px + ${CGPT_FOLD_GUIDE_STEP_PX}px);
-      color: inherit;
-    }
-    .cgpt-helper-heading-section {
-      position: relative;
-      margin: 2px 0;
-    }
-    .cgpt-helper-heading-fold {
-      margin: 0;
-    }
-    .cgpt-helper-heading-body {
-      padding-left: 0;
-    }
-    .cgpt-helper-heading-body > * {
-      margin-top: 0;
-    }
-    .cgpt-helper-heading-body > * + * {
-      margin-top: 8px;
-    }
-    .cgpt-helper-heading-body > .cgpt-helper-heading-section {
-      margin-left: ${CGPT_FOLD_GUIDE_STEP_PX}px;
-    }
-    .cgpt-helper-heading-body > :not(.cgpt-helper-heading-section) {
-      margin-left: ${CGPT_FOLD_GUIDE_STEP_PX}px;
-      padding-left: 20px;
-    }
-    .cgpt-helper-heading-guide {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      width: ${CGPT_FOLD_LINE_WIDTH_PX}px;
-      background: var(--cgpt-helper-fold-color, rgba(124, 58, 237, 0.65));
-      border-radius: 999px;
-      pointer-events: none;
-    }
-    .cgpt-helper-heading-toggle {
-      position: relative;
-      flex: 0 0 auto;
-      width: 14px;
-      height: 14px;
-      margin: 0;
-      padding: 0;
-      border: none;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-    }
-    .cgpt-helper-heading-toggle::before {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 7px;
-      height: 7px;
-      border-right: 2px solid var(--cgpt-helper-fold-color, currentColor);
-      border-bottom: 2px solid var(--cgpt-helper-fold-color, currentColor);
-      transform: translate(-50%, -60%) rotate(45deg);
-      transition: transform 0.15s ease;
-    }
-    .cgpt-helper-heading-collapsed .cgpt-helper-heading-toggle::before {
-      transform: translate(-40%, -50%) rotate(-45deg);
-    }
-    .cgpt-helper-heading-section-hidden {
-      display: none !important;
-    }
-  `;
-  document.head.appendChild(style);
-  chatLogFoldStyleInjected = true;
-}
-
 function extractChatMessageText(el) {
   if (!el) return "";
+  const body =
+    (typeof el.querySelector === "function" &&
+      (el.querySelector(":scope > .cgpt-helper-fold .cgpt-helper-message-body") ||
+        el.querySelector(".cgpt-helper-message-body"))) ||
+    null;
+  if (body) {
+    if (body.innerText) return body.innerText.trim();
+    if (body.textContent) return body.textContent.trim();
+  }
   if (el.innerText) return el.innerText.trim();
   if (el.textContent) return el.textContent.trim();
   return "";

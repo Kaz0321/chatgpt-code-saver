@@ -23,11 +23,11 @@ function buildMockPageHtml({ prompt, assistantOuterHtml }) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Offline ChatGPT UI Pattern Fixture</title>
     <style>
-      body { margin: 0; font-family: sans-serif; background: #111827; color: #f9fafb; }
+      body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f7f7f8; color: #1f2937; }
       main { max-width: 960px; margin: 0 auto; padding: 32px 24px 120px; }
-      [data-message-author-role] { margin-bottom: 24px; padding: 20px; border-radius: 16px; background: #1f2937; }
-      pre { overflow: auto; padding: 18px 20px; border-radius: 12px; background: #0f172a; color: #f9fafb; }
-      code { font-family: "Courier New", monospace; }
+      [data-message-author-role] { margin-bottom: 24px; padding: 20px; border-radius: 16px; background: #ffffff; border: 1px solid #e5e7eb; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
+      pre { overflow: auto; padding: 18px 20px; border-radius: 12px; background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
       table { border-collapse: collapse; width: 100%; }
       th, td { border: 1px solid #94a3b8; padding: 8px; }
       blockquote { margin: 16px 0; padding-left: 16px; border-left: 4px solid #94a3b8; }

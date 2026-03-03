@@ -12,7 +12,7 @@ async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
 }
 
-test("checks live ChatGPT reachability and extension injection", async () => {
+test("checks live ChatGPT reachability and extension injection @live", async () => {
   test.setTimeout(120_000);
 
   const screenshotDir = path.join(artifactsRoot, "screenshots");
@@ -51,7 +51,26 @@ test("checks live ChatGPT reachability and extension injection", async () => {
       timeout: 60_000,
     });
 
-    await page.waitForTimeout(5000);
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const textbox =
+          document.querySelector("div[contenteditable='true'][data-testid='textbox']") ||
+          document.querySelector("div[contenteditable='true'][role='textbox']") ||
+          document.querySelector("textarea[data-testid='chat-input']") ||
+          document.querySelector("textarea");
+        return {
+          readyState: document.readyState,
+          title: document.title,
+          hasTextbox: Boolean(textbox),
+          bodyTextLength: document.body ? document.body.innerText.trim().length : 0,
+        };
+      });
+    }, {
+      timeout: 10_000,
+      intervals: [200, 500, 1000],
+    }).toMatchObject({
+      readyState: "complete",
+    });
 
     const state = await page.evaluate(() => {
       const helperPanel = Boolean(document.getElementById("cgpt-code-helper-panel"));

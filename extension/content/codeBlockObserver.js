@@ -12,7 +12,6 @@ function cgptIsHelperOwnedNode(node) {
   return Boolean(
     element.closest(
       [
-        "[data-cgpt-code-preview='1']",
         "[data-cgpt-code-file-path='1']",
         "[data-cgpt-code-actions='1']",
       ].join(",")

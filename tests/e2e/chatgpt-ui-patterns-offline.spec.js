@@ -77,6 +77,7 @@ test.describe("offline chatgpt ui pattern fixtures", () => {
     : null;
 
   const scenarios = manifest?.scenarios?.filter((scenario) => scenario.validated) || [];
+  let sharedContext = null;
 
   if (!scenarios.length) {
     test("skips when no validated live ui fixtures are collected", async () => {
@@ -85,28 +86,38 @@ test.describe("offline chatgpt ui pattern fixtures", () => {
     return;
   }
 
+  test.beforeAll(async () => {
+    const profileBaseDir = path.join(artifactsRoot, "profiles");
+    await ensureDir(profileBaseDir);
+    const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "suite-"));
+    sharedContext = await chromium.launchPersistentContext(profileDir, {
+      channel: "chromium",
+      headless: true,
+      env: getBrowserLaunchEnv(),
+    });
+  });
+
+  test.afterAll(async () => {
+    if (sharedContext) {
+      await sharedContext.close().catch(() => {});
+      sharedContext = null;
+    }
+  });
+
   for (const scenario of scenarios) {
     test(`replays ${scenario.id}`, async () => {
       const scenarioDir = path.join(artifactsRoot, scenario.id);
       const screenshotDir = path.join(scenarioDir, "screenshots");
       const stateDir = path.join(scenarioDir, "state");
-      const profileBaseDir = path.join(scenarioDir, "profiles");
-      await Promise.all([ensureDir(screenshotDir), ensureDir(stateDir), ensureDir(profileBaseDir)]);
+      await Promise.all([ensureDir(screenshotDir), ensureDir(stateDir)]);
 
       const assistantOuterHtml = await fsp.readFile(
         path.join(fixtureRoot, scenario.responseOuterHtmlFile || scenario.responseHtmlFile),
         "utf8"
       );
 
-      const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "run-"));
-      const context = await chromium.launchPersistentContext(profileDir, {
-        channel: "chromium",
-        headless: true,
-        env: getBrowserLaunchEnv(),
-      });
-
+      const page = await sharedContext.newPage();
       try {
-        const page = await context.newPage();
         await page.setContent(
           buildMockPageHtml({
             prompt: scenario.prompt,
@@ -133,7 +144,7 @@ test.describe("offline chatgpt ui pattern fixtures", () => {
           ),
         ]);
       } finally {
-        await context.close();
+        await page.close().catch(() => {});
       }
     });
   }

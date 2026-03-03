@@ -17,7 +17,7 @@ function createSaveOptionsSection() {
   checkbox.checked = getStripFirstLineDefault();
 
   const text = document.createElement("span");
-  text.textContent = "Remove the first file: line when saving";
+  text.textContent = 'Remove the first "file:" line when saving';
   text.style.flex = "1";
 
   checkbox.addEventListener("change", () => {
@@ -28,8 +28,8 @@ function createSaveOptionsSection() {
     cgptUpdateSaveOptions({ stripFirstLineMetadata: nextValue }, () => {
       if (typeof showToast === "function") {
         const message = nextValue
-          ? "The first file: line will be removed on save."
-          : "The first line will be kept when saving.";
+          ? 'The first "file:" line will be removed on save.'
+          : 'The first "file:" line will be kept when saving.';
         showToast(message, "success");
       }
     });

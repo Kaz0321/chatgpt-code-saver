@@ -1,3 +1,29 @@
+function cgptResolveSaveMode(saveAs) {
+  if (typeof CGPT_SAVE_MODES !== "undefined") {
+    return saveAs ? CGPT_SAVE_MODES.SAVE_AS : CGPT_SAVE_MODES.SAVE;
+  }
+  return saveAs ? "saveAs" : "save";
+}
+
+async function cgptRunChatLogButtonAction(button, pendingLabel, action) {
+  if (!button || button.disabled || typeof action !== "function") return;
+  const originalText = button.textContent;
+  cgptSetChatLogButtonDisabled(button, true);
+  button.textContent = pendingLabel;
+  try {
+    return await action();
+  } finally {
+    button.textContent = originalText;
+    cgptSetChatLogButtonDisabled(button, false);
+  }
+}
+
+function cgptShowSingleChatLogError(message) {
+  if (typeof showToast === "function") {
+    showToast(message || "Failed to save", "error");
+  }
+}
+
 function cgptTriggerChatLogDownload(filePath, content, options = {}) {
   const {
     onDone,
@@ -17,13 +43,7 @@ function cgptTriggerChatLogDownload(filePath, content, options = {}) {
       request: {
         content,
         targetPath: filePath,
-        mode: saveAs && typeof CGPT_SAVE_MODES !== "undefined"
-          ? CGPT_SAVE_MODES.SAVE_AS
-          : typeof CGPT_SAVE_MODES !== "undefined"
-            ? CGPT_SAVE_MODES.SAVE
-            : saveAs
-              ? "saveAs"
-              : "save",
+        mode: cgptResolveSaveMode(saveAs),
         meta: {
           source: "chat-batch",
           ...meta,
@@ -83,57 +103,46 @@ function cgptCreateBatchSaveButton(blocks, options = {}) {
 }
 
 async function cgptHandleBatchSave(button, blocks, options = {}) {
-  const originalText = button.textContent;
-  cgptSetChatLogButtonDisabled(button, true);
-  button.textContent = options.pendingLabel || "Saving...";
-  try {
-    const results = await cgptDownloadCodeBlocksSequentially(blocks, { showToast: false });
-    cgptShowBatchSaveSummary(results, {
-      successMessage: (savedCount) => `Saved ${savedCount} code block${savedCount === 1 ? "" : "s"}.`,
-    });
-  } catch (error) {
-    cgptShowBatchSaveSummary(error && error.results ? error.results : [], {
-      fallbackError: error && error.message ? error.message : "Failed to save",
-    });
-  } finally {
-    button.textContent = originalText;
-    cgptSetChatLogButtonDisabled(button, false);
-  }
+  await cgptRunChatLogButtonAction(button, options.pendingLabel || "Saving...", async () => {
+    try {
+      const results = await cgptDownloadCodeBlocksSequentially(blocks, { showToast: false });
+      cgptShowBatchSaveSummary(results, {
+        successMessage: (savedCount) => `Saved ${savedCount} code block${savedCount === 1 ? "" : "s"}.`,
+      });
+    } catch (error) {
+      cgptShowBatchSaveSummary(error && error.results ? error.results : [], {
+        fallbackError: error && error.message ? error.message : "Failed to save",
+      });
+    }
+  });
 }
 
 async function cgptHandleBatchSaveAsAll(button, blocks) {
-  const originalText = button.textContent;
-  cgptSetChatLogButtonDisabled(button, true);
-  button.textContent = "Selecting...";
-  try {
-    const folderPath = await cgptPromptUserForDownloadFolder();
-    if (!folderPath) {
-      return;
-    }
-    button.textContent = "Saving...";
-    const results = await cgptDownloadCodeBlocksSequentially(blocks, {
-      overrideFolderPath: folderPath,
-      showToast: false,
-    });
-    cgptShowBatchSaveSummary(results, {
-      successMessage: (savedCount) =>
-        `Saved ${savedCount} code block${savedCount === 1 ? "" : "s"} to: ${folderPath}`,
-    });
-  } catch (error) {
-    if (error && Array.isArray(error.results)) {
-      cgptShowBatchSaveSummary(error.results, {
-        fallbackError: error.message || "Failed to save",
+  await cgptRunChatLogButtonAction(button, "Selecting...", async () => {
+    try {
+      const folderPath = await cgptPromptUserForDownloadFolder();
+      if (!folderPath) {
+        return;
+      }
+      button.textContent = "Saving...";
+      const results = await cgptDownloadCodeBlocksSequentially(blocks, {
+        overrideFolderPath: folderPath,
+        showToast: false,
       });
-    } else {
-      const message = (error && error.message) || "Failed to select a folder.";
-      if (typeof showToast === "function") {
-        showToast(message, "error");
+      cgptShowBatchSaveSummary(results, {
+        successMessage: (savedCount) =>
+          `Saved ${savedCount} code block${savedCount === 1 ? "" : "s"} to: ${folderPath}`,
+      });
+    } catch (error) {
+      if (error && Array.isArray(error.results)) {
+        cgptShowBatchSaveSummary(error.results, {
+          fallbackError: error.message || "Failed to save",
+        });
+      } else {
+        cgptShowSingleChatLogError((error && error.message) || "Failed to select a folder.");
       }
     }
-  } finally {
-    button.textContent = originalText;
-    cgptSetChatLogButtonDisabled(button, false);
-  }
+  });
 }
 
 function cgptCreateChatLogButton(label, variant = "secondary", size = "md") {
@@ -316,19 +325,17 @@ function cgptCreateBlockSaveAsButton(block) {
 }
 
 function cgptHandleBlockSave(button, block, saveAs) {
-  if (!button || button.disabled || !block || !block.filePath) return;
-  const originalText = button.textContent;
-  cgptSetChatLogButtonDisabled(button, true);
-  button.textContent = "Saving...";
-  cgptTriggerChatLogDownload(block.filePath, block.content, {
-    saveAs,
-    meta: {
-      source: "chat-block",
-    },
-    onDone: () => {
-      button.textContent = originalText;
-      cgptSetChatLogButtonDisabled(button, false);
-    },
+  if (!button || !block || !block.filePath) return;
+  cgptRunChatLogButtonAction(button, "Saving...", async () => {
+    await new Promise((resolve) => {
+      cgptTriggerChatLogDownload(block.filePath, block.content, {
+        saveAs,
+        meta: {
+          source: "chat-block",
+        },
+        onDone: resolve,
+      });
+    });
   });
 }
 

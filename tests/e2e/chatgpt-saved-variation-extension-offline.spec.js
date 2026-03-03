@@ -1,114 +1,28 @@
-const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
 const { test, expect, chromium } = require("@playwright/test");
 const { probeExtensionContext } = require("../helpers/e2eEnvironment");
+const { ensureArtifactDirs, writeJsonArtifact } = require("../helpers/e2eArtifacts");
+const { openSavedFixtureChatgptPage } = require("../helpers/mockChatgptPage");
+const { getSavedVariationFixture } = require("../helpers/savedVariationFixture");
 
 const repoRoot = path.join(__dirname, "..", "..");
 const testsRoot = path.join(__dirname, "..");
 const extensionPath = path.join(repoRoot, "extension");
 const artifactsRoot = path.join(testsRoot, "artifacts", "chatgpt-saved-variation-extension-offline");
 
-async function ensureDir(dirPath) {
-  await fsp.mkdir(dirPath, { recursive: true });
-}
-
-function findSavedVariationFixture() {
-  const htmlFileName = fs
-    .readdirSync(repoRoot)
-    .find((name) => name.endsWith(".html") && fs.readFileSync(path.join(repoRoot, name), "utf8").includes("見出し6"));
-
-  if (!htmlFileName) {
-    return null;
-  }
-
-  const assetsDirName = fs
-    .readdirSync(repoRoot)
-    .find((name) => name.endsWith("_files") && fs.existsSync(path.join(repoRoot, name)));
-
-  if (!assetsDirName) {
-    return null;
-  }
-
-  return {
-    htmlPath: path.join(repoRoot, htmlFileName),
-    assetsDirPath: path.join(repoRoot, assetsDirName),
-    assetsDirName,
-  };
-}
-
-function contentTypeFor(filePath) {
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext === ".css") return "text/css; charset=utf-8";
-  if (ext === ".png") return "image/png";
-  if (ext === ".webp") return "image/webp";
-  if (ext === ".svg") return "image/svg+xml";
-  if (ext === ".js") return "application/javascript; charset=utf-8";
-  return "application/octet-stream";
-}
-
-async function openSavedVariationPage(page, fixture, html) {
-  await page.route("https://chatgpt.com/**", async (route) => {
-    const request = route.request();
-    if (request.resourceType() === "document") {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/html; charset=utf-8",
-        body: html,
-      });
-      return;
-    }
-
-    const pathname = decodeURIComponent(new URL(request.url()).pathname);
-    const marker = `/${fixture.assetsDirName}/`;
-    const markerIndex = pathname.indexOf(marker);
-    if (markerIndex >= 0) {
-      const relativePath = pathname.slice(markerIndex + marker.length);
-      const localPath = path.join(fixture.assetsDirPath, relativePath);
-      if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
-        await route.fulfill({
-          status: 200,
-          contentType: contentTypeFor(localPath),
-          body: await fsp.readFile(localPath),
-        });
-        return;
-      }
-    }
-
-    await route.fulfill({
-      status: 204,
-      contentType: "text/plain; charset=utf-8",
-      body: "",
-    });
-  });
-
-  await page.goto("https://chatgpt.com/c/offline-saved-variation", {
-    waitUntil: "domcontentloaded",
-  });
-
-  await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible();
-}
-
 test("replays saved variation page and keeps heading levels 4-6 visible", async () => {
-  const fixture = findSavedVariationFixture();
-  test.skip(!fixture, "Saved variation HTML fixture was not found in the repository root.");
+  const fixture = getSavedVariationFixture();
+  test.skip(!fixture, "Saved variation HTML fixture was not found under tests/fixtures/saved-variation.");
 
   const scenarioDir = path.join(artifactsRoot, "saved-variation");
   const screenshotDir = path.join(scenarioDir, "screenshots");
   const stateDir = path.join(scenarioDir, "state");
   const traceDir = path.join(scenarioDir, "traces");
   const profileBaseDir = path.join(scenarioDir, "profiles");
-
-  await Promise.all([
-    ensureDir(screenshotDir),
-    ensureDir(stateDir),
-    ensureDir(traceDir),
-    ensureDir(profileBaseDir),
-  ]);
+  await ensureArtifactDirs(screenshotDir, stateDir, traceDir, profileBaseDir);
 
   const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "run-"));
-  const html = await fsp.readFile(fixture.htmlPath, "utf8");
-
   const launchProbe = await probeExtensionContext({
     chromium,
     profileDir,
@@ -120,12 +34,11 @@ test("replays saved variation page and keeps heading levels 4-6 visible", async 
   try {
     await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
     const page = await context.newPage();
-
-    await openSavedVariationPage(page, fixture, html);
+    await openSavedFixtureChatgptPage(page, "https://chatgpt.com/c/offline-saved-variation", fixture);
 
     const targetMessage = page
       .locator("[data-message-author-role='assistant']")
-      .filter({ hasText: "見出し6" })
+      .filter({ has: page.locator("h4, h5, h6") })
       .last();
 
     await expect(targetMessage).toBeVisible();
@@ -135,14 +48,12 @@ test("replays saved variation page and keeps heading levels 4-6 visible", async 
 
     const visibilityState = await targetMessage.evaluate((element) => {
       const getHeadingState = (title) => {
-        const node = Array.from(
-          element.querySelectorAll(".cgpt-helper-heading-title")
-        ).find((candidate) => candidate.textContent?.trim() === title);
-
+        const node = Array.from(element.querySelectorAll(".cgpt-helper-heading-title")).find(
+          (candidate) => candidate.textContent?.trim() === title
+        );
         if (!node) {
           return null;
         }
-
         const rect = node.getBoundingClientRect();
         return {
           title,
@@ -167,36 +78,25 @@ test("replays saved variation page and keeps heading levels 4-6 visible", async 
         path: path.join(screenshotDir, "saved-variation.png"),
         fullPage: true,
       }),
-      fsp.writeFile(
-        path.join(stateDir, "visibility.json"),
-        `${JSON.stringify(visibilityState, null, 2)}\n`,
-        "utf8"
-      ),
+      writeJsonArtifact(path.join(stateDir, "visibility.json"), visibilityState),
     ]);
   } finally {
-    await context.tracing.stop({ path: path.join(traceDir, "trace.zip") });
+    await context.tracing.stop({ path: path.join(traceDir, "trace.zip") }).catch(() => {});
     await context.close();
   }
 });
 
 test("keeps timestamp headers separated from body and actions in a constrained viewport", async () => {
-  const fixture = findSavedVariationFixture();
-  test.skip(!fixture, "Saved variation HTML fixture was not found in the repository root.");
+  const fixture = getSavedVariationFixture();
+  test.skip(!fixture, "Saved variation HTML fixture was not found under tests/fixtures/saved-variation.");
 
   const scenarioDir = path.join(artifactsRoot, "saved-variation-layout");
   const screenshotDir = path.join(scenarioDir, "screenshots");
   const stateDir = path.join(scenarioDir, "state");
   const profileBaseDir = path.join(scenarioDir, "profiles");
-
-  await Promise.all([
-    ensureDir(screenshotDir),
-    ensureDir(stateDir),
-    ensureDir(profileBaseDir),
-  ]);
+  await ensureArtifactDirs(screenshotDir, stateDir, profileBaseDir);
 
   const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "run-"));
-  const html = await fsp.readFile(fixture.htmlPath, "utf8");
-
   const launchProbe = await probeExtensionContext({
     chromium,
     profileDir,
@@ -208,7 +108,7 @@ test("keeps timestamp headers separated from body and actions in a constrained v
   try {
     const page = await context.newPage();
     await page.setViewportSize({ width: 1280, height: 960 });
-    await openSavedVariationPage(page, fixture, html);
+    await openSavedFixtureChatgptPage(page, "https://chatgpt.com/c/offline-saved-variation", fixture);
 
     const firstAssistant = page.locator("[data-message-author-role='assistant']").first();
     await expect(firstAssistant.locator(".cgpt-helper-chatlog-timestamp-label")).toBeVisible();
@@ -219,8 +119,8 @@ test("keeps timestamp headers separated from body and actions in a constrained v
       const title = element.querySelector(".cgpt-helper-fold-title");
       const actions = element.querySelector(".cgpt-helper-fold-actions");
       const timestamp = element.querySelector(".cgpt-helper-chatlog-timestamp-wrapper");
-
       const rect = (node) => (node ? node.getBoundingClientRect() : null);
+
       const headerRect = rect(header);
       const bodyRect = rect(body);
       const titleRect = rect(title);
@@ -257,11 +157,7 @@ test("keeps timestamp headers separated from body and actions in a constrained v
         path: path.join(screenshotDir, "saved-variation-layout.png"),
         fullPage: true,
       }),
-      fsp.writeFile(
-        path.join(stateDir, "layout.json"),
-        `${JSON.stringify(layoutState, null, 2)}\n`,
-        "utf8"
-      ),
+      writeJsonArtifact(path.join(stateDir, "layout.json"), layoutState),
     ]);
   } finally {
     await context.close();

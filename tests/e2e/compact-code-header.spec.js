@@ -21,11 +21,29 @@ function buildFixtureHtml() {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Compact Header Fixture</title>
     <style>
+      :root {
+        color-scheme: light;
+        --cgpt-page-bg: rgb(255, 255, 255);
+        --cgpt-surface-elevated: rgb(249, 249, 249);
+        --cgpt-border-light: rgba(13, 13, 13, 0.05);
+        --cgpt-text-primary: rgb(13, 13, 13);
+        --cgpt-text-secondary: rgb(84, 84, 84);
+        --cgpt-button-hover: rgba(0, 0, 0, 0.05);
+      }
+      html.dark {
+        color-scheme: dark;
+        --cgpt-page-bg: rgb(33, 33, 33);
+        --cgpt-surface-elevated: rgb(24, 24, 24);
+        --cgpt-border-light: rgba(255, 255, 255, 0.05);
+        --cgpt-text-primary: rgb(255, 255, 255);
+        --cgpt-text-secondary: rgb(171, 171, 171);
+        --cgpt-button-hover: rgba(255, 255, 255, 0.1);
+      }
       body {
         margin: 0;
-        font-family: sans-serif;
-        background: #111827;
-        color: #f9fafb;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--cgpt-page-bg);
+        color: var(--cgpt-text-primary);
       }
       main {
         max-width: 920px;
@@ -34,9 +52,7 @@ function buildFixtureHtml() {
       }
       [data-message-author-role] {
         margin-bottom: 24px;
-        padding: 20px;
-        border-radius: 16px;
-        background: #1f2937;
+        padding: 20px 0;
       }
       pre {
         position: relative;
@@ -46,26 +62,31 @@ function buildFixtureHtml() {
         background: transparent;
       }
       .cgpt-mock-code-shell {
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        border-radius: 20px;
-        background: #0f172a;
+        border: 1px solid var(--cgpt-border-light);
+        border-radius: 24px;
+        background: var(--cgpt-surface-elevated);
         overflow: hidden;
       }
       .cgpt-mock-code-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 8px 14px;
-        background: rgba(15, 23, 42, 0.92);
-        color: #e5eefb;
+        padding: 8px 14px 7px 16px;
+        background: var(--cgpt-surface-elevated);
+        color: var(--cgpt-text-primary);
         font-size: 14px;
         font-weight: 600;
+        border-bottom: 1px solid var(--cgpt-border-light);
       }
       .cgpt-mock-code-label {
         display: flex;
         align-items: center;
         gap: 8px;
         min-width: 0;
+      }
+      .cgpt-mock-code-label-summary {
+        color: var(--cgpt-text-secondary);
+        font-weight: 500;
       }
       .cgpt-mock-code-actions {
         display: flex;
@@ -74,16 +95,64 @@ function buildFixtureHtml() {
       .cgpt-mock-code-actions button {
         width: 32px;
         height: 32px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+      }
+      .cgpt-mock-code-actions button:hover {
+        background: var(--cgpt-button-hover);
       }
       .cgpt-mock-code-body {
-        padding: 18px 20px;
+        padding: 0;
+        color: var(--cgpt-text-primary);
+        background: var(--cgpt-surface-elevated);
+      }
+      .cm-scroller,
+      .cm-content {
+        background: var(--cgpt-surface-elevated);
       }
       .cm-content,
       code {
         display: block;
         white-space: pre-wrap;
-        font-family: "Courier New", monospace;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
         line-height: 1.5;
+        color: var(--cgpt-text-primary);
+      }
+      .cm-content {
+        padding: 0 20px 18px;
+      }
+      .cgpt-mock-code-body > code {
+        padding: 0 20px 18px;
+        background: var(--cgpt-surface-elevated);
+      }
+      .cgpt-mock-code-token-comment {
+        color: var(--cgpt-text-secondary);
+        font-style: italic;
+      }
+      .cgpt-mock-code-token-keyword {
+        color: rgb(139, 92, 246);
+      }
+      .cgpt-mock-code-token-string {
+        color: rgb(5, 150, 105);
+      }
+      .cgpt-mock-code-token-function {
+        color: rgb(37, 99, 235);
+      }
+      .cgpt-mock-code-token-number {
+        color: rgb(217, 119, 6);
+      }
+      html.dark .cgpt-mock-code-token-keyword {
+        color: rgb(196, 181, 253);
+      }
+      html.dark .cgpt-mock-code-token-string {
+        color: rgb(74, 222, 128);
+      }
+      html.dark .cgpt-mock-code-token-function {
+        color: rgb(96, 165, 250);
+      }
+      html.dark .cgpt-mock-code-token-number {
+        color: rgb(251, 191, 36);
       }
     </style>
   </head>
@@ -103,9 +172,9 @@ function buildFixtureHtml() {
             </div>
             <div class="cgpt-mock-code-body">
               <div class="cm-scroller">
-                <div class="cm-content">// file: src/demo.py
-def hello():
-    print("hello")
+                <div class="cm-content"><span class="cgpt-mock-code-token-comment"># file: src/demo.py</span>
+<span class="cgpt-mock-code-token-keyword">def</span> hello():
+    print(<span class="cgpt-mock-code-token-string">"hello"</span>)
     return 1
 </div>
               </div>
@@ -123,9 +192,9 @@ def hello():
               </div>
             </div>
             <div class="cgpt-mock-code-body">
-              <code># file: scripts/run.sh
-echo "hello"
-echo "world"
+              <code><span class="cgpt-mock-code-token-comment"># file: scripts/run.sh</span>
+<span class="cgpt-mock-code-token-function">echo</span> <span class="cgpt-mock-code-token-string">"hello"</span>
+<span class="cgpt-mock-code-token-function">echo</span> <span class="cgpt-mock-code-token-string">"world"</span>
 </code>
             </div>
           </div>
@@ -144,8 +213,8 @@ echo "world"
               </div>
             </div>
             <div class="cgpt-mock-code-body">
-              <code>// file: src/middleware/errorHandler.js
-export function errorHandler(err, req, res, next) {
+              <code><span class="cgpt-mock-code-token-comment">// file: src/middleware/errorHandler.js</span>
+<span class="cgpt-mock-code-token-keyword">export function</span> <span class="cgpt-mock-code-token-function">errorHandler</span>(err, req, res, next) {
   return err;
 }
 </code>
@@ -159,7 +228,7 @@ export function errorHandler(err, req, res, next) {
 </html>`;
 }
 
-test("compact mode keeps native labels and appends file paths", async ({ page, browserName }) => {
+test("compact mode keeps native labels and appends file paths by default", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "This DOM-level verification targets Chromium behavior.");
 
   const screenshotDir = path.join(artifactsRoot, "screenshots");
@@ -169,6 +238,7 @@ test("compact mode keeps native labels and appends file paths", async ({ page, b
   const scripts = await Promise.all([
     readScript("extension/shared/uiStyles.js"),
     readScript("extension/content/codeBlockMetadata.js"),
+    readScript("extension/content/codeBlockState.js"),
     readScript("extension/content/codeBlockViewMode.js"),
     readScript("extension/content/codeBlockButtons.js"),
     readScript("extension/content/codeBlocks.js"),
@@ -187,8 +257,8 @@ test("compact mode keeps native labels and appends file paths", async ({ page, b
       hasToggle: true,
       toggleExpanded: "false",
       toggleCount: 1,
-      previewText: "def hello():",
-      hostDisplay: "none",
+      compactFirstLine: "def hello():",
+      hostDisplay: "",
     },
     {
       headerText: "Code scripts/run.sh",
@@ -197,8 +267,8 @@ test("compact mode keeps native labels and appends file paths", async ({ page, b
       hasToggle: true,
       toggleExpanded: "false",
       toggleCount: 1,
-      previewText: 'echo "hello"',
-      hostDisplay: "none",
+      compactFirstLine: 'echo "hello"',
+      hostDisplay: "",
     },
     {
       headerText: "JavaScript export function errorHandler(err, req, res, next) { src/middleware/errorHandler.js",
@@ -207,8 +277,8 @@ test("compact mode keeps native labels and appends file paths", async ({ page, b
       hasToggle: true,
       toggleExpanded: "false",
       toggleCount: 1,
-      previewText: "export function errorHandler(err, req, res, next) {",
-      hostDisplay: "none",
+      compactFirstLine: "export function errorHandler(err, req, res, next) {",
+      hostDisplay: "",
     },
   ];
   const result = await page.waitForFunction(() => {
@@ -225,12 +295,17 @@ test("compact mode keeps native labels and appends file paths", async ({ page, b
       const explicitLangNode = pre.querySelector("[data-lang-label='1']");
       const toggles = Array.from(pre.querySelectorAll("[data-cgpt-code-toggle='1']"));
       const toggle = toggles[0] || null;
-      const preview = pre.parentElement?.querySelector(
-        "[data-cgpt-code-preview='1'] [data-cgpt-code-preview-content='1']"
-      );
       const host = typeof cgptGetCompactContentHost === "function"
         ? cgptGetCompactContentHost(pre)
         : pre;
+      const code = typeof cgptGetDecoratableCodeContent === "function"
+        ? cgptGetDecoratableCodeContent(pre)
+        : pre.querySelector("code, .cm-content");
+      const rawLines = (code?.textContent || "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\n+$/, "")
+        .split("\n")
+        .slice(1);
       return {
         headerText: labelNode ? labelNode.textContent.replace(/\s+/g, " ").trim() : "",
         pathText: pathEl ? pathEl.textContent.trim() : "",
@@ -238,7 +313,7 @@ test("compact mode keeps native labels and appends file paths", async ({ page, b
         hasToggle: Boolean(toggle),
         toggleExpanded: toggle ? toggle.getAttribute("aria-expanded") : "",
         toggleCount: toggles.length,
-        previewText: preview ? preview.textContent.trim().split("\n")[0] : "",
+        compactFirstLine: rawLines[0] || "",
         hostDisplay: host && host.style ? host.style.display : "",
       };
     });
@@ -264,6 +339,7 @@ test("compact and expand can be repeated without breaking the header path", asyn
   const scripts = await Promise.all([
     readScript("extension/shared/uiStyles.js"),
     readScript("extension/content/codeBlockMetadata.js"),
+    readScript("extension/content/codeBlockState.js"),
     readScript("extension/content/codeBlockViewMode.js"),
     readScript("extension/content/codeBlockButtons.js"),
     readScript("extension/content/codeBlocks.js"),
@@ -369,6 +445,7 @@ test("header toggle switches compact mode from the left edge control", async ({ 
   const scripts = await Promise.all([
     readScript("extension/shared/uiStyles.js"),
     readScript("extension/content/codeBlockMetadata.js"),
+    readScript("extension/content/codeBlockState.js"),
     readScript("extension/content/codeBlockViewMode.js"),
     readScript("extension/content/codeBlockButtons.js"),
     readScript("extension/content/codeBlocks.js"),
@@ -385,7 +462,6 @@ test("header toggle switches compact mode from the left edge control", async ({ 
     const host = typeof cgptGetCompactContentHost === "function"
       ? cgptGetCompactContentHost(targetPre)
       : targetPre;
-    const preview = targetPre.parentElement?.querySelector("[data-cgpt-code-preview='1']");
     const snapshot = () => {
       const toggle = targetPre.querySelector("[data-cgpt-code-toggle='1']");
       return {
@@ -393,7 +469,8 @@ test("header toggle switches compact mode from the left edge control", async ({ 
         toggleExpanded: toggle ? toggle.getAttribute("aria-expanded") : "",
         toggleCount: targetPre.querySelectorAll("[data-cgpt-code-toggle='1']").length,
         hostDisplay: host && host.style ? host.style.display : "",
-        previewDisplay: preview && preview.style ? preview.style.display : "",
+        hostMaxHeight: host && host.style ? host.style.maxHeight : "",
+        hostOverflow: host && host.style ? host.style.overflow : "",
       };
     };
 
@@ -405,27 +482,31 @@ test("header toggle switches compact mode from the left edge control", async ({ 
     return states;
   });
 
-  expect(result).toEqual([
-    {
-      viewMode: "compact",
-      toggleExpanded: "false",
-      toggleCount: 1,
-      hostDisplay: "none",
-      previewDisplay: "block",
-    },
-    {
-      viewMode: "expanded",
-      toggleExpanded: "true",
-      toggleCount: 1,
-      hostDisplay: "",
-      previewDisplay: "none",
-    },
-    {
-      viewMode: "compact",
-      toggleExpanded: "false",
-      toggleCount: 1,
-      hostDisplay: "none",
-      previewDisplay: "block",
-    },
-  ]);
+  expect(result).toHaveLength(3);
+  expect(result[0]).toEqual({
+    viewMode: "compact",
+    toggleExpanded: "false",
+    toggleCount: 1,
+    hostDisplay: "",
+    hostMaxHeight: expect.any(String),
+    hostOverflow: "hidden",
+  });
+  expect(result[0].hostMaxHeight).not.toBe("");
+  expect(result[1]).toEqual({
+    viewMode: "expanded",
+    toggleExpanded: "true",
+    toggleCount: 1,
+    hostDisplay: "",
+    hostMaxHeight: "",
+    hostOverflow: "",
+  });
+  expect(result[2]).toEqual({
+    viewMode: "compact",
+    toggleExpanded: "false",
+    toggleCount: 1,
+    hostDisplay: "",
+    hostMaxHeight: expect.any(String),
+    hostOverflow: "hidden",
+  });
+  expect(result[2].hostMaxHeight).not.toBe("");
 });

@@ -19,7 +19,7 @@ test("buildLogEntryMetaInfo includes source, role, and chat metadata", () => {
 
   assert.equal(
     text,
-    "Relative: chat-logs/demo/assistant.txt • Action: APPLY • Source: Chat Text • Role: assistant • Chat: demo-chat"
+    "Relative: chat-logs/demo/assistant.txt - Action: APPLY - Source: Chat Text - Role: assistant - Chat: demo-chat"
   );
 });
 

@@ -1,7 +1,8 @@
 const CGPT_CODE_WRAPPER_CLASS = "cgpt-code-wrapper";
 const CGPT_CODE_COLLAPSED_CLASS = "cgpt-code-wrapper--collapsed";
-const CGPT_CODE_PREVIEW_SELECTOR = "[data-cgpt-code-preview='1']";
 const CGPT_CODE_TOGGLE_SELECTOR = "[data-cgpt-code-toggle='1']";
+const CGPT_CODE_COLLAPSE_CUE_SELECTOR = "[data-cgpt-code-collapse-cue='1']";
+const CGPT_CODE_COLLAPSE_TOP_CUE_SELECTOR = "[data-cgpt-code-collapse-top-cue='1']";
 let cgptCodeBlockStylesInjected = false;
 const CGPT_VIEW_MODE = {
   COMPACT: "compact",
@@ -36,8 +37,29 @@ function cgptEnsureCodeBlockStyles() {
 .${CGPT_CODE_WRAPPER_CLASS} {
   position: relative;
 }
-.${CGPT_CODE_WRAPPER_CLASS} ${CGPT_CODE_PREVIEW_SELECTOR} {
-  display: none;
+.${CGPT_CODE_WRAPPER_CLASS} ${CGPT_CODE_COLLAPSE_CUE_SELECTOR} {
+  opacity: 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.38) 100%);
+  transition: opacity 0.15s ease;
+  z-index: 1;
+}
+.${CGPT_CODE_WRAPPER_CLASS} ${CGPT_CODE_COLLAPSE_TOP_CUE_SELECTOR} {
+  opacity: 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 26px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.22) 0%, rgba(15, 23, 42, 0) 100%);
+  transition: opacity 0.15s ease;
+  z-index: 1;
 }
 .${CGPT_CODE_WRAPPER_CLASS} [data-cgpt-code-actions="1"] {
   opacity: 0;
@@ -54,6 +76,12 @@ function cgptEnsureCodeBlockStyles() {
 .${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS} {
   border: 0;
   box-shadow: none;
+}
+.${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS} ${CGPT_CODE_COLLAPSE_CUE_SELECTOR} {
+  opacity: 1;
+}
+.${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS} ${CGPT_CODE_COLLAPSE_TOP_CUE_SELECTOR} {
+  opacity: 1;
 }
 .${CGPT_CODE_WRAPPER_CLASS} ${CGPT_CODE_TOGGLE_SELECTOR} {
   position: relative;
@@ -123,6 +151,148 @@ function cgptRememberOriginalPreStyles(pre) {
   }
 }
 
+function cgptRememberOriginalCompactHostStyles(host) {
+  if (!host || !host.style) return;
+  if (host.dataset.cgptOriginalOverflow === undefined) {
+    host.dataset.cgptOriginalOverflow = host.style.overflow || "";
+  }
+  if (host.dataset.cgptOriginalMaxHeight === undefined) {
+    host.dataset.cgptOriginalMaxHeight = host.style.maxHeight || "";
+  }
+  if (host.dataset.cgptOriginalBackgroundColor === undefined) {
+    host.dataset.cgptOriginalBackgroundColor = host.style.backgroundColor || "";
+  }
+  if (host.dataset.cgptOriginalBoxShadow === undefined) {
+    host.dataset.cgptOriginalBoxShadow = host.style.boxShadow || "";
+  }
+}
+
+function cgptRestoreCompactHostStyles(host) {
+  if (!host || !host.style) return;
+  cgptRememberOriginalCompactHostStyles(host);
+  host.style.overflow = host.dataset.cgptOriginalOverflow || "";
+  host.style.maxHeight = host.dataset.cgptOriginalMaxHeight || "";
+  host.style.backgroundColor = host.dataset.cgptOriginalBackgroundColor || "";
+  host.style.boxShadow = host.dataset.cgptOriginalBoxShadow || "";
+}
+
+function cgptGetCompactCueColors(pre) {
+  if (
+    !pre ||
+    typeof window === "undefined" ||
+    typeof window.getComputedStyle !== "function"
+  ) {
+    return {
+      headerColor: "rgba(255, 255, 255, 0.16)",
+      bodyColor: "rgba(15, 23, 42, 0.08)",
+      tailColor: "rgba(15, 23, 42, 0.24)",
+    };
+  }
+
+  const host =
+    typeof cgptGetCompactContentHost === "function" ? cgptGetCompactContentHost(pre) : pre;
+  const cueHost = cgptGetCompactCueHost(pre);
+  const shell = cueHost && cueHost.parentElement ? cueHost.parentElement : null;
+  const header =
+    cueHost && cueHost.previousElementSibling
+      ? cueHost.previousElementSibling
+      : shell && shell.firstElementChild && shell.firstElementChild !== cueHost
+        ? shell.firstElementChild
+        : null;
+
+  const hostStyle = host ? window.getComputedStyle(host) : null;
+  const cueHostStyle = cueHost ? window.getComputedStyle(cueHost) : null;
+  const shellStyle = shell ? window.getComputedStyle(shell) : null;
+  const headerStyle = header ? window.getComputedStyle(header) : null;
+  const pickSolidColor = (...values) =>
+    values.find((value) => value && value !== "rgba(0, 0, 0, 0)" && value !== "transparent") || "";
+  const cardColor = pickSolidColor(
+    shellStyle && shellStyle.backgroundColor,
+    cueHostStyle && cueHostStyle.backgroundColor,
+    hostStyle && hostStyle.backgroundColor
+  );
+  const headerColor = pickSolidColor(
+    headerStyle && headerStyle.backgroundColor,
+    cardColor
+  );
+
+  return {
+    headerColor: headerColor || "rgba(255, 255, 255, 0.16)",
+    bodyColor: cardColor || "rgba(255, 255, 255, 0.12)",
+    tailColor: cardColor || "rgba(255, 255, 255, 0.12)",
+  };
+}
+
+function cgptGetCompactCueHost(pre) {
+  if (!pre) return null;
+  const host =
+    typeof cgptGetCompactContentHost === "function" ? cgptGetCompactContentHost(pre) : pre;
+  if (!host) return null;
+  return host.parentElement || host;
+}
+
+function cgptRememberOriginalCueHostStyles(element) {
+  if (!element || !element.style) return;
+  if (element.dataset.cgptOriginalPosition === undefined) {
+    element.dataset.cgptOriginalPosition = element.style.position || "";
+  }
+}
+
+function cgptRestoreCueHostStyles(element) {
+  if (!element || !element.style) return;
+  cgptRememberOriginalCueHostStyles(element);
+  element.style.position = element.dataset.cgptOriginalPosition || "";
+}
+
+function cgptEnsureCollapseCue(pre) {
+  const cueHost = cgptGetCompactCueHost(pre);
+  if (!cueHost) return null;
+  cgptRememberOriginalCueHostStyles(cueHost);
+  if (!cueHost.style.position) {
+    cueHost.style.position = "relative";
+  }
+  let cue = cueHost.querySelector(`:scope > ${CGPT_CODE_COLLAPSE_CUE_SELECTOR}`);
+  if (cue) {
+    return cue;
+  }
+  cue = document.createElement("div");
+  cue.dataset.cgptCodeCollapseCue = "1";
+  cue.style.borderRadius = "inherit";
+  cueHost.appendChild(cue);
+  return cue;
+}
+
+function cgptEnsureCollapseTopCue(pre) {
+  const cueHost = cgptGetCompactCueHost(pre);
+  if (!cueHost) return null;
+  cgptRememberOriginalCueHostStyles(cueHost);
+  if (!cueHost.style.position) {
+    cueHost.style.position = "relative";
+  }
+  let cue = cueHost.querySelector(`:scope > ${CGPT_CODE_COLLAPSE_TOP_CUE_SELECTOR}`);
+  if (cue) {
+    return cue;
+  }
+  cue = document.createElement("div");
+  cue.dataset.cgptCodeCollapseTopCue = "1";
+  cue.style.borderTopLeftRadius = "inherit";
+  cue.style.borderTopRightRadius = "inherit";
+  cueHost.appendChild(cue);
+  return cue;
+}
+
+function cgptSyncCollapseCueStyles(pre) {
+  const bottomCue = cgptEnsureCollapseCue(pre);
+  const topCue = cgptEnsureCollapseTopCue(pre);
+  const { headerColor, bodyColor, tailColor } = cgptGetCompactCueColors(pre);
+  if (topCue) {
+    topCue.style.background = `linear-gradient(180deg, ${headerColor} 0%, ${bodyColor} 82%, rgba(0, 0, 0, 0) 100%)`;
+  }
+  if (bottomCue) {
+    bottomCue.style.background = `linear-gradient(180deg, ${headerColor} 0%, ${tailColor} 100%)`;
+  }
+}
+
 function cgptEnsureCollapsibleState(pre) {
   if (!pre) return false;
   if (pre.dataset.cgptCollapsibleApplied !== "1") {
@@ -169,25 +339,6 @@ function cgptGetCodeLineHeight(pre) {
   }
   const fallbackFontSize = style ? parseFloat(style.fontSize) || 14 : 14;
   return fallbackFontSize * 1.4;
-}
-
-function cgptRememberOriginalElementDisplay(element) {
-  if (!element || !element.style) return;
-  if (element.dataset.cgptOriginalDisplay === undefined) {
-    element.dataset.cgptOriginalDisplay = element.style.display || "";
-  }
-}
-
-function cgptSetElementDisplay(element, displayValue) {
-  if (!element || !element.style) return;
-  cgptRememberOriginalElementDisplay(element);
-  element.style.display = displayValue;
-}
-
-function cgptRestoreElementDisplay(element) {
-  if (!element || !element.style) return;
-  cgptRememberOriginalElementDisplay(element);
-  element.style.display = element.dataset.cgptOriginalDisplay || "";
 }
 
 function cgptSetCollapsedVisualState(element, isCollapsed) {
@@ -245,7 +396,9 @@ function cgptSyncCodeHeaderToggleState(pre, mode) {
 }
 
 function cgptUpdateViewButtonStates(pre) {
-  const buttons = pre && pre.cgptViewButtons;
+  const state =
+    pre && typeof cgptGetCodeBlockState === "function" ? cgptGetCodeBlockState(pre) : null;
+  const buttons = state ? state.viewButtons : null;
   if (!buttons) return;
   const mode = cgptGetViewModeFromDataset(pre);
   const disabledStates = {
@@ -266,15 +419,19 @@ function cgptUpdateViewButtonStates(pre) {
 
 function cgptGetButtonOverlayOffset(pre) {
   if (!pre) return 0;
-  if (typeof pre.cgptButtonOverlayOffset === "number") {
-    return pre.cgptButtonOverlayOffset;
+  const state =
+    typeof cgptGetCodeBlockState === "function" ? cgptGetCodeBlockState(pre) : null;
+  if (state && typeof state.buttonOverlayOffset === "number") {
+    return state.buttonOverlayOffset;
   }
-  const container = pre.cgptButtonContainer;
+  const container = state ? state.buttonContainer : null;
   if (!container || typeof cgptCalculateButtonOverlayOffset !== "function") {
     return 0;
   }
   const offset = cgptCalculateButtonOverlayOffset(container);
-  pre.cgptButtonOverlayOffset = offset;
+  if (state) {
+    state.buttonOverlayOffset = offset;
+  }
   return offset;
 }
 
@@ -282,22 +439,21 @@ function cgptSetPreViewMode(pre, mode) {
   if (!pre || !cgptEnsureCollapsibleState(pre)) return;
   const collapsibleEl = cgptGetCollapsibleElement(pre);
   if (!collapsibleEl) return;
+  cgptSyncCollapseCueStyles(pre);
   const viewSettings =
     typeof cgptGetViewSettings === "function" ? cgptGetViewSettings() : FALLBACK_VIEW_SETTINGS;
   pre.dataset.cgptViewMode = mode;
   const host =
     typeof cgptGetCompactContentHost === "function" ? cgptGetCompactContentHost(pre) : pre;
-  const preview = host && host.parentElement
-    ? host.parentElement.querySelector(":scope > [data-cgpt-code-preview='1']")
-    : null;
-  const metadata = pre.cgptMetadata || null;
+  cgptRememberOriginalCompactHostStyles(host);
+  const state =
+    typeof cgptGetCodeBlockState === "function" ? cgptGetCodeBlockState(pre) : null;
+  const metadata = state ? state.metadata || null : null;
   if (mode === CGPT_VIEW_MODE.EXPANDED) {
     collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
     collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
-    cgptRestoreElementDisplay(host);
-    if (preview) {
-      cgptSetElementDisplay(preview, "none");
-    }
+    cgptRestoreCompactHostStyles(host);
+    cgptRestoreCueHostStyles(cgptGetCompactCueHost(pre));
     if (typeof cgptSyncCompactHeaderPath === "function") {
       cgptSyncCompactHeaderPath(pre, metadata, mode);
     }
@@ -308,12 +464,14 @@ function cgptSetPreViewMode(pre, mode) {
     const normalizedLines = Number.isFinite(parsedLines)
       ? Math.max(0, parsedLines)
       : FALLBACK_VIEW_SETTINGS.compactLineCount;
-    if (typeof cgptSyncCompactPreview === "function") {
-      cgptSyncCompactPreview(pre, normalizedLines);
-    }
-    cgptSetElementDisplay(host, "none");
-    if (preview) {
-      cgptSetElementDisplay(preview, "block");
+    const lineHeight = cgptGetCodeLineHeight(pre);
+    const overlayOffset = cgptGetButtonOverlayOffset(pre);
+    if (host && host.style) {
+      const compactHeight = cgptCalculateCompactHeight(normalizedLines, lineHeight, overlayOffset);
+      host.style.maxHeight = compactHeight > 0 ? `${compactHeight}px` : "0px";
+      host.style.overflow = "hidden";
+      host.style.backgroundColor = host.dataset.cgptOriginalBackgroundColor || "";
+      host.style.boxShadow = host.dataset.cgptOriginalBoxShadow || "";
     }
     collapsibleEl.style.maxHeight = "";
     collapsibleEl.style.overflow = "visible";

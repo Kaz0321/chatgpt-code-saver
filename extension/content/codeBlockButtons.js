@@ -262,13 +262,17 @@ function cgptHandleExpandButtonClick(pre) {
 
 function cgptRefreshSaveButtonState(pre, code, metadataOverride) {
   if (!pre || !code) return null;
-  let saveButton = pre.cgptSaveButton;
+  const state =
+    typeof cgptGetCodeBlockState === "function" ? cgptGetCodeBlockState(pre) : null;
+  let saveButton = state ? state.saveButton : null;
   if (!saveButton) {
     saveButton = pre.querySelector("button[data-cgpt-button-role='save']");
     if (!saveButton) {
       return null;
     }
-    pre.cgptSaveButton = saveButton;
+    if (state) {
+      state.saveButton = saveButton;
+    }
   }
 
   const metadata =
@@ -281,6 +285,9 @@ function cgptRefreshSaveButtonState(pre, code, metadataOverride) {
   cgptSetButtonDisabled(saveButton, !hasMetadata);
   pre.dataset.cgptHasMetadata = hasMetadata ? "1" : "0";
   pre.dataset.cgptFilePath = hasMetadata && metadata.filePath ? metadata.filePath : "";
+  if (state) {
+    state.metadata = metadata || null;
+  }
   return metadata;
 }
 
