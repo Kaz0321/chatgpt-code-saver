@@ -1,6 +1,7 @@
 const CGPT_CODE_WRAPPER_CLASS = "cgpt-code-wrapper";
 const CGPT_CODE_COLLAPSED_CLASS = "cgpt-code-wrapper--collapsed";
 const CGPT_CODE_PREVIEW_SELECTOR = "[data-cgpt-code-preview='1']";
+const CGPT_CODE_TOGGLE_SELECTOR = "[data-cgpt-code-toggle='1']";
 let cgptCodeBlockStylesInjected = false;
 const CGPT_VIEW_MODE = {
   COMPACT: "compact",
@@ -51,30 +52,39 @@ function cgptEnsureCodeBlockStyles() {
   pointer-events: auto;
 }
 .${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS} {
-  border-bottom: 4px solid rgba(255, 255, 255, 0.25);
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
+  border: 0;
+  box-shadow: none;
 }
-.${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS}::before {
+.${CGPT_CODE_WRAPPER_CLASS} ${CGPT_CODE_TOGGLE_SELECTOR} {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  margin-inline-end: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.${CGPT_CODE_WRAPPER_CLASS} ${CGPT_CODE_TOGGLE_SELECTOR}::before {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 48px;
-  background: linear-gradient(180deg, rgba(32, 33, 35, 0) 0%, rgba(32, 33, 35, 0.85) 100%);
-  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translate(-50%, -60%) rotate(45deg);
+  transition: transform 0.15s ease;
 }
-.${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS}::after {
-  content: "…";
-  position: absolute;
-  right: 12px;
-  bottom: 8px;
-  font-size: 20px;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
+.${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS} ${CGPT_CODE_TOGGLE_SELECTOR}::before {
+  transform: translate(-40%, -50%) rotate(-45deg);
 }
 `;
   (document.head || document.documentElement).appendChild(style);
@@ -186,6 +196,54 @@ function cgptSetCollapsedVisualState(element, isCollapsed) {
   element.classList.toggle(CGPT_CODE_COLLAPSED_CLASS, Boolean(isCollapsed));
 }
 
+function cgptFindCodeHeaderLabelContainer(pre) {
+  if (typeof cgptFindNativeHeaderLabelContainer === "function") {
+    return cgptFindNativeHeaderLabelContainer(pre);
+  }
+  return null;
+}
+
+function cgptEnsureCodeHeaderToggle(pre) {
+  if (!pre) return null;
+  const container = cgptFindCodeHeaderLabelContainer(pre);
+  if (!container) return null;
+
+  pre.querySelectorAll(CGPT_CODE_TOGGLE_SELECTOR).forEach((node) => {
+    if (node.parentElement !== container) {
+      node.remove();
+    }
+  });
+
+  let toggle = container.querySelector(`:scope > ${CGPT_CODE_TOGGLE_SELECTOR}`);
+  if (toggle) {
+    return toggle;
+  }
+
+  toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.dataset.cgptCodeToggle = "1";
+  toggle.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const nextMode =
+      cgptGetPreViewMode(pre) === CGPT_VIEW_MODE.COMPACT
+        ? CGPT_VIEW_MODE.EXPANDED
+        : CGPT_VIEW_MODE.COMPACT;
+    cgptSetPreViewMode(pre, nextMode);
+  });
+  container.insertBefore(toggle, container.firstChild);
+  return toggle;
+}
+
+function cgptSyncCodeHeaderToggleState(pre, mode) {
+  const toggle = cgptEnsureCodeHeaderToggle(pre);
+  if (!toggle) return;
+  const isExpanded = mode === CGPT_VIEW_MODE.EXPANDED;
+  toggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+  toggle.setAttribute("aria-label", isExpanded ? "Collapse code block" : "Expand code block");
+  toggle.title = isExpanded ? "Collapse code block" : "Expand code block";
+}
+
 function cgptUpdateViewButtonStates(pre) {
   const buttons = pre && pre.cgptViewButtons;
   if (!buttons) return;
@@ -264,6 +322,7 @@ function cgptSetPreViewMode(pre, mode) {
     }
     cgptSetCollapsedVisualState(collapsibleEl, true);
   }
+  cgptSyncCodeHeaderToggleState(pre, mode);
   cgptUpdateViewButtonStates(pre);
 }
 

@@ -76,15 +76,32 @@ function cgptFindNativeHeaderLabelContainer(pre) {
     );
   };
 
-  const findCompactLabelTarget = (element) => {
+  const getCandidateText = (element) => {
+    if (!element) return "";
+    return (element.textContent || "").replace(/\s+/g, " ").trim();
+  };
+
+  const isCompactLabelTarget = (element) => {
     if (!element || hasCodeContentDescendant(element)) return null;
     if (
       element.dataset &&
-      (element.dataset.cgptCodeFilePath === "1" || element.dataset.cgptCodePathHost === "1")
+      (
+        element.dataset.cgptCodeFilePath === "1" ||
+        element.dataset.cgptCodePathHost === "1" ||
+        element.dataset.cgptCodeToggle === "1"
+      )
     ) {
-      return null;
+      return false;
     }
+    const text = getCandidateText(element);
+    return Boolean(text) && !/\n/.test(text) && text.length <= 120;
+  };
 
+  const findCompactLabelTarget = (element) => {
+    if (!element || hasCodeContentDescendant(element)) return null;
+    if (isCompactLabelTarget(element)) {
+      return element;
+    }
     const childElements = Array.from(element.children || []);
     for (const child of childElements) {
       const nestedMatch = findCompactLabelTarget(child);
@@ -92,13 +109,7 @@ function cgptFindNativeHeaderLabelContainer(pre) {
         return nestedMatch;
       }
     }
-
-    const text = (element.textContent || "").trim();
-    if (!text || /\n/.test(text) || text.length > 80) {
-      return null;
-    }
-
-    return element;
+    return null;
   };
 
   let current = copyButton;

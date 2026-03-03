@@ -179,56 +179,71 @@ test("compact mode keeps native labels and appends file paths", async ({ page, b
     await page.addScriptTag({ content: script });
   }
 
-  const result = await expect
-    .poll(async () => {
-      return page.evaluate(() => {
-        if (typeof decorateCodeBlocks === "function") {
-          decorateCodeBlocks(document);
-        }
-        const pres = Array.from(document.querySelectorAll("pre[data-cgpt-code-helper-applied='1']"));
-        return pres.map((pre) => {
-          const pathEl = pre.querySelector("[data-cgpt-code-file-path='1']");
-          const labelNode = pathEl ? pathEl.parentElement : null;
-          const explicitLangNode = pre.querySelector("[data-lang-label='1']");
-          const preview = pre.parentElement?.querySelector(
-            "[data-cgpt-code-preview='1'] [data-cgpt-code-preview-content='1']"
-          );
-          const host = typeof cgptGetCompactContentHost === "function"
-            ? cgptGetCompactContentHost(pre)
-            : pre;
-          return {
-            headerText: labelNode ? labelNode.textContent.replace(/\s+/g, " ").trim() : "",
-            pathText: pathEl ? pathEl.textContent.trim() : "",
-            langText: explicitLangNode ? explicitLangNode.textContent.replace(/\s+/g, " ").trim() : "",
-            previewText: preview ? preview.textContent.trim().split("\n")[0] : "",
-            hostDisplay: host && host.style ? host.style.display : "",
-          };
-        });
-      });
-    }, { timeout: 10_000 })
-    .toEqual([
-      {
-        headerText: "Python src/demo.py",
-        pathText: "src/demo.py",
-        langText: "",
-        previewText: "def hello():",
-        hostDisplay: "none",
-      },
-      {
-        headerText: "Code scripts/run.sh",
-        pathText: "scripts/run.sh",
-        langText: "",
-        previewText: 'echo "hello"',
-        hostDisplay: "none",
-      },
-      {
-        headerText: "JavaScript src/middleware/errorHandler.js",
-        pathText: "src/middleware/errorHandler.js",
-        langText: "JavaScript src/middleware/errorHandler.js",
-        previewText: "export function errorHandler(err, req, res, next) {",
-        hostDisplay: "none",
-      },
-    ]);
+  const expected = [
+    {
+      headerText: "Python src/demo.py",
+      pathText: "src/demo.py",
+      langText: "",
+      hasToggle: true,
+      toggleExpanded: "false",
+      toggleCount: 1,
+      previewText: "def hello():",
+      hostDisplay: "none",
+    },
+    {
+      headerText: "Code scripts/run.sh",
+      pathText: "scripts/run.sh",
+      langText: "",
+      hasToggle: true,
+      toggleExpanded: "false",
+      toggleCount: 1,
+      previewText: 'echo "hello"',
+      hostDisplay: "none",
+    },
+    {
+      headerText: "JavaScript export function errorHandler(err, req, res, next) { src/middleware/errorHandler.js",
+      pathText: "src/middleware/errorHandler.js",
+      langText: "JavaScript",
+      hasToggle: true,
+      toggleExpanded: "false",
+      toggleCount: 1,
+      previewText: "export function errorHandler(err, req, res, next) {",
+      hostDisplay: "none",
+    },
+  ];
+  const result = await page.waitForFunction(() => {
+    if (typeof decorateCodeBlocks === "function") {
+      decorateCodeBlocks(document);
+    }
+    const pres = Array.from(document.querySelectorAll("pre[data-cgpt-code-helper-applied='1']"));
+    if (pres.length !== 3) {
+      return null;
+    }
+    return pres.map((pre) => {
+      const pathEl = pre.querySelector("[data-cgpt-code-file-path='1']");
+      const labelNode = pathEl ? pathEl.parentElement : null;
+      const explicitLangNode = pre.querySelector("[data-lang-label='1']");
+      const toggles = Array.from(pre.querySelectorAll("[data-cgpt-code-toggle='1']"));
+      const toggle = toggles[0] || null;
+      const preview = pre.parentElement?.querySelector(
+        "[data-cgpt-code-preview='1'] [data-cgpt-code-preview-content='1']"
+      );
+      const host = typeof cgptGetCompactContentHost === "function"
+        ? cgptGetCompactContentHost(pre)
+        : pre;
+      return {
+        headerText: labelNode ? labelNode.textContent.replace(/\s+/g, " ").trim() : "",
+        pathText: pathEl ? pathEl.textContent.trim() : "",
+        langText: explicitLangNode ? explicitLangNode.textContent.replace(/\s+/g, " ").trim() : "",
+        hasToggle: Boolean(toggle),
+        toggleExpanded: toggle ? toggle.getAttribute("aria-expanded") : "",
+        toggleCount: toggles.length,
+        previewText: preview ? preview.textContent.trim().split("\n")[0] : "",
+        hostDisplay: host && host.style ? host.style.display : "",
+      };
+    });
+  }, null, { timeout: 10_000 }).then((handle) => handle.jsonValue());
+  expect(result).toEqual(expected);
 
   await Promise.all([
     page.screenshot({
@@ -266,11 +281,15 @@ test("compact and expand can be repeated without breaking the header path", asyn
       const pathNodes = Array.from(targetPre.querySelectorAll("[data-cgpt-code-file-path='1']"));
       const langNode = targetPre.querySelector("[data-lang-label='1']");
       const summaryNode = targetPre.querySelector(".cgpt-mock-code-label-summary");
+      const toggleNodes = Array.from(targetPre.querySelectorAll("[data-cgpt-code-toggle='1']"));
+      const toggleNode = toggleNodes[0] || null;
       return {
         pathCount: pathNodes.length,
         pathText: pathNodes.map((node) => node.textContent.trim()).join(" | "),
         langText: langNode ? langNode.textContent.replace(/\s+/g, " ").trim() : "",
         summaryText: summaryNode ? summaryNode.textContent.replace(/\s+/g, " ").trim() : "",
+        toggleExpanded: toggleNode ? toggleNode.getAttribute("aria-expanded") : "",
+        toggleCount: toggleNodes.length,
       };
     };
 
@@ -288,44 +307,125 @@ test("compact and expand can be repeated without breaking the header path", asyn
     {
       pathCount: 1,
       pathText: "src/middleware/errorHandler.js",
-      langText: "JavaScript src/middleware/errorHandler.js",
+      langText: "JavaScript",
       summaryText: "export function errorHandler(err, req, res, next) {",
+      toggleExpanded: "false",
+      toggleCount: 1,
     },
     {
       pathCount: 0,
       pathText: "",
       langText: "JavaScript",
       summaryText: "export function errorHandler(err, req, res, next) {",
+      toggleExpanded: "true",
+      toggleCount: 1,
     },
     {
       pathCount: 1,
       pathText: "src/middleware/errorHandler.js",
-      langText: "JavaScript src/middleware/errorHandler.js",
+      langText: "JavaScript",
       summaryText: "export function errorHandler(err, req, res, next) {",
+      toggleExpanded: "false",
+      toggleCount: 1,
     },
     {
       pathCount: 0,
       pathText: "",
       langText: "JavaScript",
       summaryText: "export function errorHandler(err, req, res, next) {",
+      toggleExpanded: "true",
+      toggleCount: 1,
     },
     {
       pathCount: 1,
       pathText: "src/middleware/errorHandler.js",
-      langText: "JavaScript src/middleware/errorHandler.js",
+      langText: "JavaScript",
       summaryText: "export function errorHandler(err, req, res, next) {",
+      toggleExpanded: "false",
+      toggleCount: 1,
     },
     {
       pathCount: 0,
       pathText: "",
       langText: "JavaScript",
       summaryText: "export function errorHandler(err, req, res, next) {",
+      toggleExpanded: "true",
+      toggleCount: 1,
     },
     {
       pathCount: 1,
       pathText: "src/middleware/errorHandler.js",
-      langText: "JavaScript src/middleware/errorHandler.js",
+      langText: "JavaScript",
       summaryText: "export function errorHandler(err, req, res, next) {",
+      toggleExpanded: "false",
+      toggleCount: 1,
+    },
+  ]);
+});
+
+test("header toggle switches compact mode from the left edge control", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "This DOM-level verification targets Chromium behavior.");
+
+  const scripts = await Promise.all([
+    readScript("extension/shared/uiStyles.js"),
+    readScript("extension/content/codeBlockMetadata.js"),
+    readScript("extension/content/codeBlockViewMode.js"),
+    readScript("extension/content/codeBlockButtons.js"),
+    readScript("extension/content/codeBlocks.js"),
+  ]);
+
+  await page.setContent(buildFixtureHtml(), { waitUntil: "domcontentloaded" });
+  for (const script of scripts) {
+    await page.addScriptTag({ content: script });
+  }
+
+  const result = await page.evaluate(() => {
+    decorateCodeBlocks(document);
+    const targetPre = document.querySelectorAll("pre[data-cgpt-code-helper-applied='1']")[0];
+    const host = typeof cgptGetCompactContentHost === "function"
+      ? cgptGetCompactContentHost(targetPre)
+      : targetPre;
+    const preview = targetPre.parentElement?.querySelector("[data-cgpt-code-preview='1']");
+    const snapshot = () => {
+      const toggle = targetPre.querySelector("[data-cgpt-code-toggle='1']");
+      return {
+        viewMode: targetPre.dataset.cgptViewMode || "",
+        toggleExpanded: toggle ? toggle.getAttribute("aria-expanded") : "",
+        toggleCount: targetPre.querySelectorAll("[data-cgpt-code-toggle='1']").length,
+        hostDisplay: host && host.style ? host.style.display : "",
+        previewDisplay: preview && preview.style ? preview.style.display : "",
+      };
+    };
+
+    const states = [snapshot()];
+    targetPre.querySelector("[data-cgpt-code-toggle='1']")?.click();
+    states.push(snapshot());
+    targetPre.querySelector("[data-cgpt-code-toggle='1']")?.click();
+    states.push(snapshot());
+    return states;
+  });
+
+  expect(result).toEqual([
+    {
+      viewMode: "compact",
+      toggleExpanded: "false",
+      toggleCount: 1,
+      hostDisplay: "none",
+      previewDisplay: "block",
+    },
+    {
+      viewMode: "expanded",
+      toggleExpanded: "true",
+      toggleCount: 1,
+      hostDisplay: "",
+      previewDisplay: "none",
+    },
+    {
+      viewMode: "compact",
+      toggleExpanded: "false",
+      toggleCount: 1,
+      hostDisplay: "none",
+      previewDisplay: "block",
     },
   ]);
 });
