@@ -67,30 +67,35 @@ function cgptCreatePanelToggleButton() {
   const existing = document.getElementById("cgpt-helper-panel-toggle");
   if (existing) return existing;
 
-  const button = document.createElement("button");
+  const button =
+    typeof cgptCreateSharedChipButton === "function"
+      ? cgptCreateSharedChipButton("Tools", "md")
+      : document.createElement("button");
   button.id = "cgpt-helper-panel-toggle";
   button.textContent = "Tools";
   button.style.position = "fixed";
   button.style.right = "16px";
   button.style.bottom = "16px";
   button.style.zIndex = "9999";
-  button.style.width = "48px";
-  button.style.height = "48px";
-  button.style.padding = "0";
-  button.style.borderRadius = "999px";
-  button.style.fontSize = "11px";
-  button.style.fontWeight = "600";
+  button.style.minWidth = "56px";
+  button.style.padding = "0 14px";
   button.style.cursor = "pointer";
-  button.style.display = "flex";
-  button.style.alignItems = "center";
-  button.style.justifyContent = "center";
-  if (typeof cgptApplySurfaceStyle === "function") {
-    cgptApplySurfaceStyle(button, "panel");
-  } else {
-    button.style.border = "1px solid rgba(255,255,255,0.15)";
-    button.style.background = "rgba(32, 33, 35, 0.9)";
-    button.style.color = "#fff";
-    button.style.boxShadow = "0 4px 12px rgba(0,0,0,0.35)";
+  if (typeof cgptCreateSharedChipButton !== "function") {
+    button.style.height = "48px";
+    button.style.borderRadius = "999px";
+    button.style.fontSize = "11px";
+    button.style.fontWeight = "600";
+    button.style.display = "flex";
+    button.style.alignItems = "center";
+    button.style.justifyContent = "center";
+    if (typeof cgptApplySurfaceStyle === "function") {
+      cgptApplySurfaceStyle(button, "panel");
+    } else {
+      button.style.border = "1px solid rgba(255,255,255,0.15)";
+      button.style.background = "rgba(32, 33, 35, 0.9)";
+      button.style.color = "#fff";
+      button.style.boxShadow = "0 4px 12px rgba(0,0,0,0.35)";
+    }
   }
   return button;
 }

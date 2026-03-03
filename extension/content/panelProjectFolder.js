@@ -1,6 +1,5 @@
 function createProjectFolderSection() {
-  const section = document.createElement("div");
-  section.appendChild(createSectionLabel("Project Folder"));
+  const section = createPanelSection("Project Folder");
 
   const input = document.createElement("input");
   input.type = "text";

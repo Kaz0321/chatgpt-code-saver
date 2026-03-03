@@ -47,6 +47,48 @@ function contentTypeFor(filePath) {
   return "application/octet-stream";
 }
 
+async function openSavedVariationPage(page, fixture, html) {
+  await page.route("https://chatgpt.com/**", async (route) => {
+    const request = route.request();
+    if (request.resourceType() === "document") {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/html; charset=utf-8",
+        body: html,
+      });
+      return;
+    }
+
+    const pathname = decodeURIComponent(new URL(request.url()).pathname);
+    const marker = `/${fixture.assetsDirName}/`;
+    const markerIndex = pathname.indexOf(marker);
+    if (markerIndex >= 0) {
+      const relativePath = pathname.slice(markerIndex + marker.length);
+      const localPath = path.join(fixture.assetsDirPath, relativePath);
+      if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+        await route.fulfill({
+          status: 200,
+          contentType: contentTypeFor(localPath),
+          body: await fsp.readFile(localPath),
+        });
+        return;
+      }
+    }
+
+    await route.fulfill({
+      status: 204,
+      contentType: "text/plain; charset=utf-8",
+      body: "",
+    });
+  });
+
+  await page.goto("https://chatgpt.com/c/offline-saved-variation", {
+    waitUntil: "domcontentloaded",
+  });
+
+  await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible();
+}
+
 test("replays saved variation page and keeps heading levels 4-6 visible", async () => {
   const fixture = findSavedVariationFixture();
   test.skip(!fixture, "Saved variation HTML fixture was not found in the repository root.");
@@ -79,45 +121,7 @@ test("replays saved variation page and keeps heading levels 4-6 visible", async 
     await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
     const page = await context.newPage();
 
-    await page.route("https://chatgpt.com/**", async (route) => {
-      const request = route.request();
-      if (request.resourceType() === "document") {
-        await route.fulfill({
-          status: 200,
-          contentType: "text/html; charset=utf-8",
-          body: html,
-        });
-        return;
-      }
-
-      const pathname = decodeURIComponent(new URL(request.url()).pathname);
-      const marker = `/${fixture.assetsDirName}/`;
-      const markerIndex = pathname.indexOf(marker);
-      if (markerIndex >= 0) {
-        const relativePath = pathname.slice(markerIndex + marker.length);
-        const localPath = path.join(fixture.assetsDirPath, relativePath);
-        if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
-          await route.fulfill({
-            status: 200,
-            contentType: contentTypeFor(localPath),
-            body: await fsp.readFile(localPath),
-          });
-          return;
-        }
-      }
-
-      await route.fulfill({
-        status: 204,
-        contentType: "text/plain; charset=utf-8",
-        body: "",
-      });
-    });
-
-    await page.goto("https://chatgpt.com/c/offline-saved-variation", {
-      waitUntil: "domcontentloaded",
-    });
-
-    await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible();
+    await openSavedVariationPage(page, fixture, html);
 
     const targetMessage = page
       .locator("[data-message-author-role='assistant']")
@@ -171,6 +175,95 @@ test("replays saved variation page and keeps heading levels 4-6 visible", async 
     ]);
   } finally {
     await context.tracing.stop({ path: path.join(traceDir, "trace.zip") });
+    await context.close();
+  }
+});
+
+test("keeps timestamp headers separated from body and actions in a constrained viewport", async () => {
+  const fixture = findSavedVariationFixture();
+  test.skip(!fixture, "Saved variation HTML fixture was not found in the repository root.");
+
+  const scenarioDir = path.join(artifactsRoot, "saved-variation-layout");
+  const screenshotDir = path.join(scenarioDir, "screenshots");
+  const stateDir = path.join(scenarioDir, "state");
+  const profileBaseDir = path.join(scenarioDir, "profiles");
+
+  await Promise.all([
+    ensureDir(screenshotDir),
+    ensureDir(stateDir),
+    ensureDir(profileBaseDir),
+  ]);
+
+  const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "run-"));
+  const html = await fsp.readFile(fixture.htmlPath, "utf8");
+
+  const launchProbe = await probeExtensionContext({
+    chromium,
+    profileDir,
+    extensionPath,
+  });
+  test.skip(!launchProbe.ok, launchProbe.reason);
+  const context = launchProbe.context;
+
+  try {
+    const page = await context.newPage();
+    await page.setViewportSize({ width: 1280, height: 960 });
+    await openSavedVariationPage(page, fixture, html);
+
+    const firstAssistant = page.locator("[data-message-author-role='assistant']").first();
+    await expect(firstAssistant.locator(".cgpt-helper-chatlog-timestamp-label")).toBeVisible();
+
+    const layoutState = await firstAssistant.evaluate((element) => {
+      const header = element.querySelector(".cgpt-helper-fold-header");
+      const body = element.querySelector(".cgpt-helper-fold-body");
+      const title = element.querySelector(".cgpt-helper-fold-title");
+      const actions = element.querySelector(".cgpt-helper-fold-actions");
+      const timestamp = element.querySelector(".cgpt-helper-chatlog-timestamp-wrapper");
+
+      const rect = (node) => (node ? node.getBoundingClientRect() : null);
+      const headerRect = rect(header);
+      const bodyRect = rect(body);
+      const titleRect = rect(title);
+      const actionsRect = rect(actions);
+      const timestampRect = rect(timestamp);
+
+      return {
+        headerBottom: headerRect ? headerRect.bottom : null,
+        bodyTop: bodyRect ? bodyRect.top : null,
+        titleRight: titleRect ? titleRect.right : null,
+        actionsLeft: actionsRect ? actionsRect.left : null,
+        timestampBottom: timestampRect ? timestampRect.bottom : null,
+        titleBottom: titleRect ? titleRect.bottom : null,
+        headerWidth: headerRect ? headerRect.width : null,
+        titleWidth: titleRect ? titleRect.width : null,
+        actionsWidth: actionsRect ? actionsRect.width : null,
+        timestampText: timestamp ? timestamp.textContent.trim() : "",
+      };
+    });
+
+    expect(layoutState.timestampText).toMatch(/\d/);
+    expect(layoutState.timestampText).toContain(":");
+    expect(layoutState.bodyTop).toBeGreaterThanOrEqual(layoutState.headerBottom);
+    expect(layoutState.timestampBottom).toBeLessThanOrEqual(layoutState.headerBottom);
+    expect(layoutState.titleWidth).toBeLessThanOrEqual(layoutState.headerWidth);
+    expect(layoutState.actionsWidth).toBeLessThanOrEqual(layoutState.headerWidth);
+
+    if (layoutState.titleBottom <= layoutState.headerBottom - 1) {
+      expect(layoutState.titleRight).toBeLessThanOrEqual(layoutState.actionsLeft);
+    }
+
+    await Promise.all([
+      page.screenshot({
+        path: path.join(screenshotDir, "saved-variation-layout.png"),
+        fullPage: true,
+      }),
+      fsp.writeFile(
+        path.join(stateDir, "layout.json"),
+        `${JSON.stringify(layoutState, null, 2)}\n`,
+        "utf8"
+      ),
+    ]);
+  } finally {
     await context.close();
   }
 });

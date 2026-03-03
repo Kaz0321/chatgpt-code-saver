@@ -68,6 +68,12 @@ classDiagram
     class ContentInit {
       +init()
     }
+    class CodeSaverFeature {
+      +cgptInitCodeSaverFeature()
+    }
+    class ChatToolsFeature {
+      +cgptInitChatToolsFeature()
+    }
     class TemplateStoreContent {
       +loadTemplatesFromStorage()
       +saveTemplatesToStorage()
@@ -81,13 +87,14 @@ classDiagram
     }
     class CodeBlockDecorator {
       +decorateCodeBlocks()
-      +setupMutationObserver()
+      +setupCodeBlockMutationObserver()
     }
     class LogViewer {
       +openLogViewer()
     }
     class ChatLogTracker {
-      +initChatLogTracker()
+      +initChatLogTracker(root)
+      +startChatLogMutationObserver()
       +getChatLogEntries()
       +highlightChatMessageElement()
     }
@@ -107,8 +114,10 @@ classDiagram
     BackgroundServiceWorker --> DownloadOpener : openDownloadedFile
     ContentInit --> TemplateStoreContent : load templates
     ContentInit --> TemplatePanel
-    ContentInit --> CodeBlockDecorator
-    ContentInit --> ChatLogTracker
+    ContentInit --> CodeSaverFeature
+    ContentInit --> ChatToolsFeature
+    CodeSaverFeature --> CodeBlockDecorator
+    ChatToolsFeature --> ChatLogTracker
     TemplatePanel --> TemplateEditor
     TemplatePanel --> TemplateStoreContent
     TemplatePanel --> ChatLogModal
@@ -143,6 +152,12 @@ classDiagram
 - 1 つの操作グループで `primary` は原則 1 個までにします。副次操作は `secondary`、軽い補助操作は `ghost`、破壊的操作は `danger` を使ってください。
 - disabled 状態は `button.disabled = true` のみで済ませず、共有ヘルパー経由で見た目も更新します。理由が分かりにくい場合は `title` などで無効理由を補足します。
 
+## Heading Fold Visual Rules
+- 見出し fold の横方向のオフセットは、見出しレベルではなくネスト深さで決めます。飛びレベル (`H2 -> H4`) があっても、1 段だけ深く見せます。
+- 見出し fold のインデント幅は一定ピッチで統一し、現在は `12px` ごとに 1 段深くします。
+- 各見出しセクションが追加する補助線は常に 1 本です。親セクションが描いた補助線と合成してネストを表現します。
+- この見た目ルールを変更する場合は、`tests/e2e/heading-variations-offline.spec.js` の視覚確認アサーションも一緒に更新してください。
+
 ### v0.2.0 リファクタリングのポイント
 - `background/applyCode.js` は入力バリデーション・ログ生成・ダウンロード実行をそれぞれ独立関数に分割し、単体で差し替えやすくしました。
 - `content/init.js` では、オプション読み込みごとのラッパー (`cgptEnsureLoaded` など) を追加して初期化手順を段階化し、読み込み順の可読性を向上させています。
@@ -152,3 +167,8 @@ classDiagram
 - 拡張の公開バージョンは `manifest.json` と `package.json` の両方で同じ値にそろえます。権限の追加・削除が伴う場合は、README の説明も合わせて見直してください。
 - リリースタグは `vX.Y.Z` 形式で作成します。タグを打つ前に `git status` がクリーンであることと、サービスワーカーのバージョンが期待どおりに更新されていることを確認してください。
 - 機能追加やリファクタリングでは、保存処理・テンプレ管理・チャットログ管理といった単一機能ごとにファイルを分け、変更範囲を限定します。
+## 2026-03 Refactor Notes
+- The extension remains a single MV3 package. Internal content-script bootstrap is now split into `cgptInitCodeSaverFeature()` and `cgptInitChatToolsFeature()` so code saving and chat tooling can evolve independently without changing user-facing behavior.
+- `extension/content/codeBlocks.js` now focuses on code-block decoration, while `extension/content/codeBlockObserver.js` owns `setupCodeBlockMutationObserver()`.
+- `extension/content/chatLogTracker.js` now focuses on chat entry collection and rendering, while `extension/content/chatLogObserver.js` owns `startChatLogMutationObserver()` and route watching.
+- `package.json` keeps `test` aligned with `test:unit` without nesting `npm run`, so local unit test invocation stays simple.

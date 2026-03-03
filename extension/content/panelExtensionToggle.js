@@ -1,6 +1,5 @@
 function createExtensionToggleSection() {
-  const section = document.createElement("div");
-  section.appendChild(createSectionLabel("Extension"));
+  const section = createPanelSection("Extension");
 
   const buttonRow = createButtonRow();
 

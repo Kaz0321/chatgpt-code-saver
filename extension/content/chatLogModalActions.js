@@ -1,27 +1,45 @@
 function cgptTriggerChatLogDownload(filePath, content, options = {}) {
-  const { onDone, saveAs = false, overrideFolderPath = "" } = options;
+  const {
+    onDone,
+    saveAs = false,
+    overrideFolderPath = "",
+    meta = {},
+    showToast: shouldShowToast = true,
+    successMessage,
+  } = options;
   const callback = typeof onDone === "function" ? onDone : () => {};
-  if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== "function") {
+  if (typeof cgptRunSaveAction !== "function") {
     callback();
-    if (typeof showToast === "function") {
-      showToast("Cannot reach background worker.", "error");
-    }
     return;
   }
-  chrome.runtime.sendMessage(
-    { type: "applyCodeBlock", filePath, content, saveAs, overrideFolderPath },
-    (res) => {
-      callback();
-      if (!res || !res.ok) {
-        const errMsg = (res && res.error) || "Failed to download";
-        if (typeof showToast === "function") {
-          showToast(errMsg, "error");
-        } else {
-          alert(errMsg);
-        }
-      } else if (typeof showToast === "function") {
-        showToast(`Started download: ${filePath}`, "success");
-      }
+  cgptRunSaveAction(
+    {
+      request: {
+        content,
+        targetPath: filePath,
+        mode: saveAs && typeof CGPT_SAVE_MODES !== "undefined"
+          ? CGPT_SAVE_MODES.SAVE_AS
+          : typeof CGPT_SAVE_MODES !== "undefined"
+            ? CGPT_SAVE_MODES.SAVE
+            : saveAs
+              ? "saveAs"
+              : "save",
+        meta: {
+          source: "chat-batch",
+          ...meta,
+        },
+        overrideFolderPath,
+      },
+      ui: {
+        showToast: shouldShowToast,
+        successMessage,
+        onSuccess: () => {
+          callback();
+        },
+        onError: () => {
+          callback();
+        },
+      },
     }
   );
 }
@@ -99,10 +117,13 @@ async function cgptHandleBatchSaveAsAll(button, blocks) {
 }
 
 function cgptCreateChatLogButton(label, variant = "secondary", size = "md") {
+  const useChipButton = variant === "secondary" || variant === "ghost" || variant === "primary";
   const button =
-    typeof cgptCreateSharedButton === "function"
-      ? cgptCreateSharedButton(label, variant, size)
-      : document.createElement("button");
+    typeof cgptCreateSharedChipButton === "function" && useChipButton
+      ? cgptCreateSharedChipButton(label, size)
+      : typeof cgptCreateSharedButton === "function"
+        ? cgptCreateSharedButton(label, variant, size)
+        : document.createElement("button");
   if (!button.textContent) {
     button.textContent = label;
   }
@@ -154,6 +175,8 @@ function cgptCreateBlockDownloadPromise(block, options = {}) {
     cgptTriggerChatLogDownload(block.filePath, block.content, {
       saveAs: Boolean(options.saveAs),
       overrideFolderPath: options.overrideFolderPath,
+      showToast: options.showToast,
+      meta: options.meta,
       onDone: resolve,
     });
   });
@@ -234,6 +257,9 @@ function cgptHandleBlockSave(button, block, saveAs) {
   button.textContent = "Saving...";
   cgptTriggerChatLogDownload(block.filePath, block.content, {
     saveAs,
+    meta: {
+      source: "chat-block",
+    },
     onDone: () => {
       button.textContent = originalText;
       cgptSetChatLogButtonDisabled(button, false);

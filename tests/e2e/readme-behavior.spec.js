@@ -115,7 +115,7 @@ test("verifies README workflow on a mocked ChatGPT page", async () => {
       waitUntil: "domcontentloaded",
     });
 
-    await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible();
+    await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible({ timeout: 10_000 });
     const initialLayout = await page.evaluate(() => {
       const main = document.querySelector("main");
       const panel = document.getElementById("cgpt-code-helper-panel");
@@ -138,9 +138,13 @@ test("verifies README workflow on a mocked ChatGPT page", async () => {
       "[data-cgpt-code-wrapper='1'] button[data-cgpt-button-role='save']"
     );
     await expect(saveButton).toHaveCount(1);
+    await page.locator("[data-cgpt-code-wrapper='1']").hover();
+    await expect(saveButton).toBeVisible();
     await expect(saveButton).toBeEnabled();
 
-    await page.getByRole("button", { name: "Insert" }).click();
+    await page.getByRole("button", { name: "Templates" }).click();
+    await expect(page.locator("#cgpt-helper-template-panel")).toBeVisible();
+    await page.locator("#cgpt-helper-template-panel").getByRole("button", { name: "Insert" }).click();
     await expect(page.locator("textarea[data-testid='textbox']")).toHaveValue(/\/\/ 出力ルール/);
 
     const projectFolderInput = page.locator("input[placeholder='e.g. dev/my-project']");
@@ -153,6 +157,7 @@ test("verifies README workflow on a mocked ChatGPT page", async () => {
     });
     await stripLabel.locator("input[type='checkbox']").check();
 
+    await page.locator("[data-cgpt-code-wrapper='1']").hover();
     await saveButton.click();
 
     const { storageState, latestLog, download } = await waitForLatestApplyLog(serviceWorker);

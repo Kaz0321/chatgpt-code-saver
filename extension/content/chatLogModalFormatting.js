@@ -38,6 +38,17 @@ function cgptCollectAssistantBlocksForEntry(entry, nextEntry, allEntries) {
   return blocks;
 }
 
+function cgptCollectAssistantEntriesForUserEntry(entry, nextEntry, allEntries) {
+  if (!entry || !Array.isArray(allEntries)) {
+    return [];
+  }
+  const startOrder = entry.order;
+  const endOrder = nextEntry ? nextEntry.order : Infinity;
+  return allEntries.filter(
+    (candidate) => candidate.role === "assistant" && candidate.order > startOrder && candidate.order < endOrder
+  );
+}
+
 function cgptCollectAssistantUrlsForEntry(entry, nextEntry, allEntries) {
   const urls = [];
   if (!entry || !Array.isArray(allEntries)) {

@@ -108,42 +108,6 @@ function tryDecorateSingleCodeBlock(pre) {
   cgptRefreshSaveButtonState(pre, code, metadata);
 }
 
-function setupMutationObserver() {
-  const observer = new MutationObserver((mutations) => {
-    let shouldRefreshPanelLayout = false;
-    for (const m of mutations) {
-      if (m.type === "childList" && m.addedNodes && m.addedNodes.length > 0) {
-        shouldRefreshPanelLayout = true;
-        m.addedNodes.forEach((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.DOCUMENT_NODE) {
-            decorateCodeBlocks(node);
-            if (typeof captureChatLogsFromNode === "function") {
-              captureChatLogsFromNode(node);
-            }
-          } else if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-            decorateCodeBlocks(node);
-            if (typeof captureChatLogsFromNode === "function") {
-              captureChatLogsFromNode(node);
-            }
-          } else if (node.nodeType === Node.TEXT_NODE) {
-            tryDecorateFromTextNode(node);
-          }
-        });
-      } else if (m.type === "characterData") {
-        tryDecorateFromTextNode(m.target);
-      }
-    }
-    if (shouldRefreshPanelLayout && typeof cgptSchedulePanelLayoutRefresh === "function") {
-      cgptSchedulePanelLayoutRefresh();
-    }
-  });
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
-}
-
 function tryDecorateFromTextNode(node) {
   if (!node || node.nodeType !== Node.TEXT_NODE) return;
   const elementParent = node.parentElement;

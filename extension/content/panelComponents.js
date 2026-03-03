@@ -7,15 +7,16 @@ function createPanelContainer() {
   panel.style.zIndex = "9999";
   panel.style.boxSizing = "border-box";
   panel.style.borderRadius = "8px";
-  panel.style.padding = "12px";
+  panel.style.padding = "8px";
   panel.style.fontSize = "12px";
   panel.style.display = "flex";
   panel.style.flexDirection = "column";
-  panel.style.gap = "8px";
+  panel.style.gap = "4px";
   panel.style.backdropFilter = "blur(8px)";
-  panel.style.width = "min(280px, calc(100vw - 32px))";
-  panel.style.maxWidth = "280px";
+  panel.style.width = "min(192px, calc(100vw - 32px))";
+  panel.style.maxWidth = "192px";
   panel.style.maxHeight = "calc(100vh - 112px)";
+  panel.style.overflowX = "hidden";
   panel.style.overflowY = "auto";
   if (typeof cgptApplySurfaceStyle === "function") {
     cgptApplySurfaceStyle(panel, "panel");
@@ -28,6 +29,8 @@ function createPanelTitle() {
   title.textContent = getHelperPanelTitle();
   title.style.fontWeight = "bold";
   title.style.fontSize = "13px";
+  title.style.lineHeight = "1.35";
+  title.style.overflowWrap = "anywhere";
   return title;
 }
 
@@ -50,9 +53,9 @@ function getHelperPanelTitle() {
 function createSectionLabel(text) {
   const label = document.createElement("div");
   label.textContent = text;
-  label.style.fontSize = "11px";
+  label.style.fontSize = "10px";
   label.style.fontWeight = "bold";
-  label.style.marginBottom = "2px";
+  label.style.marginBottom = "0";
   if (typeof cgptApplyPanelTextTone === "function") {
     cgptApplyPanelTextTone(label, "secondary");
   } else {
@@ -61,15 +64,48 @@ function createSectionLabel(text) {
   return label;
 }
 
+function createPanelSection(titleText, options = {}) {
+  const { description = "" } = options;
+  const section = document.createElement("div");
+  section.style.display = "flex";
+  section.style.flexDirection = "column";
+  section.style.gap = "4px";
+  section.style.paddingTop = "6px";
+  section.style.borderTop = "1px solid rgba(203, 213, 225, 0.7)";
+
+  const label = createSectionLabel(titleText);
+  section.appendChild(label);
+
+  if (description) {
+    const descriptionEl = document.createElement("div");
+    descriptionEl.textContent = description;
+    descriptionEl.style.fontSize = "10px";
+    descriptionEl.style.lineHeight = "1.35";
+    if (typeof cgptApplyPanelTextTone === "function") {
+      cgptApplyPanelTextTone(descriptionEl, "muted");
+    } else {
+      descriptionEl.style.color = "rgba(255,255,255,0.65)";
+    }
+    section.appendChild(descriptionEl);
+  }
+
+  return section;
+}
+
 function createPanelButton(text, variant = "secondary", size = "sm") {
   const button =
-    typeof cgptCreateSharedButton === "function"
-      ? cgptCreateSharedButton(text, variant, size)
+    typeof cgptCreateSharedPanelButton === "function"
+      ? cgptCreateSharedPanelButton(text, variant, size)
+      : typeof cgptCreateSharedButton === "function"
+        ? cgptCreateSharedButton(text, variant, size)
       : document.createElement("button");
   if (!button.textContent) {
     button.textContent = text;
   }
-  if (typeof cgptCreateSharedButton !== "function") {
+  if (
+    typeof cgptCreateSharedPanelButton !== "function" &&
+    typeof cgptCreateSharedButton !== "function"
+  ) {
     button.style.fontSize = "11px";
     button.style.padding = "0 8px";
     button.style.minHeight = "28px";
@@ -104,6 +140,8 @@ function createButtonRow() {
   row.style.display = "flex";
   row.style.gap = "4px";
   row.style.width = "100%";
+  row.style.minWidth = "0";
+  row.style.flexWrap = "wrap";
   return row;
 }
 
@@ -114,16 +152,31 @@ function createLineCountControls({ initialValue, onCommit, min = 1, max = 200 })
   const controls = document.createElement("div");
   controls.style.display = "flex";
   controls.style.alignItems = "center";
-  controls.style.gap = "4px";
+  controls.style.gap = "0";
+  controls.style.width = "100%";
+  controls.style.minWidth = "0";
+  controls.style.minHeight = "28px";
+  controls.style.borderRadius = "999px";
+  controls.style.overflow = "hidden";
+  controls.style.boxSizing = "border-box";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(controls, "subtle");
+  } else {
+    controls.style.border = "1px solid rgba(148, 163, 184, 0.16)";
+    controls.style.background = "rgba(148, 163, 184, 0.08)";
+  }
 
   const input = document.createElement("input");
   input.type = "number";
   input.min = `${MIN_LINES}`;
   input.max = `${MAX_LINES}`;
   input.value = `${initialValue}`;
-  input.style.width = "64px";
-  input.style.borderRadius = "4px";
-  input.style.padding = "2px 4px";
+  input.style.width = "0";
+  input.style.minWidth = "0";
+  input.style.flex = "1";
+  input.style.borderRadius = "0";
+  input.style.padding = "0 4px";
+  input.style.minHeight = "28px";
   input.style.textAlign = "center";
   if (typeof cgptApplyPanelInputStyle === "function") {
     cgptApplyPanelInputStyle(input);
@@ -132,25 +185,17 @@ function createLineCountControls({ initialValue, onCommit, min = 1, max = 200 })
     input.style.background = "#1f2937";
     input.style.color = "#fff";
   }
+  input.style.borderTop = "none";
+  input.style.borderBottom = "none";
 
   const createAdjustButton = (label) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = label;
-    if (typeof cgptApplySharedButtonStyle === "function") {
-      cgptApplySharedButtonStyle(button, { variant: "secondary", size: "sm" });
-    } else {
-      button.style.borderRadius = "6px";
-      button.style.border = "1px solid rgba(148,163,184,0.72)";
-      button.style.background = "rgba(71, 85, 105, 0.96)";
-      button.style.color = "#fff";
-      button.style.cursor = "pointer";
-      button.style.display = "flex";
-      button.style.alignItems = "center";
-      button.style.justifyContent = "center";
-    }
+    const button = createPanelButton(label, "secondary", "sm");
     button.style.width = "28px";
+    button.style.minWidth = "28px";
     button.style.padding = "0";
+    button.style.borderRadius = "0";
+    button.style.borderTop = "none";
+    button.style.borderBottom = "none";
     return button;
   };
 
@@ -175,6 +220,7 @@ function createLineCountControls({ initialValue, onCommit, min = 1, max = 200 })
   };
 
   const decrementButton = createAdjustButton("-");
+  decrementButton.style.borderLeft = "none";
   decrementButton.addEventListener("click", () => adjustValue(-1));
   controls.appendChild(decrementButton);
 
@@ -183,6 +229,7 @@ function createLineCountControls({ initialValue, onCommit, min = 1, max = 200 })
   controls.appendChild(input);
 
   const incrementButton = createAdjustButton("+");
+  incrementButton.style.borderRight = "none";
   incrementButton.addEventListener("click", () => adjustValue(1));
   controls.appendChild(incrementButton);
 

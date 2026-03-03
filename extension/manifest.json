@@ -34,6 +34,7 @@
         "shared/projectFolderSettings.js",
         "shared/uiStyles.js",
         "content/toast.js",
+        "content/saveFlow.js",
         "content/reloadNotifier.js",
         "content/lightweightMode.js",
         "content/chatInput.js",

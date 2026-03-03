@@ -1,6 +1,5 @@
 function createLightweightModeSection() {
-  const section = document.createElement("div");
-  section.appendChild(createSectionLabel("Lightweight Mode"));
+  const section = createPanelSection("Lightweight Mode");
 
   const buttonRow = createButtonRow();
   buttonRow.style.flexWrap = "wrap";

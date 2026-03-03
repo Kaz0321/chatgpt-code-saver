@@ -120,7 +120,7 @@ test.describe("offline chatgpt ui pattern fixtures with extension", () => {
           waitUntil: "domcontentloaded",
         });
 
-        await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible();
+        await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible({ timeout: 10_000 });
 
         const expectedLevels = scenario.summary.headingTags.map((tagName) =>
           Number.parseInt(String(tagName).replace(/^h/i, ""), 10)

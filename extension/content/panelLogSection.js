@@ -1,6 +1,5 @@
 function createLogSection() {
-  const logSection = document.createElement("div");
-  logSection.appendChild(createSectionLabel("Logs"));
+  const logSection = createPanelSection("Logs");
   const logButtons = createButtonRow();
   const logButtonVariant = "secondary";
 

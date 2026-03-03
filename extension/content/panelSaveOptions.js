@@ -1,6 +1,5 @@
 function createSaveOptionsSection() {
-  const section = document.createElement("div");
-  section.appendChild(createSectionLabel("Save Options"));
+  const section = createPanelSection("Save Options");
 
   const checkboxRow = document.createElement("label");
   checkboxRow.style.display = "flex";

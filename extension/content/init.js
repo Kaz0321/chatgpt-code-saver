@@ -18,14 +18,20 @@ function cgptRenderExtensionIfEnabled(onEnabled) {
 
 function cgptInitializeUi() {
   createFloatingPanel();
-  if (typeof initChatLogTracker === "function") {
-    initChatLogTracker();
-  }
   if (typeof cgptStartLightweightModeWatcher === "function") {
     cgptStartLightweightModeWatcher();
   }
-  decorateCodeBlocks(document);
-  setupMutationObserver();
+  if (typeof cgptInitCodeSaverFeature === "function") {
+    cgptInitCodeSaverFeature(document);
+  } else {
+    decorateCodeBlocks(document);
+    setupMutationObserver();
+  }
+  if (typeof cgptInitChatToolsFeature === "function") {
+    cgptInitChatToolsFeature(document);
+  } else if (typeof initChatLogTracker === "function") {
+    initChatLogTracker(document);
+  }
 }
 
 function cgptLoadPanelStateAndStart() {

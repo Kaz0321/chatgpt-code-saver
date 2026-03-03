@@ -34,6 +34,18 @@ function cgptEnsureCodeBlockStyles() {
 .${CGPT_CODE_WRAPPER_CLASS} {
   position: relative;
 }
+.${CGPT_CODE_WRAPPER_CLASS} [data-cgpt-code-actions="1"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+.${CGPT_CODE_WRAPPER_CLASS}:hover [data-cgpt-code-actions="1"],
+.${CGPT_CODE_WRAPPER_CLASS}:focus-within [data-cgpt-code-actions="1"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
 .${CGPT_CODE_WRAPPER_CLASS}.${CGPT_CODE_COLLAPSED_CLASS} {
   border-bottom: 4px solid rgba(255, 255, 255, 0.25);
   border-bottom-left-radius: 6px;

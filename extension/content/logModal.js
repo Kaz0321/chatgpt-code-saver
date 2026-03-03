@@ -26,14 +26,18 @@ function openLogViewer() {
     overlay.style.justifyContent = "center";
 
     const dialog = document.createElement("div");
-    dialog.style.borderRadius = "8px";
-    dialog.style.padding = "12px";
-    dialog.style.width = "80%";
-    dialog.style.maxWidth = "800px";
-    dialog.style.maxHeight = "80%";
     dialog.style.display = "flex";
     dialog.style.flexDirection = "column";
-    dialog.style.gap = "8px";
+    if (typeof cgptApplySurfaceLayout === "function") {
+      cgptApplySurfaceLayout(dialog, "dialogCompact");
+    } else {
+      dialog.style.borderRadius = "16px";
+      dialog.style.padding = "18px";
+      dialog.style.width = "80%";
+      dialog.style.maxWidth = "800px";
+      dialog.style.maxHeight = "80%";
+      dialog.style.gap = "12px";
+    }
     if (typeof cgptApplySurfaceStyle === "function") {
       cgptApplySurfaceStyle(dialog, "dialog");
     } else {
@@ -49,7 +53,12 @@ function openLogViewer() {
 
     const title = document.createElement("div");
     title.textContent = "Save Log";
-    title.style.fontWeight = "bold";
+    if (typeof cgptApplyTextScale === "function") {
+      cgptApplyTextScale(title, "title");
+    } else {
+      title.style.fontWeight = "700";
+      title.style.fontSize = "16px";
+    }
     headerRow.appendChild(title);
 
     const headerButtons = document.createElement("div");
@@ -146,11 +155,15 @@ function createLogModalButton(label, variant = "secondary", size = "sm") {
 
 function createLogEntryCard(entry) {
   const card = document.createElement("div");
-  card.style.borderRadius = "8px";
-  card.style.padding = "10px";
   card.style.display = "flex";
   card.style.flexDirection = "column";
-  card.style.gap = "8px";
+  if (typeof cgptApplySurfaceLayout === "function") {
+    cgptApplySurfaceLayout(card, "card");
+  } else {
+    card.style.borderRadius = "14px";
+    card.style.padding = "12px";
+    card.style.gap = "8px";
+  }
   if (typeof cgptApplySurfaceStyle === "function") {
     cgptApplySurfaceStyle(card, "card");
   } else {
@@ -168,7 +181,11 @@ function createLogEntryCard(entry) {
 
   const timestamp = document.createElement("div");
   timestamp.textContent = formatLogTimestamp(entry && entry.time);
-  timestamp.style.fontSize = "12px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(timestamp, "sectionLabel");
+  } else {
+    timestamp.style.fontSize = "12px";
+  }
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(timestamp, "primary");
   } else {
@@ -181,7 +198,11 @@ function createLogEntryCard(entry) {
   const kind = (entry && entry.kind ? entry.kind : "apply").toUpperCase();
   const ok = Boolean(entry && entry.ok);
   status.textContent = `${kind} • ${ok ? "Success" : "Failed"}`;
-  status.style.fontSize = "11px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(status, "meta");
+  } else {
+    status.style.fontSize = "11px";
+  }
   status.style.fontWeight = "600";
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(status, ok ? "success" : "danger");
@@ -191,7 +212,11 @@ function createLogEntryCard(entry) {
   header.appendChild(status);
 
   const downloadInfo = document.createElement("div");
-  downloadInfo.style.fontSize = "11px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(downloadInfo, "meta");
+  } else {
+    downloadInfo.style.fontSize = "11px";
+  }
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(downloadInfo, "accent");
   } else {
@@ -222,8 +247,12 @@ function createLogEntryCard(entry) {
 
   const fileNameText = document.createElement("span");
   fileNameText.textContent = getLogEntryFileName(entry);
-  fileNameText.style.fontSize = "12px";
-  fileNameText.style.fontWeight = "bold";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(fileNameText, "sectionLabel");
+  } else {
+    fileNameText.style.fontSize = "12px";
+  }
+  fileNameText.style.fontWeight = "600";
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(fileNameText, "warning");
   } else {
@@ -233,7 +262,11 @@ function createLogEntryCard(entry) {
 
   const metaInfoText = document.createElement("span");
   metaInfoText.textContent = buildLogEntryMetaInfo(entry);
-  metaInfoText.style.fontSize = "11px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(metaInfoText, "meta");
+  } else {
+    metaInfoText.style.fontSize = "11px";
+  }
   metaInfoText.style.color = "#fef3c7";
   metaInfoText.style.opacity = "0.85";
   fileRow.appendChild(metaInfoText);
@@ -251,7 +284,11 @@ function createLogEntryCard(entry) {
   const fullPathText = document.createElement("div");
   fullPathText.textContent = buildLogEntryFullPath(entry);
   fullPathText.style.fontFamily = "monospace";
-  fullPathText.style.fontSize = "11px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(fullPathText, "meta");
+  } else {
+    fullPathText.style.fontSize = "11px";
+  }
   fullPathText.style.color = "#d1d5db";
   fullPathText.style.wordBreak = "break-all";
   pathRow.appendChild(fullPathText);

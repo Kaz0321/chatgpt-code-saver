@@ -6,6 +6,10 @@ function createFloatingPanel() {
     typeof cgptCreatePanelToggleButton === "function"
       ? cgptCreatePanelToggleButton()
       : null;
+  const templateToggleButton =
+    typeof cgptCreateTemplateToggleButton === "function"
+      ? cgptCreateTemplateToggleButton()
+      : null;
 
   const visibilityState =
     typeof cgptGetPanelVisibility === "function"
@@ -40,7 +44,6 @@ function createFloatingPanel() {
   }
   panel.appendChild(createProjectFolderSection());
   panel.appendChild(createSaveOptionsSection());
-  panel.appendChild(createTemplateSection());
   panel.appendChild(createLightweightModeSection());
   panel.appendChild(createViewSection());
   panel.appendChild(createLogSection());
@@ -49,9 +52,24 @@ function createFloatingPanel() {
 
   if (toggleButton) {
     toggleButton.addEventListener("click", () => {
-      requestVisibility(false);
+      const nextHidden =
+        typeof cgptGetPanelVisibility === "function"
+          ? !cgptGetPanelVisibility().hidden
+          : panel.style.display !== "none";
+      requestVisibility(nextHidden);
     });
     document.body.appendChild(toggleButton);
+  }
+
+  if (templateToggleButton) {
+    templateToggleButton.addEventListener("click", () => {
+      if (typeof cgptToggleTemplatePanel === "function") {
+        cgptToggleTemplatePanel();
+      } else if (typeof openTemplatePanel === "function") {
+        openTemplatePanel();
+      }
+    });
+    document.body.appendChild(templateToggleButton);
   }
 
   if (typeof cgptSyncPanelLayoutState === "function") {

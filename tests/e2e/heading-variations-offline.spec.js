@@ -10,6 +10,7 @@ const extensionPath = path.join(repoRoot, "extension");
 const artifactsRoot = path.join(testsRoot, "artifacts", "heading-variations-offline");
 const fixtureRoot = path.join(testsRoot, "fixtures", "live-heading-variations");
 const manifestPath = path.join(fixtureRoot, "manifest.json");
+const HEADING_GUIDE_STEP_PX = 12;
 
 async function ensureDir(dirPath) {
   await fsp.mkdir(dirPath, { recursive: true });
@@ -83,6 +84,21 @@ function headingLevelRow(page, level) {
     .filter({ hasText: `Level ${level}` })
     .first()
     .locator("xpath=ancestor::div[1]");
+}
+
+function getExpectedVisualLevels(expectedLevels) {
+  const visualLevels = [];
+  const stack = [];
+
+  expectedLevels.forEach((level) => {
+    while (stack.length && stack[stack.length - 1] >= level) {
+      stack.pop();
+    }
+    visualLevels.push(stack.length + 1);
+    stack.push(level);
+  });
+
+  return visualLevels;
 }
 
 test.describe("offline heading fixtures", () => {
@@ -159,6 +175,20 @@ test.describe("offline heading fixtures", () => {
         });
 
         expect(actualLevels).toEqual(expectedLevels);
+
+        const expectedVisualLevels = getExpectedVisualLevels(expectedLevels);
+        const actualGuideOffsets = await page.locator(".cgpt-helper-heading-guide").evaluateAll((elements) => {
+          if (!elements.length) return [];
+          const firstLeft = elements[0].getBoundingClientRect().left;
+          return elements.map((element) => {
+            const rect = element.getBoundingClientRect();
+            return Math.round(rect.left - firstLeft);
+          });
+        });
+
+        expect(actualGuideOffsets).toEqual(
+          expectedVisualLevels.map((visualLevel) => (visualLevel - 1) * HEADING_GUIDE_STEP_PX)
+        );
 
         const uniqueLevels = [...new Set(expectedLevels)].sort((a, b) => a - b);
         for (const level of uniqueLevels) {

@@ -54,14 +54,18 @@ function cgptCreateChatLogModalOverlay() {
 
 function cgptCreateChatLogDialog() {
   const dialog = document.createElement("div");
-  dialog.style.borderRadius = "10px";
-  dialog.style.padding = "16px";
-  dialog.style.width = "80%";
-  dialog.style.maxWidth = "900px";
-  dialog.style.maxHeight = "80%";
   dialog.style.display = "flex";
   dialog.style.flexDirection = "column";
-  dialog.style.gap = "10px";
+  if (typeof cgptApplySurfaceLayout === "function") {
+    cgptApplySurfaceLayout(dialog, "dialog");
+  } else {
+    dialog.style.borderRadius = "16px";
+    dialog.style.padding = "18px";
+    dialog.style.width = "80%";
+    dialog.style.maxWidth = "900px";
+    dialog.style.maxHeight = "80%";
+    dialog.style.gap = "12px";
+  }
   if (typeof cgptApplySurfaceStyle === "function") {
     cgptApplySurfaceStyle(dialog, "dialog");
   } else {
@@ -80,8 +84,12 @@ function cgptCreateChatLogHeader(closeModal) {
 
   const title = document.createElement("div");
   title.textContent = "Chat Log";
-  title.style.fontWeight = "bold";
-  title.style.fontSize = "16px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(title, "title");
+  } else {
+    title.style.fontWeight = "700";
+    title.style.fontSize = "16px";
+  }
   headerRow.appendChild(title);
 
   const headerButtons = document.createElement("div");
@@ -128,11 +136,15 @@ function cgptCreateChatLogList(userEntries, allEntries, closeModal) {
 
 function cgptCreateChatLogUserCard(entry, nextEntry, allEntries, closeModal) {
   const card = document.createElement("div");
-  card.style.borderRadius = "8px";
-  card.style.padding = "10px";
   card.style.display = "flex";
   card.style.flexDirection = "column";
-  card.style.gap = "6px";
+  if (typeof cgptApplySurfaceLayout === "function") {
+    cgptApplySurfaceLayout(card, "card");
+  } else {
+    card.style.borderRadius = "14px";
+    card.style.padding = "12px";
+    card.style.gap = "8px";
+  }
   if (typeof cgptApplySurfaceStyle === "function") {
     cgptApplySurfaceStyle(card, "card");
   } else {
@@ -233,8 +245,12 @@ function cgptCreateChatLogSectionTitle(label, timestamp) {
 
   const labelEl = document.createElement("div");
   labelEl.textContent = label;
-  labelEl.style.fontSize = "12px";
-  labelEl.style.fontWeight = "bold";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(labelEl, "sectionLabel");
+  } else {
+    labelEl.style.fontSize = "12px";
+    labelEl.style.fontWeight = "600";
+  }
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(labelEl, "secondary");
   } else {
@@ -245,7 +261,11 @@ function cgptCreateChatLogSectionTitle(label, timestamp) {
   if (timestamp) {
     const timeEl = document.createElement("div");
     timeEl.textContent = cgptFormatChatLogTimestamp(timestamp);
-    timeEl.style.fontSize = "11px";
+    if (typeof cgptApplyTextScale === "function") {
+      cgptApplyTextScale(timeEl, "meta");
+    } else {
+      timeEl.style.fontSize = "11px";
+    }
     if (typeof cgptApplyTextTone === "function") {
       cgptApplyTextTone(timeEl, "muted");
     } else {
@@ -346,8 +366,12 @@ function cgptNormalizeAssistantDisplayLabel(value) {
 function cgptCreateChatLogMessageBody(entry) {
   const messageBody = document.createElement("div");
   messageBody.style.whiteSpace = "pre-wrap";
-  messageBody.style.fontSize = "13px";
-  messageBody.style.lineHeight = "1.5";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(messageBody, "body");
+  } else {
+    messageBody.style.fontSize = "13px";
+    messageBody.style.lineHeight = "1.5";
+  }
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(messageBody, "primary");
   } else {
@@ -376,7 +400,11 @@ function cgptCreateChatLogBlocksSection(blocks, closeModal) {
 
   const blockHeaderLabel = document.createElement("div");
   blockHeaderLabel.textContent = `Code blocks (${blocks.length})`;
-  blockHeaderLabel.style.fontSize = "12px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(blockHeaderLabel, "sectionLabel");
+  } else {
+    blockHeaderLabel.style.fontSize = "12px";
+  }
   if (typeof cgptApplyTextTone === "function") {
     cgptApplyTextTone(blockHeaderLabel, "accent");
   } else {
@@ -403,12 +431,16 @@ function cgptCreateChatLogBlocksSection(blocks, closeModal) {
 function cgptCreateChatLogCodeBlockCard(block, closeModal) {
   const blockWrapper = document.createElement("div");
   blockWrapper.style.border = "1px solid #27272a";
-  blockWrapper.style.borderRadius = "6px";
   blockWrapper.style.background = "#111827";
-  blockWrapper.style.padding = "6px";
   blockWrapper.style.display = "flex";
   blockWrapper.style.flexDirection = "column";
-  blockWrapper.style.gap = "6px";
+  if (typeof cgptApplySurfaceLayout === "function") {
+    cgptApplySurfaceLayout(blockWrapper, "sectionCard");
+  } else {
+    blockWrapper.style.borderRadius = "12px";
+    blockWrapper.style.padding = "8px";
+    blockWrapper.style.gap = "6px";
+  }
 
   const blockHeaderRow = document.createElement("div");
   blockHeaderRow.style.display = "flex";
@@ -453,7 +485,11 @@ function cgptCreateChatLogHeadingsSection(headingSections) {
 
   const headingHeader = document.createElement("div");
   headingHeader.textContent = `Markdown headings (${totalHeadings})`;
-  headingHeader.style.fontSize = "12px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(headingHeader, "sectionLabel");
+  } else {
+    headingHeader.style.fontSize = "12px";
+  }
   headingHeader.style.color = "#f9a8d4";
   section.appendChild(headingHeader);
 
@@ -468,10 +504,14 @@ function cgptCreateHeadingNodeElement(node, depth) {
   const details = document.createElement("details");
   details.open = depth === 0;
   details.style.border = "1px solid #27272a";
-  details.style.borderRadius = "6px";
   details.style.background = "#0b1324";
-  details.style.padding = "6px";
   details.style.marginLeft = `${Math.min(depth, 4) * 12}px`;
+  if (typeof cgptApplySurfaceLayout === "function") {
+    cgptApplySurfaceLayout(details, "sectionCard");
+  } else {
+    details.style.borderRadius = "12px";
+    details.style.padding = "8px";
+  }
 
   const summary = document.createElement("summary");
   summary.style.cursor = "pointer";
@@ -493,7 +533,11 @@ function cgptCreateHeadingNodeElement(node, depth) {
 
   const title = document.createElement("span");
   title.textContent = node.title || "(untitled heading)";
-  title.style.fontSize = "12px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(title, "sectionLabel");
+  } else {
+    title.style.fontSize = "12px";
+  }
   title.style.color = "#e5e7eb";
   title.style.flex = "1";
   summary.appendChild(title);
@@ -502,8 +546,13 @@ function cgptCreateHeadingNodeElement(node, depth) {
 
   const content = document.createElement("div");
   content.style.marginTop = "6px";
-  content.style.fontSize = "12px";
-  content.style.lineHeight = "1.5";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(content, "body");
+    content.style.fontSize = "12px";
+  } else {
+    content.style.fontSize = "12px";
+    content.style.lineHeight = "1.5";
+  }
   content.style.color = "#f3f4f6";
   content.style.whiteSpace = "pre-wrap";
   content.textContent = node.content || "(no content under this heading)";
@@ -533,14 +582,22 @@ function cgptCreateChatLogBlockInfo(block) {
 
   const fileNameText = document.createElement("span");
   fileNameText.textContent = block.fileName || block.filePath;
-  fileNameText.style.fontSize = "12px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(fileNameText, "sectionLabel");
+  } else {
+    fileNameText.style.fontSize = "12px";
+    fileNameText.style.fontWeight = "600";
+  }
   fileNameText.style.color = "#facc15";
-  fileNameText.style.fontWeight = "bold";
   fileNameLabel.appendChild(fileNameText);
 
   const metaInfoText = document.createElement("span");
   metaInfoText.textContent = cgptBuildCodeMetaInfoText(block && block.content);
-  metaInfoText.style.fontSize = "11px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(metaInfoText, "meta");
+  } else {
+    metaInfoText.style.fontSize = "11px";
+  }
   metaInfoText.style.color = "#fef3c7";
   metaInfoText.style.opacity = "0.85";
   fileNameLabel.appendChild(metaInfoText);
@@ -549,7 +606,11 @@ function cgptCreateChatLogBlockInfo(block) {
 
   const filePathLabel = document.createElement("div");
   filePathLabel.textContent = block.filePath;
-  filePathLabel.style.fontSize = "11px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(filePathLabel, "meta");
+  } else {
+    filePathLabel.style.fontSize = "11px";
+  }
   filePathLabel.style.color = "#fef3c7";
   filePathLabel.style.opacity = "0.9";
   fileInfoWrapper.appendChild(filePathLabel);
@@ -568,7 +629,11 @@ function cgptCreateChatLogUrlsSection(assistantUrls) {
 
   const urlHeader = document.createElement("div");
   urlHeader.textContent = `Links Provided (${assistantUrls.length})`;
-  urlHeader.style.fontSize = "12px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(urlHeader, "sectionLabel");
+  } else {
+    urlHeader.style.fontSize = "12px";
+  }
   urlHeader.style.color = "#7dd3fc";
   section.appendChild(urlHeader);
 
@@ -582,12 +647,16 @@ function cgptCreateChatLogUrlsSection(assistantUrls) {
 function cgptCreateChatLogUrlCard(link) {
   const urlWrapper = document.createElement("div");
   urlWrapper.style.border = "1px solid #1f2937";
-  urlWrapper.style.borderRadius = "6px";
   urlWrapper.style.background = "#0f172a";
-  urlWrapper.style.padding = "6px";
   urlWrapper.style.display = "flex";
   urlWrapper.style.flexDirection = "column";
-  urlWrapper.style.gap = "6px";
+  if (typeof cgptApplySurfaceLayout === "function") {
+    cgptApplySurfaceLayout(urlWrapper, "sectionCard");
+  } else {
+    urlWrapper.style.borderRadius = "12px";
+    urlWrapper.style.padding = "8px";
+    urlWrapper.style.gap = "6px";
+  }
 
   const urlHeaderRow = document.createElement("div");
   urlHeaderRow.style.display = "flex";
@@ -603,14 +672,22 @@ function cgptCreateChatLogUrlCard(link) {
 
   const urlDisplayText = document.createElement("div");
   urlDisplayText.textContent = link.text || link.url;
-  urlDisplayText.style.fontSize = "12px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(urlDisplayText, "sectionLabel");
+  } else {
+    urlDisplayText.style.fontSize = "12px";
+    urlDisplayText.style.fontWeight = "600";
+  }
   urlDisplayText.style.color = "#bae6fd";
-  urlDisplayText.style.fontWeight = "bold";
   urlLabelWrapper.appendChild(urlDisplayText);
 
   const urlValue = document.createElement("div");
   urlValue.textContent = link.url;
-  urlValue.style.fontSize = "11px";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(urlValue, "meta");
+  } else {
+    urlValue.style.fontSize = "11px";
+  }
   urlValue.style.color = "#e0f2fe";
   urlValue.style.opacity = "0.9";
   urlLabelWrapper.appendChild(urlValue);

@@ -7,6 +7,11 @@ const CGPT_BUTTON_BASE_TOKENS = {
   focusInset: "0 0 0 2px rgba(17, 24, 39, 0.96)",
 };
 
+const CGPT_BUTTON_SHAPE_TOKENS = {
+  rounded: CGPT_BUTTON_BASE_TOKENS.borderRadius,
+  pill: "999px",
+};
+
 const CGPT_UI_THEME = {
   overlayBackground: "rgba(7, 11, 18, 0.66)",
   panelBackground: "rgba(255, 255, 255, 0.96)",
@@ -43,6 +48,64 @@ const CGPT_BUTTON_SIZE_TOKENS = {
   sm: { minHeight: "28px", fontSize: "11px", padding: "0 8px" },
   md: { minHeight: "32px", fontSize: "12px", padding: "0 10px" },
   lg: { minHeight: "36px", fontSize: "12px", padding: "0 12px" },
+};
+
+const CGPT_CHIP_BASE_TOKENS = {
+  fontFamily: CGPT_BUTTON_BASE_TOKENS.fontFamily,
+  fontWeight: CGPT_BUTTON_BASE_TOKENS.fontWeight,
+  lineHeight: "1",
+  borderRadius: CGPT_BUTTON_SHAPE_TOKENS.pill,
+};
+
+const CGPT_CHIP_SIZE_TOKENS = {
+  sm: { minHeight: "28px", fontSize: "11px", padding: "0 8px" },
+  md: { minHeight: "30px", fontSize: "12px", padding: "0 12px" },
+  lg: { minHeight: "34px", fontSize: "12px", padding: "0 14px" },
+};
+
+const CGPT_SURFACE_LAYOUT_TOKENS = {
+  dialog: {
+    borderRadius: "16px",
+    padding: "18px",
+    gap: "12px",
+    width: "80%",
+    maxWidth: "900px",
+    maxHeight: "80%",
+  },
+  dialogCompact: {
+    borderRadius: "16px",
+    padding: "18px",
+    gap: "12px",
+    width: "80%",
+    maxWidth: "800px",
+    maxHeight: "80%",
+  },
+  card: {
+    borderRadius: "14px",
+    padding: "12px",
+    gap: "8px",
+  },
+  sectionCard: {
+    borderRadius: "12px",
+    padding: "8px",
+    gap: "6px",
+  },
+  title: {
+    fontSize: "16px",
+    fontWeight: "700",
+  },
+  sectionLabel: {
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+  body: {
+    fontSize: "13px",
+    lineHeight: "1.5",
+  },
+  meta: {
+    fontSize: "11px",
+    lineHeight: "1.4",
+  },
 };
 
 const CGPT_BUTTON_PALETTE = {
@@ -96,6 +159,16 @@ const CGPT_BUTTON_PALETTE = {
     activeBorder: "#94a3b8",
     focusRing: "rgba(147, 197, 253, 0.26)",
   },
+  chip: {
+    background: CGPT_UI_THEME.chipBackground,
+    hoverBackground: "#e2e8f0",
+    activeBackground: "#cbd5e1",
+    color: CGPT_UI_THEME.chipText,
+    border: CGPT_UI_THEME.chipBorder,
+    hoverBorder: "#94a3b8",
+    activeBorder: "#64748b",
+    focusRing: "rgba(147, 197, 253, 0.24)",
+  },
   disabled: {
     background: "#e2e8f0",
     hoverBackground: "#e2e8f0",
@@ -113,6 +186,7 @@ const CGPT_BUTTON_VARIANT_ALIASES = {
   muted: "secondary",
   neutral: "secondary",
   warning: "danger",
+  subtleChip: "chip",
 };
 
 function cgptNormalizeButtonVariant(variant = "secondary") {
@@ -127,6 +201,14 @@ function cgptGetButtonPaletteEntry(variant) {
 
 function cgptGetButtonSizeEntry(size = "sm") {
   return CGPT_BUTTON_SIZE_TOKENS[size] || CGPT_BUTTON_SIZE_TOKENS.sm;
+}
+
+function cgptGetChipSizeEntry(size = "md") {
+  return CGPT_CHIP_SIZE_TOKENS[size] || CGPT_CHIP_SIZE_TOKENS.md;
+}
+
+function cgptGetButtonShapeEntry(shape = "rounded") {
+  return CGPT_BUTTON_SHAPE_TOKENS[shape] || CGPT_BUTTON_SHAPE_TOKENS.rounded;
 }
 
 function cgptEnsureSharedButtonObservers(button) {
@@ -236,6 +318,7 @@ function cgptRenderSharedButton(button) {
   if (!button || !button.style) return;
   const size = cgptGetButtonSizeEntry(button.dataset.cgptButtonSize);
   const palette = cgptResolveSharedButtonPalette(button);
+  const borderRadius = cgptGetButtonShapeEntry(button.dataset.cgptButtonShape);
   const visualState = button.disabled
     ? {
       background: palette.background,
@@ -253,7 +336,7 @@ function cgptRenderSharedButton(button) {
   button.style.lineHeight = CGPT_BUTTON_BASE_TOKENS.lineHeight;
   button.style.minHeight = size.minHeight;
   button.style.padding = size.padding;
-  button.style.borderRadius = CGPT_BUTTON_BASE_TOKENS.borderRadius;
+  button.style.borderRadius = borderRadius;
   button.style.border = `1px solid ${visualState.border}`;
   button.style.background = visualState.background;
   button.style.color = visualState.color;
@@ -281,21 +364,30 @@ function cgptRenderSharedButton(button) {
 
 function cgptApplySharedButtonStyle(button, options = {}) {
   if (!button || !button.style) return button;
-  const { variant = "secondary", size = "sm" } = options;
+  const { variant = "secondary", size = "sm", shape = "rounded" } = options;
   if (!button.type) {
     button.type = "button";
   }
   button.dataset.cgptButtonVariant = cgptNormalizeButtonVariant(variant);
   button.dataset.cgptButtonSize = CGPT_BUTTON_SIZE_TOKENS[size] ? size : "sm";
+  button.dataset.cgptButtonShape = CGPT_BUTTON_SHAPE_TOKENS[shape] ? shape : "rounded";
   cgptEnsureSharedButtonObservers(button);
   cgptRenderSharedButton(button);
   return button;
 }
 
-function cgptCreateSharedButton(label, variant = "secondary", size = "sm") {
+function cgptCreateSharedButton(label, variant = "secondary", size = "sm", shape = "rounded") {
   const button = document.createElement("button");
   button.textContent = label;
-  return cgptApplySharedButtonStyle(button, { variant, size });
+  return cgptApplySharedButtonStyle(button, { variant, size, shape });
+}
+
+function cgptCreateSharedChipButton(label, size = "md") {
+  return cgptCreateSharedButton(label, "chip", size, "pill");
+}
+
+function cgptCreateSharedPanelButton(label, variant = "secondary", size = "sm") {
+  return cgptCreateSharedButton(label, variant, size, "pill");
 }
 
 function cgptApplySharedButtonVariant(button, variant = "secondary") {
@@ -303,6 +395,7 @@ function cgptApplySharedButtonVariant(button, variant = "secondary") {
   cgptApplySharedButtonStyle(button, {
     variant,
     size: button.dataset.cgptButtonSize || "sm",
+    shape: button.dataset.cgptButtonShape || "rounded",
   });
 }
 
@@ -311,6 +404,16 @@ function cgptApplySharedButtonSize(button, size = "sm") {
   cgptApplySharedButtonStyle(button, {
     variant: button.dataset.cgptButtonVariant || "secondary",
     size,
+    shape: button.dataset.cgptButtonShape || "rounded",
+  });
+}
+
+function cgptApplySharedButtonShape(button, shape = "rounded") {
+  if (!button || !button.style) return;
+  cgptApplySharedButtonStyle(button, {
+    variant: button.dataset.cgptButtonVariant || "secondary",
+    size: button.dataset.cgptButtonSize || "sm",
+    shape,
   });
 }
 
@@ -392,6 +495,30 @@ function cgptApplyInputStyle(element) {
   return element;
 }
 
+function cgptApplySharedChipStyle(element, options = {}) {
+  if (!element || !element.style) return element;
+  const { variant = "chip", size = "md" } = options;
+  const chipSize = cgptGetChipSizeEntry(size);
+  const palette = cgptGetButtonPaletteEntry(variant);
+
+  element.style.display = "inline-flex";
+  element.style.alignItems = "center";
+  element.style.justifyContent = "center";
+  element.style.minHeight = chipSize.minHeight;
+  element.style.padding = chipSize.padding;
+  element.style.fontFamily = CGPT_CHIP_BASE_TOKENS.fontFamily;
+  element.style.fontWeight = CGPT_CHIP_BASE_TOKENS.fontWeight;
+  element.style.fontSize = chipSize.fontSize;
+  element.style.lineHeight = CGPT_CHIP_BASE_TOKENS.lineHeight;
+  element.style.borderRadius = CGPT_CHIP_BASE_TOKENS.borderRadius;
+  element.style.border = `1px solid ${palette.border}`;
+  element.style.background = palette.background;
+  element.style.color = palette.color;
+  element.style.boxSizing = "border-box";
+  element.style.whiteSpace = "nowrap";
+  return element;
+}
+
 function cgptApplyPanelTextTone(element, tone = "primary") {
   if (!element || !element.style) return element;
   const theme = CGPT_UI_THEME;
@@ -414,5 +541,39 @@ function cgptApplyPanelInputStyle(element) {
   element.style.background = theme.panelInputBackground;
   element.style.border = `1px solid ${theme.panelInputBorder}`;
   element.style.color = theme.panelTextPrimary;
+  return element;
+}
+
+function cgptGetSurfaceLayoutTokens() {
+  return {
+    dialog: { ...CGPT_SURFACE_LAYOUT_TOKENS.dialog },
+    dialogCompact: { ...CGPT_SURFACE_LAYOUT_TOKENS.dialogCompact },
+    card: { ...CGPT_SURFACE_LAYOUT_TOKENS.card },
+    sectionCard: { ...CGPT_SURFACE_LAYOUT_TOKENS.sectionCard },
+    title: { ...CGPT_SURFACE_LAYOUT_TOKENS.title },
+    sectionLabel: { ...CGPT_SURFACE_LAYOUT_TOKENS.sectionLabel },
+    body: { ...CGPT_SURFACE_LAYOUT_TOKENS.body },
+    meta: { ...CGPT_SURFACE_LAYOUT_TOKENS.meta },
+  };
+}
+
+function cgptApplySurfaceLayout(element, variant = "card") {
+  if (!element || !element.style) return element;
+  const token = CGPT_SURFACE_LAYOUT_TOKENS[variant] || CGPT_SURFACE_LAYOUT_TOKENS.card;
+  if (token.borderRadius) element.style.borderRadius = token.borderRadius;
+  if (token.padding) element.style.padding = token.padding;
+  if (token.gap) element.style.gap = token.gap;
+  if (token.width) element.style.width = token.width;
+  if (token.maxWidth) element.style.maxWidth = token.maxWidth;
+  if (token.maxHeight) element.style.maxHeight = token.maxHeight;
+  return element;
+}
+
+function cgptApplyTextScale(element, variant = "body") {
+  if (!element || !element.style) return element;
+  const token = CGPT_SURFACE_LAYOUT_TOKENS[variant] || CGPT_SURFACE_LAYOUT_TOKENS.body;
+  if (token.fontSize) element.style.fontSize = token.fontSize;
+  if (token.fontWeight) element.style.fontWeight = token.fontWeight;
+  if (token.lineHeight) element.style.lineHeight = token.lineHeight;
   return element;
 }

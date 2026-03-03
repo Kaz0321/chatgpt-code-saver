@@ -20,24 +20,6 @@ const CGPT_FOLD_GUIDE_STEP_PX = 12;
 const CGPT_FOLD_LINE_LEFT_BASE_PX = 8;
 const CGPT_FOLD_CONTENT_LEFT_BASE_PX = 18;
 const CGPT_FOLD_LINE_WIDTH_PX = 1;
-const CGPT_FOLD_CHIP_FONT_SIZE_PX = 11;
-const CGPT_FOLD_CHIP_MIN_HEIGHT_PX = 22;
-const CGPT_FOLD_CHIP_PADDING = "0 8px";
-const CGPT_FOLD_CHIP_RADIUS = "999px";
-
-function cgptApplyFoldChipStyle(element) {
-  if (!element || !element.style) return;
-  element.style.display = "inline-flex";
-  element.style.alignItems = "center";
-  element.style.justifyContent = "center";
-  element.style.minHeight = `${CGPT_FOLD_CHIP_MIN_HEIGHT_PX}px`;
-  element.style.padding = CGPT_FOLD_CHIP_PADDING;
-  element.style.fontSize = `${CGPT_FOLD_CHIP_FONT_SIZE_PX}px`;
-  element.style.lineHeight = "1";
-  element.style.borderRadius = CGPT_FOLD_CHIP_RADIUS;
-  element.style.boxSizing = "border-box";
-  element.style.whiteSpace = "nowrap";
-}
 
 function cgptGetFoldLevelColor(level) {
   const paletteIndex = Math.min(
@@ -73,32 +55,6 @@ function cgptApplyFoldState(foldElement, isOpen) {
       btn.classList.toggle("cgpt-helper-fold-action-disabled", open);
     }
   });
-}
-
-function cgptApplyFoldToggleTheme(button) {
-  if (!button) return;
-  cgptApplyFoldActionTheme(button);
-}
-
-function cgptApplyFoldActionTheme(button) {
-  if (!button) return;
-  const theme = typeof cgptGetUiTheme === "function" ? cgptGetUiTheme() : null;
-  if (typeof cgptSetSharedButtonCustomPalette === "function") {
-    cgptSetSharedButtonCustomPalette(button, {
-      background: theme ? theme.chipBackground : "rgba(255, 255, 255, 0.05)",
-      hoverBackground: "rgba(148, 163, 184, 0.12)",
-      activeBackground: "rgba(148, 163, 184, 0.16)",
-      border: theme ? theme.chipBorder : "rgba(255, 255, 255, 0.16)",
-      hoverBorder: "rgba(148, 163, 184, 0.24)",
-      activeBorder: "rgba(148, 163, 184, 0.28)",
-      color: theme ? theme.chipText : "rgba(255, 255, 255, 0.9)",
-      focusRing: "rgba(147, 197, 253, 0.18)",
-    });
-    return;
-  }
-  button.style.background = theme ? theme.chipBackground : "rgba(255, 255, 255, 0.05)";
-  button.style.borderColor = theme ? theme.chipBorder : "rgba(255, 255, 255, 0.16)";
-  button.style.color = theme ? theme.chipText : "rgba(255, 255, 255, 0.9)";
 }
 
 function cgptCreateFoldSection({
@@ -138,6 +94,9 @@ function cgptCreateFoldSection({
     const badge = document.createElement("span");
     badge.className = "cgpt-helper-fold-title-badge";
     badge.textContent = badgeText;
+    if (typeof cgptApplySharedChipStyle === "function") {
+      cgptApplySharedChipStyle(badge, { variant: "chip", size: "md" });
+    }
     titleWrapper.appendChild(badge);
   }
   if (title) {
@@ -203,10 +162,6 @@ function cgptCreateFoldActionButtons(actionConfig = {}) {
     if (actionKey) {
       button.dataset.cgptHelperFoldAction = actionKey;
     }
-    if (actionKey === "compact" || actionKey === "expand") {
-      button.classList.add("cgpt-helper-fold-toggle");
-      cgptApplyFoldToggleTheme(button);
-    }
     if (typeof handler === "function") {
       button.addEventListener("click", handler);
     } else if (actionKey !== "compact" && actionKey !== "expand") {
@@ -231,20 +186,22 @@ function cgptCreateFoldActionButton(label, variant = "secondary") {
   button.className = "cgpt-helper-fold-action-button";
   button.textContent = label;
   if (typeof cgptApplySharedButtonStyle === "function") {
-    cgptApplySharedButtonStyle(button, { variant, size: "sm" });
+    cgptApplySharedButtonStyle(button, { variant: "chip", size: "md", shape: "pill" });
   } else {
-    const palette = {
-      primary: { background: "#2563eb", color: "#fff", border: "rgba(255,255,255,0.25)" },
-      secondary: { background: "#374151", color: "#f3f4f6", border: "rgba(255,255,255,0.2)" },
-      ghost: { background: "transparent", color: "#e5e7eb", border: "rgba(255,255,255,0.18)" },
-    };
-    const paletteEntry = palette[variant] || palette.secondary;
-    button.style.background = paletteEntry.background;
-    button.style.color = paletteEntry.color;
-    button.style.border = `1px solid ${paletteEntry.border}`;
+    button.style.display = "inline-flex";
+    button.style.alignItems = "center";
+    button.style.justifyContent = "center";
+    button.style.minHeight = "30px";
+    button.style.padding = "0 12px";
+    button.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+    button.style.fontWeight = "600";
+    button.style.fontSize = "12px";
+    button.style.lineHeight = "1";
+    button.style.borderRadius = "999px";
+    button.style.border = "1px solid rgba(148, 163, 184, 0.52)";
+    button.style.background = "rgba(241, 245, 249, 0.92)";
+    button.style.color = "#334155";
   }
-  cgptApplyFoldChipStyle(button);
-  cgptApplyFoldActionTheme(button);
   button.style.boxShadow = "none";
   button.style.minWidth = "0";
   return button;
@@ -281,7 +238,16 @@ function cgptSaveChatResponseText(entry, rawText, saveAs = false) {
   }
   const filePath = cgptBuildResponseFilePath(entry);
   if (typeof cgptTriggerChatLogDownload === "function") {
-    cgptTriggerChatLogDownload(filePath, trimmed, { saveAs });
+    cgptTriggerChatLogDownload(filePath, trimmed, {
+      saveAs,
+      meta: {
+        source: "chat-entry",
+        entryRole: entry && entry.role ? entry.role : "",
+        timestamp: entry && entry.timestamp ? entry.timestamp : "",
+        conversationKey:
+          typeof getConversationKey === "function" ? getConversationKey() : "",
+      },
+    });
     return;
   }
   cgptDownloadTextLocally(filePath, trimmed);
@@ -798,12 +764,17 @@ function ensureChatLogFoldStyle() {
       align-items: center;
       justify-content: space-between;
       gap: 10px;
+      flex-wrap: wrap;
       width: 100%;
     }
     .cgpt-helper-fold-title {
       display: flex;
       align-items: center;
+      flex: 1 1 auto;
+      min-width: 0;
+      flex-wrap: wrap;
       gap: 8px;
+      row-gap: 4px;
       font-size: 12px;
       font-weight: 600;
       color: inherit;
@@ -814,34 +785,20 @@ function ensureChatLogFoldStyle() {
       color: inherit;
     }
     .cgpt-helper-fold-title-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: ${CGPT_FOLD_CHIP_MIN_HEIGHT_PX}px;
-      padding: ${CGPT_FOLD_CHIP_PADDING};
-      font-size: ${CGPT_FOLD_CHIP_FONT_SIZE_PX}px;
-      line-height: 1;
-      border-radius: ${CGPT_FOLD_CHIP_RADIUS};
-      border: 1px solid rgba(148, 163, 184, 0.52);
-      background: rgba(241, 245, 249, 0.92);
-      color: #334155;
       box-sizing: border-box;
       white-space: nowrap;
     }
     .cgpt-helper-fold-actions {
       display: flex;
       align-items: center;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
       gap: 6px;
     }
     .cgpt-helper-fold-action-button {
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
       gap: 4px;
-      border: 1px solid rgba(148, 163, 184, 0.52);
-      background: rgba(241, 245, 249, 0.92);
-      color: #334155;
       min-width: 0;
       transition: transform 0.1s ease, opacity 0.2s ease;
     }
@@ -851,14 +808,6 @@ function ensureChatLogFoldStyle() {
     .cgpt-helper-fold-action-disabled {
       opacity: 0.55;
       cursor: not-allowed;
-    }
-    .cgpt-helper-fold-toggle {
-      background: rgba(241, 245, 249, 0.92);
-      border-color: rgba(148, 163, 184, 0.52);
-      color: #334155;
-    }
-    .cgpt-helper-fold-toggle.cgpt-helper-fold-action-disabled {
-      opacity: 0.6;
     }
     .cgpt-helper-fold-body {
       margin-top: 8px;

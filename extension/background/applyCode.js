@@ -75,10 +75,16 @@ function cgptInferMimeTypeFromPath(filePath) {
   return CGPT_KNOWN_MIME_TYPES[ext] || "text/plain";
 }
 
-function cgptCreateApplyLogContext(rawFilePath, relativeFilePath, absoluteFilePath = "") {
+function cgptCreateApplyLogContext(
+  rawFilePath,
+  relativeFilePath,
+  absoluteFilePath = "",
+  source = ""
+) {
   return {
     time: new Date().toISOString(),
     kind: "apply",
+    source,
     filePath: rawFilePath,
     filePathRelative: relativeFilePath,
     filePathAbsolute: absoluteFilePath,
@@ -95,6 +101,7 @@ function cgptHandleApplyValidation(message) {
   const rawFilePath = typeof message.filePath === "string" ? message.filePath : "";
   const content = message.content;
   const saveAs = Boolean(message.saveAs);
+  const source = typeof message.source === "string" ? message.source : "";
   const overrideFolderPathRaw =
     typeof message.overrideFolderPath === "string" ? message.overrideFolderPath : "";
 
@@ -106,6 +113,7 @@ function cgptHandleApplyValidation(message) {
       relativeFilePath: rawFilePath,
       overrideFolderPath: "",
       saveAs,
+      source,
       content: "",
     };
   }
@@ -119,6 +127,7 @@ function cgptHandleApplyValidation(message) {
       relativeFilePath: rawFilePath,
       overrideFolderPath: "",
       saveAs,
+      source,
       content,
     };
   }
@@ -135,6 +144,7 @@ function cgptHandleApplyValidation(message) {
         relativeFilePath: normalizedFilePath,
         overrideFolderPath: "",
         saveAs,
+        source,
         content,
       };
     }
@@ -148,13 +158,21 @@ function cgptHandleApplyValidation(message) {
     normalizedFilePath,
     overrideFolderPath,
     saveAs,
+    source,
     content,
   };
 }
 
-function cgptLogDownloadFailure(targetPath, relativeFilePath, absoluteFilePath, err, sendResponse) {
+function cgptLogDownloadFailure(
+  targetPath,
+  relativeFilePath,
+  absoluteFilePath,
+  err,
+  sendResponse,
+  source = ""
+) {
   const logEntry = {
-    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath),
+    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath, source),
     ok: false,
     error: err,
     downloadId: null,
@@ -162,9 +180,16 @@ function cgptLogDownloadFailure(targetPath, relativeFilePath, absoluteFilePath, 
   cgptAppendAndRespond(logEntry, sendResponse, { ok: false, error: err });
 }
 
-function cgptLogDownloadSuccess(targetPath, relativeFilePath, absoluteFilePath, downloadId, sendResponse) {
+function cgptLogDownloadSuccess(
+  targetPath,
+  relativeFilePath,
+  absoluteFilePath,
+  downloadId,
+  sendResponse,
+  source = ""
+) {
   const logEntry = {
-    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath),
+    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath, source),
     ok: true,
     error: "",
     downloadId,
@@ -177,7 +202,14 @@ function cgptLogDownloadSuccess(targetPath, relativeFilePath, absoluteFilePath, 
   });
 }
 
-function cgptStartDownload(targetPath, relativeFilePath, content, saveAs, sendResponse) {
+function cgptStartDownload(
+  targetPath,
+  relativeFilePath,
+  content,
+  saveAs,
+  sendResponse,
+  source = ""
+) {
   const encoded = encodeURIComponent(content);
   const mimeType = cgptInferMimeTypeFromPath(relativeFilePath);
   const url = `data:${mimeType};charset=utf-8,${encoded}`;
@@ -193,7 +225,14 @@ function cgptStartDownload(targetPath, relativeFilePath, content, saveAs, sendRe
       if (chrome.runtime.lastError) {
         const err = chrome.runtime.lastError.message || "unknown error";
         console.error("downloads.download error:", chrome.runtime.lastError);
-        cgptLogDownloadFailure(targetPath, relativeFilePath, targetPath, err, sendResponse);
+        cgptLogDownloadFailure(
+          targetPath,
+          relativeFilePath,
+          targetPath,
+          err,
+          sendResponse,
+          source
+        );
         return;
       }
 
@@ -206,7 +245,8 @@ function cgptStartDownload(targetPath, relativeFilePath, content, saveAs, sendRe
           relativeFilePath,
           finalAbsolutePath,
           downloadId,
-          sendResponse
+          sendResponse,
+          source
         );
       });
     }
@@ -220,7 +260,8 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
       ...cgptCreateApplyLogContext(
         validation.rawFilePath,
         validation.relativeFilePath,
-        ""
+        "",
+        validation.source
       ),
       ok: false,
       error: validation.error,
@@ -229,11 +270,12 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
     return false;
   }
 
-  const { normalizedFilePath, overrideFolderPath, relativeFilePath, content, saveAs } = validation;
+  const { normalizedFilePath, overrideFolderPath, relativeFilePath, content, saveAs, source } =
+    validation;
 
   const startDownloadWithFolder = (folderPath) => {
     const targetPath = cgptBuildFullFilePath(folderPath, normalizedFilePath);
-    cgptStartDownload(targetPath, relativeFilePath, content, saveAs, sendResponse);
+    cgptStartDownload(targetPath, relativeFilePath, content, saveAs, sendResponse, source);
   };
 
   if (overrideFolderPath) {

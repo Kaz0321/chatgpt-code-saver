@@ -2,6 +2,7 @@ const BUTTON_FEEDBACK_TIMEOUT_MS = 1500;
 
 function cgptCreateButtonContainer() {
   const container = document.createElement("div");
+  container.dataset.cgptCodeActions = "1";
   container.style.display = "inline-flex";
   container.style.gap = "6px";
   container.style.alignItems = "center";
@@ -115,57 +116,32 @@ function cgptHandleSaveAsButtonClick(button, code) {
   const filePath = cgptGetSuggestedRelativeFilePath(parsed);
   const content = cgptGetContentForSave(parsed, code);
   cgptTriggerApplyCode(button, filePath, content, {
-    saveAs: true,
+    mode: typeof CGPT_SAVE_MODES !== "undefined" ? CGPT_SAVE_MODES.SAVE_AS : "saveAs",
   });
 }
 
 function cgptTriggerApplyCode(button, filePath, content, options = {}) {
-  const { saveAs, successButtonText, successToastBuilder } = options;
-  if (!filePath) return;
-  const validation = cgptValidateFilePath(filePath);
-  if (!validation.ok) {
-    const errMsg = validation.error || "File path is invalid.";
-    if (typeof showToast === "function") {
-      showToast(errMsg, "error");
-    } else {
-      alert(errMsg);
-    }
-    return;
-  }
-
-  const normalizedFilePath = validation.filePath;
-  chrome.runtime.sendMessage(
-    {
-      type: "applyCodeBlock",
-      filePath: normalizedFilePath,
+  const {
+    mode = typeof CGPT_SAVE_MODES !== "undefined" ? CGPT_SAVE_MODES.SAVE : "save",
+    successButtonText,
+    successToastBuilder,
+  } = options;
+  if (typeof cgptRunSaveAction !== "function") return;
+  cgptRunSaveAction({
+    request: {
       content,
-      saveAs: Boolean(saveAs),
+      targetPath: filePath,
+      mode,
+      meta: {
+        source: "code-block",
+      },
     },
-    (res) => {
-      if (!res || !res.ok) {
-        const errorMessage =
-          "Failed to save: " + (res && res.error ? res.error : "unknown error");
-        if (typeof showToast === "function") {
-          showToast(errorMessage, "error");
-        } else {
-          alert(errorMessage);
-        }
-        return;
-      }
-
-      const savedPath = res.filePath || normalizedFilePath;
-      if (successButtonText) {
-        cgptFlashButtonText(button, successButtonText);
-      }
-      if (typeof showToast === "function") {
-        const toastMessage =
-          typeof successToastBuilder === "function"
-            ? successToastBuilder(savedPath)
-            : successToastBuilder || `Saved: ${savedPath}`;
-        showToast(toastMessage, "success");
-      }
-    }
-  );
+    ui: {
+      triggerButton: button,
+      flashButtonText: successButtonText,
+      successMessage: successToastBuilder,
+    },
+  });
 }
 
 function cgptHandleCopyButtonClick(button, code) {
