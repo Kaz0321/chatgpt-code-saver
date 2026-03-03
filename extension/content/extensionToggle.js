@@ -14,11 +14,26 @@ function cgptLoadExtensionEnabled(callback) {
     callback?.(cgptIsExtensionEnabled());
     return;
   }
+  const resolve =
+    typeof cgptCreateAsyncGuard === "function"
+      ? cgptCreateAsyncGuard((result) => {
+          if (result && typeof result.cgptExtensionEnabled === "boolean") {
+            cgptExtensionEnabledState = result.cgptExtensionEnabled;
+          }
+          callback?.(cgptIsExtensionEnabled());
+        })
+      : (result) => {
+          if (result && typeof result.cgptExtensionEnabled === "boolean") {
+            cgptExtensionEnabledState = result.cgptExtensionEnabled;
+          }
+          callback?.(cgptIsExtensionEnabled());
+        };
   chrome.storage.sync.get(["cgptExtensionEnabled"], (result) => {
-    if (result && typeof result.cgptExtensionEnabled === "boolean") {
-      cgptExtensionEnabledState = result.cgptExtensionEnabled;
+    if (chrome.runtime && chrome.runtime.lastError) {
+      resolve(null);
+      return;
     }
-    callback?.(cgptIsExtensionEnabled());
+    resolve(result);
   });
 }
 

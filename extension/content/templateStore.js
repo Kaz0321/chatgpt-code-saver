@@ -24,7 +24,11 @@ function ensureDefaultTemplates() {
 }
 
 function loadTemplatesFromStorage(callback) {
-  chrome.runtime.sendMessage({ type: "getTemplates" }, (res) => {
+  const runtime =
+    typeof chrome !== "undefined" && chrome.runtime && typeof chrome.runtime.sendMessage === "function"
+      ? chrome.runtime
+      : null;
+  const finalize = (res) => {
     if (res && res.ok && Array.isArray(res.templates)) {
       cgptSetTemplates(res.templates);
     } else {
@@ -32,6 +36,21 @@ function loadTemplatesFromStorage(callback) {
     }
     ensureDefaultTemplates();
     if (typeof callback === "function") callback();
+  };
+  if (!runtime) {
+    finalize(null);
+    return;
+  }
+  const resolve =
+    typeof cgptCreateAsyncGuard === "function"
+      ? cgptCreateAsyncGuard(finalize)
+      : finalize;
+  runtime.sendMessage({ type: "getTemplates" }, (res) => {
+    if (chrome.runtime && chrome.runtime.lastError) {
+      resolve(null);
+      return;
+    }
+    resolve(res);
   });
 }
 
@@ -71,6 +90,9 @@ function rebuildTemplateDropdown(selectEl) {
     emptyOption.value = "";
     emptyOption.textContent = "No templates available";
     emptyOption.selected = true;
+    if (typeof cgptStyleTemplateDropdownOption === "function") {
+      cgptStyleTemplateDropdownOption(emptyOption);
+    }
     selectEl.appendChild(emptyOption);
     return;
   }
@@ -88,6 +110,9 @@ function rebuildTemplateDropdown(selectEl) {
     option.textContent = tpl.title;
     if (tpl.id === selectedId) {
       option.selected = true;
+    }
+    if (typeof cgptStyleTemplateDropdownOption === "function") {
+      cgptStyleTemplateDropdownOption(option);
     }
     selectEl.appendChild(option);
   });

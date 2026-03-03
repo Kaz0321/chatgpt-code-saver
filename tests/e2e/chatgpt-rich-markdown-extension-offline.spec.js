@@ -226,14 +226,6 @@ function buildMockPageHtml({ prompt, assistantInnerHtml }) {
 </html>`;
 }
 
-function headingLevelRow(page, level) {
-  return page
-    .locator("#cgpt-code-helper-panel span")
-    .filter({ hasText: `Level ${level}` })
-    .first()
-    .locator("xpath=ancestor::div[1]");
-}
-
 async function readAssistantStructure(page) {
   return page.locator("[data-message-author-role='assistant']").first().evaluate((element) => {
     const scope = element.querySelector(".cgpt-helper-message-body") || element;
@@ -269,10 +261,10 @@ async function readAssistantStructure(page) {
 }
 
 async function assertToggleWorksForLevel(page, level) {
-  const row = headingLevelRow(page, level);
-  await expect(row).toBeVisible();
+  const headingSection = page.locator("#cgpt-code-helper-panel").filter({ hasText: "Headings" }).first();
+  await expect(headingSection).toBeVisible();
 
-  await row.getByRole("button", { name: "Compact All" }).click();
+  await headingSection.getByTitle("Collapse all visible heading folds").click();
   await expect
     .poll(async () => {
       return page
@@ -283,7 +275,7 @@ async function assertToggleWorksForLevel(page, level) {
     })
     .toBeTruthy();
 
-  await row.getByRole("button", { name: "Expand All" }).click();
+  await headingSection.getByTitle("Expand all visible heading folds").click();
   await expect
     .poll(async () => {
       return page
@@ -296,36 +288,51 @@ async function assertToggleWorksForLevel(page, level) {
 }
 
 test.describe("offline rich markdown fixtures with extension", () => {
+  let sharedContext = null;
+  let launchFailureReason = "";
+
+  test.beforeAll(async () => {
+    const profileBaseDir = path.join(artifactsRoot, "profiles");
+    await ensureDir(profileBaseDir);
+    const profileDir = await fs.mkdtemp(path.join(profileBaseDir, "suite-"));
+    const launchProbe = await probeExtensionContext({
+      chromium,
+      profileDir,
+      extensionPath,
+    });
+    if (!launchProbe.ok) {
+      launchFailureReason = launchProbe.reason;
+      return;
+    }
+    sharedContext = launchProbe.context;
+  });
+
+  test.afterAll(async () => {
+    if (sharedContext) {
+      await Promise.race([
+        sharedContext.close().catch(() => {}),
+        new Promise((resolve) => setTimeout(resolve, 5_000)),
+      ]);
+      sharedContext = null;
+    }
+  });
+
   for (const scenario of scenarios) {
     test(`preserves ${scenario.id}`, async () => {
       test.setTimeout(120_000);
+      test.skip(!sharedContext, launchFailureReason || "Extension context is unavailable.");
 
       const scenarioDir = path.join(artifactsRoot, scenario.id);
       const screenshotDir = path.join(scenarioDir, "screenshots");
       const stateDir = path.join(scenarioDir, "state");
-      const traceDir = path.join(scenarioDir, "traces");
-      const profileBaseDir = path.join(scenarioDir, "profiles");
 
       await Promise.all([
         ensureDir(screenshotDir),
         ensureDir(stateDir),
-        ensureDir(traceDir),
-        ensureDir(profileBaseDir),
       ]);
 
-      const profileDir = await fs.mkdtemp(path.join(profileBaseDir, "run-"));
-      const launchProbe = await probeExtensionContext({
-        chromium,
-        profileDir,
-        extensionPath,
-      });
-      test.skip(!launchProbe.ok, launchProbe.reason);
-      const context = launchProbe.context;
-
+      const page = await sharedContext.newPage();
       try {
-        await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
-
-        const page = await context.newPage();
         await page.route("https://chatgpt.com/**", async (route) => {
           if (route.request().resourceType() !== "document") {
             await route.fulfill({
@@ -375,8 +382,7 @@ test.describe("offline rich markdown fixtures with extension", () => {
           ),
         ]);
       } finally {
-        await context.tracing.stop({ path: path.join(traceDir, "trace.zip") });
-        await context.close();
+        await page.close().catch(() => {});
       }
     });
   }

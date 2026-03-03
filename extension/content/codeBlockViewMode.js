@@ -1,5 +1,6 @@
 const CGPT_CODE_WRAPPER_CLASS = "cgpt-code-wrapper";
 const CGPT_CODE_COLLAPSED_CLASS = "cgpt-code-wrapper--collapsed";
+const CGPT_CODE_PREVIEW_SELECTOR = "[data-cgpt-code-preview='1']";
 let cgptCodeBlockStylesInjected = false;
 const CGPT_VIEW_MODE = {
   COMPACT: "compact",
@@ -33,6 +34,9 @@ function cgptEnsureCodeBlockStyles() {
   style.textContent = `
 .${CGPT_CODE_WRAPPER_CLASS} {
   position: relative;
+}
+.${CGPT_CODE_WRAPPER_CLASS} ${CGPT_CODE_PREVIEW_SELECTOR} {
+  display: none;
 }
 .${CGPT_CODE_WRAPPER_CLASS} [data-cgpt-code-actions="1"] {
   opacity: 0;
@@ -157,17 +161,23 @@ function cgptGetCodeLineHeight(pre) {
   return fallbackFontSize * 1.4;
 }
 
-function cgptGetCodeBlockVerticalPadding(pre) {
-  if (!pre || typeof window === "undefined" || typeof window.getComputedStyle !== "function") {
-    return 0;
+function cgptRememberOriginalElementDisplay(element) {
+  if (!element || !element.style) return;
+  if (element.dataset.cgptOriginalDisplay === undefined) {
+    element.dataset.cgptOriginalDisplay = element.style.display || "";
   }
-  const style = window.getComputedStyle(pre);
-  if (!style) return 0;
-  const paddingTop = parseFloat(style.paddingTop) || 0;
-  const paddingBottom = parseFloat(style.paddingBottom) || 0;
-  const borderTopWidth = parseFloat(style.borderTopWidth) || 0;
-  const borderBottomWidth = parseFloat(style.borderBottomWidth) || 0;
-  return paddingTop + paddingBottom + borderTopWidth + borderBottomWidth;
+}
+
+function cgptSetElementDisplay(element, displayValue) {
+  if (!element || !element.style) return;
+  cgptRememberOriginalElementDisplay(element);
+  element.style.display = displayValue;
+}
+
+function cgptRestoreElementDisplay(element) {
+  if (!element || !element.style) return;
+  cgptRememberOriginalElementDisplay(element);
+  element.style.display = element.dataset.cgptOriginalDisplay || "";
 }
 
 function cgptSetCollapsedVisualState(element, isCollapsed) {
@@ -217,9 +227,22 @@ function cgptSetPreViewMode(pre, mode) {
   const viewSettings =
     typeof cgptGetViewSettings === "function" ? cgptGetViewSettings() : FALLBACK_VIEW_SETTINGS;
   pre.dataset.cgptViewMode = mode;
+  const host =
+    typeof cgptGetCompactContentHost === "function" ? cgptGetCompactContentHost(pre) : pre;
+  const preview = host && host.parentElement
+    ? host.parentElement.querySelector(":scope > [data-cgpt-code-preview='1']")
+    : null;
+  const metadata = pre.cgptMetadata || null;
   if (mode === CGPT_VIEW_MODE.EXPANDED) {
     collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
     collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
+    cgptRestoreElementDisplay(host);
+    if (preview) {
+      cgptSetElementDisplay(preview, "none");
+    }
+    if (typeof cgptSyncCompactHeaderPath === "function") {
+      cgptSyncCompactHeaderPath(pre, metadata, mode);
+    }
     cgptSetCollapsedVisualState(collapsibleEl, false);
   } else {
     const lineCount = viewSettings.compactLineCount;
@@ -227,17 +250,18 @@ function cgptSetPreViewMode(pre, mode) {
     const normalizedLines = Number.isFinite(parsedLines)
       ? Math.max(0, parsedLines)
       : FALLBACK_VIEW_SETTINGS.compactLineCount;
-    const lineHeight = cgptGetCodeLineHeight(pre);
-    const buttonOverlayOffset = cgptGetButtonOverlayOffset(pre);
-    const verticalPadding = cgptGetCodeBlockVerticalPadding(pre);
-    const targetHeight = cgptCalculateCompactHeight(
-      normalizedLines,
-      lineHeight,
-      buttonOverlayOffset,
-      verticalPadding
-    );
-    collapsibleEl.style.maxHeight = `${targetHeight}px`;
-    collapsibleEl.style.overflow = "hidden";
+    if (typeof cgptSyncCompactPreview === "function") {
+      cgptSyncCompactPreview(pre, normalizedLines);
+    }
+    cgptSetElementDisplay(host, "none");
+    if (preview) {
+      cgptSetElementDisplay(preview, "block");
+    }
+    collapsibleEl.style.maxHeight = "";
+    collapsibleEl.style.overflow = "visible";
+    if (typeof cgptSyncCompactHeaderPath === "function") {
+      cgptSyncCompactHeaderPath(pre, metadata, mode);
+    }
     cgptSetCollapsedVisualState(collapsibleEl, true);
   }
   cgptUpdateViewButtonStates(pre);

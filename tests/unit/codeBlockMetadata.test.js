@@ -5,6 +5,7 @@ const {
   cgptGetRawCodeText,
   cgptParseCodeBlockMetadata,
   cgptGetNormalizedCodeText,
+  cgptGetDisplayCodeText,
 } = require('../../extension/content/codeBlockMetadata.js');
 
 test('cgptParseCodeBlockMetadata extracts path and content from // metadata', () => {
@@ -44,6 +45,16 @@ test('cgptParseCodeBlockMetadata ignores file: lines that are not first', () => 
 test('cgptGetNormalizedCodeText converts CRLF to LF', () => {
   const code = { innerText: 'line1\r\nline2' };
   assert.strictEqual(cgptGetNormalizedCodeText(code), 'line1\nline2');
+});
+
+test('cgptGetDisplayCodeText removes the first metadata line from visible code text', () => {
+  const code = { innerText: '// file: src/app.js\nconsole.log("ok");' };
+  assert.strictEqual(cgptGetDisplayCodeText(code), 'console.log("ok");');
+});
+
+test('cgptGetDisplayCodeText keeps full text when metadata is missing', () => {
+  const code = { innerText: 'console.log("plain");\nconsole.log("text");' };
+  assert.strictEqual(cgptGetDisplayCodeText(code), 'console.log("plain");\nconsole.log("text");');
 });
 
 test('cgptGetRawCodeText reads CodeMirror-style content containers', () => {

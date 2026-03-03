@@ -78,14 +78,6 @@ function buildMockPageHtml({ prompt, assistantInnerHtml }) {
 </html>`;
 }
 
-function headingLevelRow(page, level) {
-  return page
-    .locator("#cgpt-code-helper-panel span")
-    .filter({ hasText: `Level ${level}` })
-    .first()
-    .locator("xpath=ancestor::div[1]");
-}
-
 function getExpectedVisualLevels(expectedLevels) {
   const visualLevels = [];
   const stack = [];
@@ -101,10 +93,25 @@ function getExpectedVisualLevels(expectedLevels) {
   return visualLevels;
 }
 
+async function assertAllHeadingFoldsState(page, shouldBeOpen) {
+  const expectedValue = shouldBeOpen ? "1" : "0";
+  await expect
+    .poll(async () => {
+      return page.locator(".cgpt-helper-heading-fold").evaluateAll(
+        (elements, targetValue) =>
+          elements.every((element) => element.getAttribute("data-cgpt-helper-fold-open") === targetValue),
+        expectedValue
+      );
+    }, { timeout: 10_000 })
+    .toBeTruthy();
+}
+
 test.describe("offline heading fixtures", () => {
   const manifest = fs.existsSync(manifestPath)
     ? JSON.parse(fs.readFileSync(manifestPath, "utf8"))
     : null;
+  let sharedContext = null;
+  let launchFailureReason = "";
 
   if (!manifest || !Array.isArray(manifest.scenarios) || manifest.scenarios.length === 0) {
     test("skips when no live heading fixtures are collected", async () => {
@@ -113,40 +120,52 @@ test.describe("offline heading fixtures", () => {
     return;
   }
 
+  test.beforeAll(async () => {
+    const profileBaseDir = path.join(artifactsRoot, "profiles");
+    await ensureDir(profileBaseDir);
+    const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "suite-"));
+    const launchProbe = await probeExtensionContext({
+      chromium,
+      profileDir,
+      extensionPath,
+    });
+    if (!launchProbe.ok) {
+      launchFailureReason = launchProbe.reason;
+      return;
+    }
+    sharedContext = launchProbe.context;
+  });
+
+  test.afterAll(async () => {
+    if (sharedContext) {
+      await Promise.race([
+        sharedContext.close().catch(() => {}),
+        new Promise((resolve) => setTimeout(resolve, 5_000)),
+      ]);
+      sharedContext = null;
+    }
+  });
+
   for (const scenario of manifest.scenarios) {
     test(`replays ${scenario.id}`, async () => {
       test.setTimeout(120_000);
+      test.skip(!sharedContext, launchFailureReason || "Extension context is unavailable.");
 
       const scenarioDir = path.join(artifactsRoot, scenario.id);
       const screenshotDir = path.join(scenarioDir, "screenshots");
       const stateDir = path.join(scenarioDir, "state");
-      const traceDir = path.join(scenarioDir, "traces");
-      const profileBaseDir = path.join(scenarioDir, "profiles");
 
       await Promise.all([
         ensureDir(screenshotDir),
         ensureDir(stateDir),
-        ensureDir(traceDir),
-        ensureDir(profileBaseDir),
       ]);
-
-      const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "run-"));
       const assistantInnerHtml = await fsp.readFile(
         path.join(fixtureRoot, scenario.responseHtmlFile),
         "utf8"
       );
-      const launchProbe = await probeExtensionContext({
-        chromium,
-        profileDir,
-        extensionPath,
-      });
-      test.skip(!launchProbe.ok, launchProbe.reason);
-      const context = launchProbe.context;
 
+      const page = await sharedContext.newPage();
       try {
-        await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
-
-        const page = await context.newPage();
         await page.route("https://chatgpt.com/**", async (route) => {
           await route.fulfill({
             status: 200,
@@ -166,7 +185,9 @@ test.describe("offline heading fixtures", () => {
           Number.parseInt(String(heading.tagName || "").replace(/^h/i, ""), 10)
         );
 
-        await expect(page.locator(".cgpt-helper-heading-fold")).toHaveCount(expectedLevels.length);
+        await expect
+          .poll(async () => page.locator(".cgpt-helper-heading-fold").count(), { timeout: 10_000 })
+          .toBe(expectedLevels.length);
 
         const actualLevels = await page.locator(".cgpt-helper-heading-fold").evaluateAll((elements) => {
           return elements.map((element) =>
@@ -190,30 +211,12 @@ test.describe("offline heading fixtures", () => {
           expectedVisualLevels.map((visualLevel) => (visualLevel - 1) * HEADING_GUIDE_STEP_PX)
         );
 
-        const uniqueLevels = [...new Set(expectedLevels)].sort((a, b) => a - b);
-        for (const level of uniqueLevels) {
-          const row = headingLevelRow(page, level);
-          await expect(row).toBeVisible();
-          await row.getByRole("button", { name: "Compact All" }).click();
-          const collapsedForLevel = await page
-            .locator(`.cgpt-helper-heading-fold[data-cgpt-helper-fold-level='${level}']`)
-            .evaluateAll((elements) => {
-              return elements.every(
-                (element) => element.getAttribute("data-cgpt-helper-fold-open") === "0"
-              );
-            });
-          expect(collapsedForLevel).toBeTruthy();
-
-          await row.getByRole("button", { name: "Expand All" }).click();
-          const expandedForLevel = await page
-            .locator(`.cgpt-helper-heading-fold[data-cgpt-helper-fold-level='${level}']`)
-            .evaluateAll((elements) => {
-              return elements.every(
-                (element) => element.getAttribute("data-cgpt-helper-fold-open") === "1"
-              );
-            });
-          expect(expandedForLevel).toBeTruthy();
-        }
+        const headingSection = page.locator("#cgpt-code-helper-panel").filter({ hasText: "Headings" }).first();
+        await expect(headingSection).toBeVisible();
+        await headingSection.getByTitle("Collapse all visible heading folds").click();
+        await assertAllHeadingFoldsState(page, false);
+        await headingSection.getByTitle("Expand all visible heading folds").click();
+        await assertAllHeadingFoldsState(page, true);
 
         await page.getByRole("button", { name: "Chat Log" }).click();
         await expect(page.locator("#cgpt-helper-chatlog-modal")).toBeVisible();
@@ -230,8 +233,7 @@ test.describe("offline heading fixtures", () => {
           ),
         ]);
       } finally {
-        await context.tracing.stop({ path: path.join(traceDir, "trace.zip") });
-        await context.close();
+        await page.close().catch(() => {});
       }
     });
   }

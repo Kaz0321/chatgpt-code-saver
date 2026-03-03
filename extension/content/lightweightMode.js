@@ -9,30 +9,34 @@ function cgptEnsureLightweightStyles() {
   const style = document.createElement("style");
   style.textContent = `
 /* 軽量モード中のコードブロック軽量化 */
+html.${CGPT_LIGHTWEIGHT_CLASS} pre code,
 body.${CGPT_LIGHTWEIGHT_CLASS} pre code {
   white-space: pre;
   font-feature-settings: "kern" 0;
 }
 
 /* 長大コードはホバー時以外は折りたたむ（拡張側でExpanded指定時は除外） */
+html.${CGPT_LIGHTWEIGHT_CLASS} pre:not(:hover):not([data-cgpt-view-mode="expanded"]),
 body.${CGPT_LIGHTWEIGHT_CLASS} pre:not(:hover):not([data-cgpt-view-mode="expanded"]) {
   max-height: 350px;
   overflow: hidden;
 }
 
 /* 構文ハイライトを事実上オフにして描画負荷を下げる */
+html.${CGPT_LIGHTWEIGHT_CLASS} pre code span,
 body.${CGPT_LIGHTWEIGHT_CLASS} pre code span {
   color: inherit !important;
   background: none !important;
 }
 
 /* スムーズスクロールを無効化（自動スクロール負荷軽減） */
-body.${CGPT_LIGHTWEIGHT_CLASS} html,
-body.${CGPT_LIGHTWEIGHT_CLASS} :root {
+html.${CGPT_LIGHTWEIGHT_CLASS},
+body.${CGPT_LIGHTWEIGHT_CLASS} {
   scroll-behavior: auto !important;
 }
 
 /* GPU負荷軽減（影やぼかしを除去） */
+html.${CGPT_LIGHTWEIGHT_CLASS} *,
 body.${CGPT_LIGHTWEIGHT_CLASS} * {
   backdrop-filter: none !important;
   text-shadow: none !important;
@@ -52,10 +56,13 @@ function cgptIsChatGenerating() {
 
 function cgptToggleLightweightMode(isEnabled) {
   if (!document || !document.body || !document.body.classList) return;
+  const roots = [document.documentElement, document.body].filter(
+    (node) => node && node.classList
+  );
   if (isEnabled) {
-    document.body.classList.add(CGPT_LIGHTWEIGHT_CLASS);
+    roots.forEach((node) => node.classList.add(CGPT_LIGHTWEIGHT_CLASS));
   } else {
-    document.body.classList.remove(CGPT_LIGHTWEIGHT_CLASS);
+    roots.forEach((node) => node.classList.remove(CGPT_LIGHTWEIGHT_CLASS));
   }
 }
 
@@ -105,4 +112,18 @@ function cgptStartLightweightModeWatcher() {
       ? cgptGetLightweightMode
       : () => CGPT_DEFAULT_LIGHTWEIGHT_MODE;
   cgptApplyLightweightMode(resolveMode());
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    CGPT_LIGHTWEIGHT_CLASS,
+    CGPT_LIGHTWEIGHT_POLL_INTERVAL,
+    cgptEnsureLightweightStyles,
+    cgptIsChatGenerating,
+    cgptToggleLightweightMode,
+    cgptStopLightweightPolling,
+    cgptStartLightweightPolling,
+    cgptApplyLightweightMode,
+    cgptStartLightweightModeWatcher,
+  };
 }

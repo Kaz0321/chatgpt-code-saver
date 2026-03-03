@@ -14,7 +14,7 @@ function createLogSection() {
   });
   logButtons.appendChild(chatLogBtn);
 
-  const historyBtn = createPanelButton("Save Log", logButtonVariant);
+  const historyBtn = createPanelButton("Download Log", logButtonVariant);
   historyBtn.style.flex = "1";
   historyBtn.addEventListener("click", () => {
     openLogViewer();

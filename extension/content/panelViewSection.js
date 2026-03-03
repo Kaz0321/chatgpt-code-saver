@@ -1,23 +1,7 @@
 function createViewSection() {
-  const viewSection = createPanelSection("Code View");
-  const settings = getViewSettingsForPanel();
-
+  const viewSection = createPanelSection("Display Actions");
+  viewSection.appendChild(createDisplayActionsSubLabel("Code Blocks"));
   viewSection.appendChild(createViewModeButtonsRow());
-  viewSection.appendChild(
-    createPreviewLineSection({
-      initialLineCount: settings.compactLineCount,
-      minLineCount: 0,
-      onLineCountCommit: (value) => {
-        if (typeof cgptUpdateViewSettings === "function") {
-          cgptUpdateViewSettings({ compactLineCount: value }, () => {
-            if (typeof cgptReapplyViewMode === "function") {
-              cgptReapplyViewMode("compact");
-            }
-          });
-        }
-      },
-    })
-  );
   viewSection.appendChild(createHeadingViewSection());
   return viewSection;
 }
@@ -28,46 +12,30 @@ function createViewModeButtonsRow() {
   row.style.gap = "4px";
   row.style.minWidth = "0";
 
-  const compactButton = createViewModeButton("Compact", "compact");
+  const compactButton = createViewModeButton("Compact All", "compact");
   compactButton.style.flex = "1";
+  compactButton.title = "Collapse all decorated code blocks to compact view";
   row.appendChild(compactButton);
 
-  const expandButton = createViewModeButton("Expand", "expanded");
+  const expandButton = createViewModeButton("Expand All", "expanded");
   expandButton.style.flex = "1";
+  expandButton.title = "Expand all decorated code blocks";
   row.appendChild(expandButton);
 
   return row;
 }
 
-function createPreviewLineSection({
-  initialLineCount,
-  onLineCountCommit,
-  minLineCount,
-}) {
-  const section = document.createElement("div");
-  section.style.display = "flex";
-  section.style.flexDirection = "column";
-  section.style.gap = "4px";
-
-  const controlsLabel = document.createElement("div");
-  controlsLabel.textContent = "Preview lines";
-  controlsLabel.style.fontSize = "11px";
-  controlsLabel.style.fontWeight = "600";
+function createDisplayActionsSubLabel(text) {
+  const helpText = document.createElement("div");
+  helpText.textContent = text;
+  helpText.style.fontSize = "11px";
+  helpText.style.fontWeight = "600";
   if (typeof cgptApplyPanelTextTone === "function") {
-    cgptApplyPanelTextTone(controlsLabel, "muted");
+    cgptApplyPanelTextTone(helpText, "muted");
+  } else {
+    helpText.style.color = "rgba(255,255,255,0.68)";
   }
-  section.appendChild(controlsLabel);
-
-  if (typeof initialLineCount === "number" && typeof onLineCountCommit === "function") {
-    const controls = createLineCountControls({
-      initialValue: initialLineCount,
-      onCommit: onLineCountCommit,
-      min: typeof minLineCount === "number" ? minLineCount : undefined,
-    });
-    section.appendChild(controls);
-  }
-
-  return section;
+  return helpText;
 }
 
 function createViewModeButton(label, mode) {
@@ -83,13 +51,6 @@ function createViewModeButton(label, mode) {
   return button;
 }
 
-function getViewSettingsForPanel() {
-  if (typeof cgptGetViewSettings === "function") {
-    return cgptGetViewSettings();
-  }
-  return { compactLineCount: 1 };
-}
-
 function applyViewModeToAll(mode) {
   if (typeof cgptApplyViewModeToAll === "function") {
     cgptApplyViewModeToAll(mode);
@@ -102,7 +63,7 @@ function createHeadingViewSection() {
   headingSection.style.flexDirection = "column";
   headingSection.style.gap = "4px";
 
-  const headingLabel = createSectionLabel("Headings");
+  const headingLabel = createDisplayActionsSubLabel("Headings");
   headingSection.appendChild(headingLabel);
 
   const controls = document.createElement("div");
@@ -110,13 +71,15 @@ function createHeadingViewSection() {
   controls.style.flexDirection = "row";
   controls.style.gap = "4px";
 
-  const collapseButton = createPanelButton("Compact", "secondary");
+  const collapseButton = createPanelButton("Collapse All", "secondary");
   collapseButton.style.flex = "1";
+  collapseButton.title = "Collapse all visible heading folds";
   collapseButton.addEventListener("click", () => requestAllHeadingFoldChanges(false));
   controls.appendChild(collapseButton);
 
-  const expandButton = createPanelButton("Expand", "secondary");
+  const expandButton = createPanelButton("Expand All", "secondary");
   expandButton.style.flex = "1";
+  expandButton.title = "Expand all visible heading folds";
   expandButton.addEventListener("click", () => requestAllHeadingFoldChanges(true));
   controls.appendChild(expandButton);
 

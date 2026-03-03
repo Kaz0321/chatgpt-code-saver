@@ -53,7 +53,7 @@ function cgptApplyButtonVariant(button, variant) {
 function cgptCreateSaveButtonElement(hasMetadata = true) {
   const button = cgptCreateBaseButtonElement("overlay");
   button.textContent = "Save";
-  button.title = "Save code";
+  button.title = "Save to the project folder";
   cgptApplyButtonVariant(button, hasMetadata ? "primary" : "secondary");
   cgptSetButtonDisabled(button, !hasMetadata);
   return button;
@@ -62,7 +62,7 @@ function cgptCreateSaveButtonElement(hasMetadata = true) {
 function cgptCreateSaveAsButtonElement() {
   const button = cgptCreateBaseButtonElement("overlay");
   button.textContent = "Save As";
-  button.title = "Save code with a custom filename";
+  button.title = "Choose where to save this code";
   cgptApplyButtonVariant(button, "secondary");
   return button;
 }
@@ -97,7 +97,7 @@ function cgptHandleSaveButtonClick(button, code, pre) {
     if (pre) {
       const metadata = cgptRefreshSaveButtonState(pre, code);
     }
-    const errMsg = "Add // file: path/to/file on the first line before saving.";
+    const errMsg = "Add // file: path/to/file on the first line to save to the project folder.";
     if (typeof showToast === "function") {
       showToast(errMsg, "error");
     } else {
@@ -275,7 +275,7 @@ function cgptRefreshSaveButtonState(pre, code, metadataOverride) {
     metadataOverride !== undefined ? metadataOverride : cgptParseCodeBlockMetadata(code);
   const hasMetadata = Boolean(metadata);
   saveButton.title = hasMetadata
-    ? "Save code"
+    ? "Save to the project folder"
     : "Add // file: path/to/file to the first line to enable Save";
   cgptApplyButtonVariant(saveButton, hasMetadata ? "primary" : "secondary");
   cgptSetButtonDisabled(saveButton, !hasMetadata);

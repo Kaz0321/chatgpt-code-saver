@@ -168,7 +168,7 @@ test("verifies README workflow on a mocked ChatGPT page", async () => {
     expect(latestLog.filePath).toBe("workspace/src/app.js");
     expect(downloadedContent).toBe('console.log("hello from mock");\n');
 
-    await page.getByRole("button", { name: "Save Log" }).first().click();
+    await page.getByRole("button", { name: "Download Log" }).first().click();
     await expect(page.locator("#cgpt-helper-log-modal")).toBeVisible();
     await expect(page.locator("#cgpt-helper-log-modal")).toContainText("src/app.js");
     await expect(page.locator("#cgpt-helper-log-modal")).toContainText("workspace/src/app.js");

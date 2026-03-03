@@ -23,11 +23,26 @@ function cgptLoadPanelVisibility(callback) {
     callback?.(cgptGetPanelVisibility());
     return;
   }
+  const resolve =
+    typeof cgptCreateAsyncGuard === "function"
+      ? cgptCreateAsyncGuard((result) => {
+          if (result && result.cgptPanelVisibility) {
+            cgptMergePanelVisibility(result.cgptPanelVisibility);
+          }
+          callback?.(cgptGetPanelVisibility());
+        })
+      : (result) => {
+          if (result && result.cgptPanelVisibility) {
+            cgptMergePanelVisibility(result.cgptPanelVisibility);
+          }
+          callback?.(cgptGetPanelVisibility());
+        };
   chrome.storage.sync.get(["cgptPanelVisibility"], (result) => {
-    if (result && result.cgptPanelVisibility) {
-      cgptMergePanelVisibility(result.cgptPanelVisibility);
+    if (chrome.runtime && chrome.runtime.lastError) {
+      resolve(null);
+      return;
     }
-    callback?.(cgptGetPanelVisibility());
+    resolve(result);
   });
 }
 

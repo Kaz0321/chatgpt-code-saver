@@ -151,6 +151,7 @@ function createTemplatePanelContent() {
   templateDropdown.style.border = "none";
   templateDropdown.style.outline = "none";
   templateDropdown.style.padding = "6px 32px 6px 10px";
+  templateDropdown.style.colorScheme = "light";
   if (typeof cgptApplyPanelTextTone === "function") {
     cgptApplyPanelTextTone(templateDropdown, "primary");
   } else {
@@ -177,21 +178,22 @@ function createTemplatePanelContent() {
   templateDropdownContainer.appendChild(dropdownIcon);
 
   templateDropdown.addEventListener("focus", () => {
-    templateDropdownContainer.style.borderColor = "rgba(147, 197, 253, 0.48)";
-    templateDropdownContainer.style.background = "rgba(15, 23, 42, 0.98)";
+    templateDropdownContainer.style.borderColor = "#93c5fd";
+    templateDropdownContainer.style.background = "#f8fafc";
   });
 
   templateDropdown.addEventListener("blur", () => {
-    templateDropdownContainer.style.borderColor = "rgba(148, 163, 184, 0.16)";
-    templateDropdownContainer.style.background = "rgba(148, 163, 184, 0.08)";
+    templateDropdownContainer.style.borderColor = "#cbd5e1";
+    templateDropdownContainer.style.background = "#f8fafc";
   });
 
   templateDropdownContainer.addEventListener("mouseenter", () => {
-    templateDropdownContainer.style.borderColor = "rgba(148, 163, 184, 0.28)";
+    templateDropdownContainer.style.borderColor = "#94a3b8";
   });
 
   templateDropdownContainer.addEventListener("mouseleave", () => {
-    templateDropdownContainer.style.borderColor = "rgba(148, 163, 184, 0.16)";
+    templateDropdownContainer.style.borderColor =
+      document.activeElement === templateDropdown ? "#93c5fd" : "#cbd5e1";
   });
 
   templateRow.appendChild(templateDropdownContainer);
@@ -252,4 +254,11 @@ function createTemplateActionRow(refreshTemplateList) {
   manageRow.appendChild(insertBtn);
 
   return manageRow;
+}
+
+function cgptStyleTemplateDropdownOption(option) {
+  if (!option || !option.style) return option;
+  option.style.background = "#f8fafc";
+  option.style.color = "#0f172a";
+  return option;
 }

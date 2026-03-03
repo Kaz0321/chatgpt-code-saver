@@ -101,7 +101,29 @@ function cgptCreateChatLogHeader(closeModal) {
   headerButtons.appendChild(closeBtn);
 
   headerRow.appendChild(headerButtons);
-  return headerRow;
+
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.style.flexDirection = "column";
+  wrapper.style.gap = "6px";
+  wrapper.appendChild(headerRow);
+
+  const helpText = document.createElement("div");
+  helpText.textContent =
+    "Save uses the project folder. Save As lets you choose a file or folder for this export.";
+  if (typeof cgptApplyTextScale === "function") {
+    cgptApplyTextScale(helpText, "meta");
+  } else {
+    helpText.style.fontSize = "11px";
+  }
+  if (typeof cgptApplyTextTone === "function") {
+    cgptApplyTextTone(helpText, "muted");
+  } else {
+    helpText.style.color = "#9ca3af";
+  }
+  wrapper.appendChild(helpText);
+
+  return wrapper;
 }
 
 function cgptCreateChatLogList(userEntries, allEntries, closeModal) {

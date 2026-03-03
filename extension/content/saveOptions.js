@@ -30,11 +30,26 @@ function cgptLoadSaveOptions(callback) {
     callback?.(cgptGetSaveOptions());
     return;
   }
+  const resolve =
+    typeof cgptCreateAsyncGuard === "function"
+      ? cgptCreateAsyncGuard((result) => {
+          if (result && result.cgptSaveOptions) {
+            cgptMergeSaveOptions(result.cgptSaveOptions);
+          }
+          callback?.(cgptGetSaveOptions());
+        })
+      : (result) => {
+          if (result && result.cgptSaveOptions) {
+            cgptMergeSaveOptions(result.cgptSaveOptions);
+          }
+          callback?.(cgptGetSaveOptions());
+        };
   chrome.storage.sync.get(["cgptSaveOptions"], (result) => {
-    if (result && result.cgptSaveOptions) {
-      cgptMergeSaveOptions(result.cgptSaveOptions);
+    if (chrome.runtime && chrome.runtime.lastError) {
+      resolve(null);
+      return;
     }
-    callback?.(cgptGetSaveOptions());
+    resolve(result);
   });
 }
 

@@ -1,13 +1,40 @@
 let cgptCodeBlockObserver = null;
 
+function cgptIsHelperOwnedNode(node) {
+  if (!node) return false;
+  const element =
+    node.nodeType === Node.ELEMENT_NODE
+      ? node
+      : node.parentElement || null;
+  if (!element || typeof element.closest !== "function") {
+    return false;
+  }
+  return Boolean(
+    element.closest(
+      [
+        "[data-cgpt-code-preview='1']",
+        "[data-cgpt-code-file-path='1']",
+        "[data-cgpt-code-actions='1']",
+      ].join(",")
+    )
+  );
+}
+
 function setupCodeBlockMutationObserver() {
   if (cgptCodeBlockObserver) return cgptCodeBlockObserver;
   const observer = new MutationObserver((mutations) => {
     let shouldRefreshPanelLayout = false;
     for (const mutation of mutations) {
+      if (cgptIsHelperOwnedNode(mutation.target)) {
+        continue;
+      }
       if (mutation.type === "childList" && mutation.addedNodes && mutation.addedNodes.length > 0) {
+        const addedNodes = Array.from(mutation.addedNodes).filter((node) => !cgptIsHelperOwnedNode(node));
+        if (addedNodes.length === 0) {
+          continue;
+        }
         shouldRefreshPanelLayout = true;
-        mutation.addedNodes.forEach((node) => {
+        addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.DOCUMENT_NODE) {
             decorateCodeBlocks(node);
           } else if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {

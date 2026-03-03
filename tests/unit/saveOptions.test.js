@@ -79,3 +79,31 @@ test('cgptUpdateSaveOptions immediately invokes callback when storage sync is ab
     });
   });
 });
+
+test('cgptLoadSaveOptions falls back when storage sync does not respond', async () => {
+  const { cgptCreateAsyncGuard } = require('../../extension/content/state.js');
+  global.cgptCreateAsyncGuard = cgptCreateAsyncGuard;
+  global.CGPT_ASYNC_FALLBACK_TIMEOUT_MS = 20;
+  global.chrome = {
+    runtime: {
+      lastError: null,
+    },
+    storage: {
+      sync: {
+        get() {
+          // Simulate an extension API call that never resolves.
+        },
+      },
+    },
+  };
+  const { cgptLoadSaveOptions, DEFAULT_SAVE_OPTIONS } = loadModule();
+  await new Promise((resolve) => {
+    cgptLoadSaveOptions((options) => {
+      assert.deepStrictEqual(options, DEFAULT_SAVE_OPTIONS);
+      resolve();
+    });
+  });
+  delete global.chrome;
+  delete global.cgptCreateAsyncGuard;
+  delete global.CGPT_ASYNC_FALLBACK_TIMEOUT_MS;
+});

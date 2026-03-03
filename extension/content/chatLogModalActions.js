@@ -34,10 +34,10 @@ function cgptTriggerChatLogDownload(filePath, content, options = {}) {
         showToast: shouldShowToast,
         successMessage,
         onSuccess: () => {
-          callback();
+          callback({ ok: true, filePath });
         },
-        onError: () => {
-          callback();
+        onError: (errorMessage) => {
+          callback({ ok: false, filePath, error: errorMessage || "Failed to save" });
         },
       },
     }
@@ -45,11 +45,13 @@ function cgptTriggerChatLogDownload(filePath, content, options = {}) {
 }
 
 function cgptCreateBatchSaveAllButton(blocks) {
-  return cgptCreateBatchSaveButton(blocks, {
+  const button = cgptCreateBatchSaveButton(blocks, {
     label: "Save All",
     variant: "primary",
     pendingLabel: "Saving...",
   });
+  button.title = "Save all detected code blocks to the project folder";
+  return button;
 }
 
 function cgptCreateBatchSaveAsAllButton(blocks) {
@@ -58,6 +60,7 @@ function cgptCreateBatchSaveAsAllButton(blocks) {
   if (!blocks || !blocks.length) {
     return button;
   }
+  button.title = "Choose one folder, then save all detected code blocks there";
   button.addEventListener("click", () => {
     if (button.disabled) return;
     cgptHandleBatchSaveAsAll(button, blocks);
@@ -84,7 +87,14 @@ async function cgptHandleBatchSave(button, blocks, options = {}) {
   cgptSetChatLogButtonDisabled(button, true);
   button.textContent = options.pendingLabel || "Saving...";
   try {
-    await cgptDownloadCodeBlocksSequentially(blocks);
+    const results = await cgptDownloadCodeBlocksSequentially(blocks, { showToast: false });
+    cgptShowBatchSaveSummary(results, {
+      successMessage: (savedCount) => `Saved ${savedCount} code block${savedCount === 1 ? "" : "s"}.`,
+    });
+  } catch (error) {
+    cgptShowBatchSaveSummary(error && error.results ? error.results : [], {
+      fallbackError: error && error.message ? error.message : "Failed to save",
+    });
   } finally {
     button.textContent = originalText;
     cgptSetChatLogButtonDisabled(button, false);
@@ -101,14 +111,24 @@ async function cgptHandleBatchSaveAsAll(button, blocks) {
       return;
     }
     button.textContent = "Saving...";
-    await cgptDownloadCodeBlocksSequentially(blocks, { overrideFolderPath: folderPath });
-    if (typeof showToast === "function") {
-      showToast(`Saved to: ${folderPath}`, "success");
-    }
+    const results = await cgptDownloadCodeBlocksSequentially(blocks, {
+      overrideFolderPath: folderPath,
+      showToast: false,
+    });
+    cgptShowBatchSaveSummary(results, {
+      successMessage: (savedCount) =>
+        `Saved ${savedCount} code block${savedCount === 1 ? "" : "s"} to: ${folderPath}`,
+    });
   } catch (error) {
-    const message = (error && error.message) || "Failed to select a folder.";
-    if (typeof showToast === "function") {
-      showToast(message, "error");
+    if (error && Array.isArray(error.results)) {
+      cgptShowBatchSaveSummary(error.results, {
+        fallbackError: error.message || "Failed to save",
+      });
+    } else {
+      const message = (error && error.message) || "Failed to select a folder.";
+      if (typeof showToast === "function") {
+        showToast(message, "error");
+      }
     }
   } finally {
     button.textContent = originalText;
@@ -166,13 +186,29 @@ function cgptSetChatLogButtonDisabled(button, disabled) {
 function cgptDownloadCodeBlocksSequentially(blocks, options = {}) {
   const normalizedBlocks = Array.isArray(blocks) ? blocks : [];
   return normalizedBlocks.reduce((promise, block) => {
-    return promise.then(() => cgptCreateBlockDownloadPromise(block, options));
-  }, Promise.resolve());
+    return promise.then((results) => {
+      return cgptCreateBlockDownloadPromise(block, options).then((result) => {
+        results.push(result);
+        if (!result || !result.ok) {
+          const error = new Error(
+            result && result.error ? result.error : "Failed to save"
+          );
+          error.results = results;
+          throw error;
+        }
+        return results;
+      });
+    });
+  }, Promise.resolve([]));
 }
 
 function cgptCreateBlockDownloadPromise(block, options = {}) {
+  const triggerDownload =
+    typeof options.triggerDownload === "function"
+      ? options.triggerDownload
+      : cgptTriggerChatLogDownload;
   return new Promise((resolve) => {
-    cgptTriggerChatLogDownload(block.filePath, block.content, {
+    triggerDownload(block.filePath, block.content, {
       saveAs: Boolean(options.saveAs),
       overrideFolderPath: options.overrideFolderPath,
       showToast: options.showToast,
@@ -180,6 +216,33 @@ function cgptCreateBlockDownloadPromise(block, options = {}) {
       onDone: resolve,
     });
   });
+}
+
+function cgptShowBatchSaveSummary(results, options = {}) {
+  if (typeof showToast !== "function") {
+    return;
+  }
+  const normalizedResults = Array.isArray(results) ? results : [];
+  const failed = normalizedResults.filter((result) => !result || !result.ok);
+  const savedCount = normalizedResults.length - failed.length;
+  if (!normalizedResults.length) {
+    showToast(options.fallbackError || "No code blocks were saved.", "error");
+    return;
+  }
+  if (failed.length) {
+    const firstError =
+      (failed[0] && failed[0].error) || options.fallbackError || "Failed to save";
+    showToast(
+      `Stopped after saving ${savedCount}/${normalizedResults.length} code blocks. First error: ${firstError}`,
+      "error"
+    );
+    return;
+  }
+  const successMessage =
+    typeof options.successMessage === "function"
+      ? options.successMessage(savedCount)
+      : options.successMessage || `Saved ${savedCount} code block${savedCount === 1 ? "" : "s"}.`;
+  showToast(successMessage, "success");
 }
 
 function cgptPromptUserForDownloadFolder() {
@@ -231,6 +294,7 @@ function cgptCreateBlockSaveButton(block) {
     button.title = "File path not detected";
     return button;
   }
+  button.title = "Save this code block to the project folder";
   button.addEventListener("click", () => {
     cgptHandleBlockSave(button, block, false);
   });
@@ -244,6 +308,7 @@ function cgptCreateBlockSaveAsButton(block) {
     button.title = "File path not detected";
     return button;
   }
+  button.title = "Choose where to save this code block";
   button.addEventListener("click", () => {
     cgptHandleBlockSave(button, block, true);
   });
@@ -265,4 +330,11 @@ function cgptHandleBlockSave(button, block, saveAs) {
       cgptSetChatLogButtonDisabled(button, false);
     },
   });
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptDownloadCodeBlocksSequentially,
+    cgptShowBatchSaveSummary,
+  };
 }

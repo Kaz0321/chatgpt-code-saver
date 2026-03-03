@@ -171,3 +171,23 @@ test('cgptRunSaveAction flashes button text and success toast on save success', 
   ]);
   resetGlobals();
 });
+
+test('cgptBuildDefaultSuccessMessage reflects the save source and mode', () => {
+  const { cgptBuildDefaultSuccessMessage, CGPT_SAVE_MODES } = loadModule();
+
+  assert.equal(
+    cgptBuildDefaultSuccessMessage('src/app.js', {
+      mode: CGPT_SAVE_MODES.SAVE,
+      meta: { source: 'code-block' },
+    }),
+    'Saved to project: src/app.js'
+  );
+  assert.equal(
+    cgptBuildDefaultSuccessMessage('notes.txt', {
+      mode: CGPT_SAVE_MODES.SAVE_AS,
+      meta: { source: 'chat-entry' },
+    }),
+    'Saved chat text as: notes.txt'
+  );
+  resetGlobals();
+});

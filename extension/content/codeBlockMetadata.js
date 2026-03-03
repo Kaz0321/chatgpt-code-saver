@@ -43,11 +43,21 @@ function cgptGetNormalizedCodeText(code) {
   return text.replace(/\r\n/g, "\n");
 }
 
+function cgptGetDisplayCodeText(code) {
+  if (!code) return "";
+  const metadata = cgptParseCodeBlockMetadata(code);
+  if (metadata && typeof metadata.content === "string") {
+    return metadata.content;
+  }
+  return cgptGetNormalizedCodeText(code);
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     cgptGetCodeTextContainer,
     cgptGetRawCodeText,
     cgptParseCodeBlockMetadata,
     cgptGetNormalizedCodeText,
+    cgptGetDisplayCodeText,
   };
 }

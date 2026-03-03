@@ -36,13 +36,30 @@ function cgptLoadLightweightMode(callback) {
     callback?.(cgptGetLightweightMode());
     return;
   }
+  const resolve =
+    typeof cgptCreateAsyncGuard === "function"
+      ? cgptCreateAsyncGuard((result) => {
+          if (result && result[CGPT_LIGHTWEIGHT_MODE_STORAGE_KEY]) {
+            cgptLightweightMode = cgptNormalizeLightweightMode(
+              result[CGPT_LIGHTWEIGHT_MODE_STORAGE_KEY]
+            );
+          }
+          callback?.(cgptGetLightweightMode());
+        })
+      : (result) => {
+          if (result && result[CGPT_LIGHTWEIGHT_MODE_STORAGE_KEY]) {
+            cgptLightweightMode = cgptNormalizeLightweightMode(
+              result[CGPT_LIGHTWEIGHT_MODE_STORAGE_KEY]
+            );
+          }
+          callback?.(cgptGetLightweightMode());
+        };
   chrome.storage.sync.get([CGPT_LIGHTWEIGHT_MODE_STORAGE_KEY], (result) => {
-    if (result && result[CGPT_LIGHTWEIGHT_MODE_STORAGE_KEY]) {
-      cgptLightweightMode = cgptNormalizeLightweightMode(
-        result[CGPT_LIGHTWEIGHT_MODE_STORAGE_KEY]
-      );
+    if (chrome.runtime && chrome.runtime.lastError) {
+      resolve(null);
+      return;
     }
-    callback?.(cgptGetLightweightMode());
+    resolve(result);
   });
 }
 

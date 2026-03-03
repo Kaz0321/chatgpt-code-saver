@@ -79,7 +79,8 @@ function cgptCreateApplyLogContext(
   rawFilePath,
   relativeFilePath,
   absoluteFilePath = "",
-  source = ""
+  source = "",
+  metadata = {}
 ) {
   return {
     time: new Date().toISOString(),
@@ -88,6 +89,9 @@ function cgptCreateApplyLogContext(
     filePath: rawFilePath,
     filePathRelative: relativeFilePath,
     filePathAbsolute: absoluteFilePath,
+    entryRole: metadata && metadata.entryRole ? metadata.entryRole : "",
+    conversationKey: metadata && metadata.conversationKey ? metadata.conversationKey : "",
+    sourceTimestamp: metadata && metadata.timestamp ? metadata.timestamp : "",
   };
 }
 
@@ -102,6 +106,11 @@ function cgptHandleApplyValidation(message) {
   const content = message.content;
   const saveAs = Boolean(message.saveAs);
   const source = typeof message.source === "string" ? message.source : "";
+  const metadata = {
+    entryRole: typeof message.entryRole === "string" ? message.entryRole : "",
+    conversationKey: typeof message.conversationKey === "string" ? message.conversationKey : "",
+    timestamp: typeof message.timestamp === "string" ? message.timestamp : "",
+  };
   const overrideFolderPathRaw =
     typeof message.overrideFolderPath === "string" ? message.overrideFolderPath : "";
 
@@ -114,6 +123,7 @@ function cgptHandleApplyValidation(message) {
       overrideFolderPath: "",
       saveAs,
       source,
+      metadata,
       content: "",
     };
   }
@@ -128,6 +138,7 @@ function cgptHandleApplyValidation(message) {
       overrideFolderPath: "",
       saveAs,
       source,
+      metadata,
       content,
     };
   }
@@ -145,6 +156,7 @@ function cgptHandleApplyValidation(message) {
         overrideFolderPath: "",
         saveAs,
         source,
+        metadata,
         content,
       };
     }
@@ -159,6 +171,7 @@ function cgptHandleApplyValidation(message) {
     overrideFolderPath,
     saveAs,
     source,
+    metadata,
     content,
   };
 }
@@ -169,10 +182,11 @@ function cgptLogDownloadFailure(
   absoluteFilePath,
   err,
   sendResponse,
-  source = ""
+  source = "",
+  metadata = {}
 ) {
   const logEntry = {
-    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath, source),
+    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath, source, metadata),
     ok: false,
     error: err,
     downloadId: null,
@@ -186,10 +200,11 @@ function cgptLogDownloadSuccess(
   absoluteFilePath,
   downloadId,
   sendResponse,
-  source = ""
+  source = "",
+  metadata = {}
 ) {
   const logEntry = {
-    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath, source),
+    ...cgptCreateApplyLogContext(targetPath, relativeFilePath, absoluteFilePath, source, metadata),
     ok: true,
     error: "",
     downloadId,
@@ -208,7 +223,8 @@ function cgptStartDownload(
   content,
   saveAs,
   sendResponse,
-  source = ""
+  source = "",
+  metadata = {}
 ) {
   const encoded = encodeURIComponent(content);
   const mimeType = cgptInferMimeTypeFromPath(relativeFilePath);
@@ -231,7 +247,8 @@ function cgptStartDownload(
           targetPath,
           err,
           sendResponse,
-          source
+          source,
+          metadata
         );
         return;
       }
@@ -246,7 +263,8 @@ function cgptStartDownload(
           finalAbsolutePath,
           downloadId,
           sendResponse,
-          source
+          source,
+          metadata
         );
       });
     }
@@ -261,7 +279,8 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
         validation.rawFilePath,
         validation.relativeFilePath,
         "",
-        validation.source
+        validation.source,
+        validation.metadata
       ),
       ok: false,
       error: validation.error,
@@ -270,12 +289,28 @@ function cgptHandleApplyCodeBlock(message, sendResponse) {
     return false;
   }
 
-  const { normalizedFilePath, overrideFolderPath, relativeFilePath, content, saveAs, source } =
+  const {
+    normalizedFilePath,
+    overrideFolderPath,
+    relativeFilePath,
+    content,
+    saveAs,
+    source,
+    metadata,
+  } =
     validation;
 
   const startDownloadWithFolder = (folderPath) => {
     const targetPath = cgptBuildFullFilePath(folderPath, normalizedFilePath);
-    cgptStartDownload(targetPath, relativeFilePath, content, saveAs, sendResponse, source);
+    cgptStartDownload(
+      targetPath,
+      relativeFilePath,
+      content,
+      saveAs,
+      sendResponse,
+      source,
+      metadata
+    );
   };
 
   if (overrideFolderPath) {

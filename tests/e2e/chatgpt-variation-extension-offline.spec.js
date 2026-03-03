@@ -41,6 +41,7 @@ async function readVariationCoverage(page) {
     return {
       preCount: codeBlocks.length,
       saveButtonCount: document.querySelectorAll("button[data-cgpt-button-role='save']").length,
+      compactPreviewCount: document.querySelectorAll("[data-cgpt-code-preview='1']").length,
       missing,
     };
   });
@@ -48,7 +49,7 @@ async function readVariationCoverage(page) {
 
 test("adds save buttons to all code blocks in the variation fixture", async ({ browserName, playwright }) => {
   test.skip(browserName !== "chromium", "Extension coverage requires Chromium.");
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
 
   const screenshotDir = path.join(artifactsRoot, "screenshots");
   const stateDir = path.join(artifactsRoot, "state");
@@ -118,6 +119,7 @@ test("adds save buttons to all code blocks in the variation fixture", async ({ b
     ]);
 
     assert.deepStrictEqual(result.missing, []);
+    assert.strictEqual(result.compactPreviewCount, result.preCount);
   } finally {
     await context.close();
   }

@@ -161,6 +161,7 @@ function cgptCreateFoldActionButtons(actionConfig = {}) {
     const button = cgptCreateFoldActionButton(label, variant);
     if (actionKey) {
       button.dataset.cgptHelperFoldAction = actionKey;
+      cgptApplyFoldActionTitle(button, actionKey);
     }
     if (typeof handler === "function") {
       button.addEventListener("click", handler);
@@ -178,6 +179,20 @@ function cgptCreateFoldActionButtons(actionConfig = {}) {
   addButton("Expand", "secondary", "expand", null, true);
 
   return buttons;
+}
+
+function cgptApplyFoldActionTitle(button, actionKey) {
+  if (!button || !actionKey) return;
+  const titles = {
+    save: "Save to the project folder",
+    saveAs: "Choose where to save this text",
+    copy: "Copy this text",
+    compact: "Collapse this section",
+    expand: "Expand this section",
+  };
+  if (titles[actionKey]) {
+    button.title = titles[actionKey];
+  }
 }
 
 function cgptCreateFoldActionButton(label, variant = "secondary") {
@@ -272,7 +287,9 @@ function cgptCopyPlainText(text) {
 }
 
 function cgptBuildResponseFilePath(entry) {
-  const rolePrefix = entry && entry.role === "assistant" ? "response" : "message";
+  const rolePrefix = entry && entry.role === "assistant" ? "assistant" : "user";
+  const conversationKey =
+    typeof getConversationKey === "function" ? getConversationKey() : "";
   const timestamp = (() => {
     if (entry && entry.timestamp) {
       const date = new Date(entry.timestamp);
@@ -283,7 +300,21 @@ function cgptBuildResponseFilePath(entry) {
     return new Date().toISOString();
   })();
   const safe = timestamp.replace(/[:.]/g, "-");
-  return `${rolePrefix}-${safe}.txt`;
+  const safeConversationKey = cgptSanitizeChatLogPathSegment(conversationKey || "current-chat");
+  return `chat-logs/${safeConversationKey}/${rolePrefix}-${safe}.txt`;
+}
+
+function cgptSanitizeChatLogPathSegment(value) {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^\.+/, "")
+    .replace(/\.+$/, "")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "");
+  return normalized || "current-chat";
 }
 
 function cgptDownloadTextLocally(fileName, content) {
@@ -915,4 +946,11 @@ function highlightChatMessageElement(el) {
   setTimeout(() => {
     el.classList.remove("cgpt-helper-chatlog-highlight");
   }, 2000);
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptBuildResponseFilePath,
+    cgptSanitizeChatLogPathSegment,
+  };
 }

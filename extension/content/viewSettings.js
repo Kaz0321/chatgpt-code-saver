@@ -38,11 +38,26 @@ function cgptLoadViewSettings(callback) {
     callback?.(cgptGetViewSettings());
     return;
   }
+  const resolve =
+    typeof cgptCreateAsyncGuard === "function"
+      ? cgptCreateAsyncGuard((result) => {
+          if (result && result.cgptViewSettings) {
+            cgptMergeViewSettings(result.cgptViewSettings);
+          }
+          callback?.(cgptGetViewSettings());
+        })
+      : (result) => {
+          if (result && result.cgptViewSettings) {
+            cgptMergeViewSettings(result.cgptViewSettings);
+          }
+          callback?.(cgptGetViewSettings());
+        };
   chrome.storage.sync.get(["cgptViewSettings"], (result) => {
-    if (result && result.cgptViewSettings) {
-      cgptMergeViewSettings(result.cgptViewSettings);
+    if (chrome.runtime && chrome.runtime.lastError) {
+      resolve(null);
+      return;
     }
-    callback?.(cgptGetViewSettings());
+    resolve(result);
   });
 }
 
@@ -55,4 +70,15 @@ function cgptUpdateViewSettings(partialSettings, callback) {
   chrome.storage.sync.set({ cgptViewSettings }, () => {
     callback?.(cgptGetViewSettings());
   });
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    DEFAULT_VIEW_SETTINGS,
+    cgptGetViewSettings,
+    cgptNormalizeLineCount,
+    cgptMergeViewSettings,
+    cgptLoadViewSettings,
+    cgptUpdateViewSettings,
+  };
 }

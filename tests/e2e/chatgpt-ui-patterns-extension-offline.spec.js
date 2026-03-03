@@ -57,6 +57,8 @@ test.describe("offline chatgpt ui pattern fixtures with extension", () => {
     : null;
 
   const scenarios = (manifest?.scenarios || []).filter((scenario) => scenario.validated);
+  let sharedContext = null;
+  let launchFailureReason = "";
 
   if (!scenarios.length) {
     test("skips when no validated heading fixtures are collected", async () => {
@@ -65,38 +67,50 @@ test.describe("offline chatgpt ui pattern fixtures with extension", () => {
     return;
   }
 
+  test.beforeAll(async () => {
+    const profileBaseDir = path.join(artifactsRoot, "profiles");
+    await ensureDir(profileBaseDir);
+    const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "suite-"));
+    const launchProbe = await probeExtensionContext({
+      chromium,
+      profileDir,
+      extensionPath,
+    });
+    if (!launchProbe.ok) {
+      launchFailureReason = launchProbe.reason;
+      return;
+    }
+    sharedContext = launchProbe.context;
+  });
+
+  test.afterAll(async () => {
+    if (sharedContext) {
+      await Promise.race([
+        sharedContext.close().catch(() => {}),
+        new Promise((resolve) => setTimeout(resolve, 5_000)),
+      ]);
+      sharedContext = null;
+    }
+  });
+
   for (const scenario of scenarios) {
     test(`replays ${scenario.id} with heading UI`, async () => {
+      test.skip(!sharedContext, launchFailureReason || "Extension context is unavailable.");
       const scenarioDir = path.join(artifactsRoot, scenario.id);
       const screenshotDir = path.join(scenarioDir, "screenshots");
       const stateDir = path.join(scenarioDir, "state");
-      const traceDir = path.join(scenarioDir, "traces");
-      const profileBaseDir = path.join(scenarioDir, "profiles");
 
       await Promise.all([
         ensureDir(screenshotDir),
         ensureDir(stateDir),
-        ensureDir(traceDir),
-        ensureDir(profileBaseDir),
       ]);
-
-      const profileDir = await fsp.mkdtemp(path.join(profileBaseDir, "run-"));
       const assistantOuterHtml = await fsp.readFile(
         path.join(fixtureRoot, scenario.responseOuterHtmlFile || scenario.responseHtmlFile),
         "utf8"
       );
 
-      const launchProbe = await probeExtensionContext({
-        chromium,
-        profileDir,
-        extensionPath,
-      });
-      test.skip(!launchProbe.ok, launchProbe.reason);
-      const context = launchProbe.context;
-
       try {
-        await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
-        const page = await context.newPage();
+        const page = await sharedContext.newPage();
         await page.route("https://chatgpt.com/**", async (route) => {
           if (route.request().resourceType() !== "document") {
             await route.fulfill({
@@ -125,7 +139,6 @@ test.describe("offline chatgpt ui pattern fixtures with extension", () => {
         const expectedLevels = scenario.summary.headingTags.map((tagName) =>
           Number.parseInt(String(tagName).replace(/^h/i, ""), 10)
         );
-        const expectedUniqueLevels = [...new Set(expectedLevels)].sort((a, b) => a - b);
         const expectsHeadingFolds = shouldExpectHeadingFolds(scenario.summary);
 
         await expect
@@ -149,19 +162,10 @@ test.describe("offline chatgpt ui pattern fixtures with extension", () => {
         });
         expect(actualLevels).toEqual(expectsHeadingFolds ? expectedLevels : []);
 
-        if (expectsHeadingFolds) {
-          for (const level of expectedUniqueLevels) {
-            const row = page.locator("#cgpt-code-helper-panel div").filter({
-              hasText: `Level ${level}`,
-            }).first();
-            await expect(row).toBeVisible();
-          }
-        }
-
         if (expectsHeadingFolds && scenario.id === "headings-h1-h6") {
-          for (const level of [1, 2, 3, 4, 5, 6]) {
-            await expect(page.locator("#cgpt-code-helper-panel")).toContainText(`Level ${level}`);
-          }
+          const headingSection = page.locator("#cgpt-code-helper-panel").filter({ hasText: "Headings" }).first();
+          await expect(headingSection).toContainText("Collapse All");
+          await expect(headingSection).toContainText("Expand All");
         }
 
         await Promise.all([
@@ -175,9 +179,8 @@ test.describe("offline chatgpt ui pattern fixtures with extension", () => {
             "utf8"
           ),
         ]);
+        await page.close().catch(() => {});
       } finally {
-        await context.tracing.stop({ path: path.join(traceDir, "trace.zip") });
-        await context.close();
       }
     });
   }

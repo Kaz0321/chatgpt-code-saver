@@ -52,7 +52,7 @@ function openLogViewer() {
     headerRow.style.alignItems = "center";
 
     const title = document.createElement("div");
-    title.textContent = "Save Log";
+    title.textContent = "Download Log";
     if (typeof cgptApplyTextScale === "function") {
       cgptApplyTextScale(title, "title");
     } else {
@@ -352,10 +352,32 @@ function buildLogEntryMetaInfo(entry) {
   if (entry && entry.kind) {
     parts.push(`Action: ${String(entry.kind).toUpperCase()}`);
   }
+  const sourceLabel = getLogEntrySourceLabel(entry);
+  if (sourceLabel) {
+    parts.push(`Source: ${sourceLabel}`);
+  }
+  if (entry && entry.entryRole) {
+    parts.push(`Role: ${String(entry.entryRole)}`);
+  }
+  if (entry && entry.conversationKey) {
+    parts.push(`Chat: ${entry.conversationKey}`);
+  }
   if (parts.length === 0) {
     return "No additional information.";
   }
   return parts.join(" • ");
+}
+
+function getLogEntrySourceLabel(entry) {
+  const source = entry && entry.source ? String(entry.source) : "";
+  if (!source) return "";
+  const labels = {
+    "code-block": "Code Block",
+    "chat-entry": "Chat Text",
+    "chat-block": "Chat Code Block",
+    "chat-batch": "Chat Batch",
+  };
+  return labels[source] || source;
 }
 
 function buildLogEntryFullPath(entry) {
@@ -377,4 +399,11 @@ function formatLogTimestamp(time) {
     return d.toLocaleString();
   }
   return String(time);
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    buildLogEntryMetaInfo,
+    getLogEntrySourceLabel,
+  };
 }

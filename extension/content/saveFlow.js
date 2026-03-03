@@ -81,7 +81,30 @@ function cgptReportSaveError(message, ui = {}) {
   }
 }
 
-function cgptReportSaveSuccess(savedPath, ui = {}) {
+function cgptBuildDefaultSuccessMessage(savedPath, request = null) {
+  const resolvedPath = savedPath || "";
+  const source = request && request.meta && request.meta.source ? request.meta.source : "";
+  const mode = request && request.mode ? request.mode : CGPT_SAVE_MODES.SAVE;
+
+  if (source === "code-block") {
+    return mode === CGPT_SAVE_MODES.SAVE_AS
+      ? `Saved code as: ${resolvedPath}`
+      : `Saved to project: ${resolvedPath}`;
+  }
+  if (source === "chat-entry") {
+    return mode === CGPT_SAVE_MODES.SAVE_AS
+      ? `Saved chat text as: ${resolvedPath}`
+      : `Saved chat text: ${resolvedPath}`;
+  }
+  if (source === "chat-block") {
+    return mode === CGPT_SAVE_MODES.SAVE_AS
+      ? `Saved code block as: ${resolvedPath}`
+      : `Saved code block: ${resolvedPath}`;
+  }
+  return `Saved: ${resolvedPath}`;
+}
+
+function cgptReportSaveSuccess(savedPath, ui = {}, request = null) {
   const resolvedPath = savedPath || "";
   if (typeof ui.onSuccess === "function") {
     ui.onSuccess(resolvedPath);
@@ -94,7 +117,7 @@ function cgptReportSaveSuccess(savedPath, ui = {}) {
     const successMessage =
       typeof ui.successMessage === "function"
         ? ui.successMessage(resolvedPath)
-        : ui.successMessage || `Saved: ${resolvedPath}`;
+        : ui.successMessage || cgptBuildDefaultSuccessMessage(resolvedPath, request);
     const toast = cgptGetGlobalFunction("showToast");
     if (toast) {
       toast(successMessage, "success");
@@ -141,7 +164,7 @@ function cgptRunSaveAction(options = {}, callback) {
       callback?.(result || { ok: false, error: "Failed to save" });
       return;
     }
-    cgptReportSaveSuccess(result.filePath, ui);
+    cgptReportSaveSuccess(result.filePath, ui, request);
     callback?.(result);
   });
 }
@@ -155,5 +178,6 @@ if (typeof module !== "undefined" && module.exports) {
     cgptRunSaveAction,
     cgptReportSaveError,
     cgptReportSaveSuccess,
+    cgptBuildDefaultSuccessMessage,
   };
 }
