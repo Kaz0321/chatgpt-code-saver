@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "purpose": "Instructions for Codex/GPT style models so that their outputs work seamlessly with gpt-code-saver-extension.",
+  "purpose": "Instructions for Codex/GPT style models so that their outputs work seamlessly with ChatGPT Code Saver.",
   "instructions": {
     "fileMetadata": {
       "requirement": "Always place `// file: relative/path.ext` (for JS-like files) or `# file: relative/path.ext` (for shell/Python) as the very first line of every code block.",

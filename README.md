@@ -1,4 +1,4 @@
-# gpt-code-saver-extension
+# ChatGPT Code Saver
 
 ChatGPT が生成したコードを、ローカルのプロジェクトへそのまま保存するための Chrome 拡張です。コードブロックの 1 行目に `// file: path/to/file.ext` または `# file: path/to/file.ext` があれば、`Save` でその相対パスへ保存できます。テンプレート挿入、チャットログ参照、保存ログ確認も同じ UI にまとめています。
 

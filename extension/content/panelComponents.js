@@ -42,7 +42,7 @@ function getHelperPanelTitle() {
       ? chrome.runtime.getManifest()
       : null;
   const extensionName =
-    manifest && manifest.name ? manifest.name : "gpt-code-saver-extension";
+    manifest && manifest.name ? manifest.name : "ChatGPT Code Saver";
   const version = manifest && manifest.version ? manifest.version : "";
   if (!version) {
     return extensionName;

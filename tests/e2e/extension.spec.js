@@ -87,7 +87,7 @@ test("loads the extension service worker and records manifest metadata", async (
   ]);
 
   expect(manifestState.runtimeId).toBeTruthy();
-  expect(manifestState.manifest.name).toBe("gpt-code-saver-extension");
+  expect(manifestState.manifest.name).toBe("ChatGPT Code Saver");
   expect(manifestState.manifest.background.service_worker).toBe("background/index.js");
   expect(manifestState.manifest.content_scripts[0].js).toContain("content/init.js");
 });

@@ -14,7 +14,7 @@ Use `X11/XWayland` for this environment.
 npm run open:chatgpt:x11-ime
 ```
 
-`Wayland` startup still exists in [open-chatgpt-gpu.js](/mnt/c/_Codex/gpt-code-saver-extension/tests/tools/open-chatgpt-gpu.js), but the stable path on this machine was `X11`.
+`Wayland` startup still exists in [open-chatgpt-gpu.js](/mnt/c/_Codex/chatgpt-code-saver/tests/tools/open-chatgpt-gpu.js), but the stable path on this machine was `X11`.
 
 ## Required packages
 
@@ -55,7 +55,7 @@ and configures `fcitx5` default IM as `mozc`.
 
 Linux-side Japanese fonts were not required on this machine.
 
-Instead, Chromium is launched with [fontconfig-windows-ja.conf](/mnt/c/_Codex/gpt-code-saver-extension/tests/config/fontconfig-windows-ja.conf), which exposes `C:\Windows\Fonts` to fontconfig inside WSL.
+Instead, Chromium is launched with [fontconfig-windows-ja.conf](/mnt/c/_Codex/chatgpt-code-saver/tests/config/fontconfig-windows-ja.conf), which exposes `C:\Windows\Fonts` to fontconfig inside WSL.
 
 This fixed tofu glyphs for Japanese text.
 
