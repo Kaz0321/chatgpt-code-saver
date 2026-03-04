@@ -1,197 +1,242 @@
-# 開発者向けガイド
+# DEVELOPERS
 
-このドキュメントでは ChatGPT Code Saver のアーキテクチャ、メッセージ フロー、開発時の注意点をまとめています。ユーザー向けの概要やセットアップは [README.md](README.md) を参照してください。README には利用に必要な情報のみを記載し、実装やリファクタリングの詳細は本ドキュメント側で管理します。
+このドキュメントでは ChatGPT Code Saver の構成、メッセージフロー、開発時の注意点をまとめます。
+ユーザー向けの概要、導入手順、通常の使い方は [README.md](README.md) を参照してください。
 
-## リポジトリ構成
+## 目的
+
+この拡張は 1 つの MV3 パッケージとして、主に次の 2 系統の機能を提供します。
+
+- コードブロック保存
+- チャット補助機能
+  - Templates
+  - Chat Log
+  - Download Log
+  - Heading / code block view controls
+
+## ディレクトリ構成
+
 ```text
 extension/
-├─ manifest.json (MV3)
-├─ background/
-│  ├─ index.js           … ルート初期化。onInstalled 登録とメッセージハンドラ設定。
-│  ├─ applyCode.js       … ダウンロード API を呼び出して保存とログを記録。
-│  ├─ logStore.js        … chrome.storage.local でログの追加・取得・削除。
-│  ├─ templateStore.js   … chrome.storage.sync でテンプレートを取得・保存。
-│  ├─ messageHandlers.js … type ごとの runtime メッセージハンドラを集約。
-│  └─ reloadState.js     … 拡張の再読込状態を管理し、初回起動で更新。
-├─ shared/
-│  └─ filePathValidation.js … 背景・コンテンツ共通のファイルパス検証ロジック。
-└─ content/
-   ├─ init.js                … 初期化エントリ。テンプレ読込、UI 生成、コード監視。
-   ├─ state.js               … テンプレ配列、選択 ID を集約管理するアクセサ群。
-   ├─ saveOptions.js         … 保存時のメタデータ除去フラグを保持。
-   ├─ chatInput.js           … ChatGPT 入力欄の検出とテキスト挿入ユーティリティ。
-   ├─ templateStore.js       … テンプレの同期、貼り付けコマンドの調停役。
-   ├─ templateEditor.js      … モーダル UI と CRUD 操作。
-   ├─ panel.js               … 画面右下のフローティングパネル。
-   ├─ codeBlockMetadata.js   … コードブロック先頭の `file:` メタデータを解析。
-   ├─ codeBlockViewMode.js   … ラップ要素生成、行数制御、ビュー切替処理。
-   ├─ codeBlockButtons.js    … 保存、コピー、表示切替ボタン生成とハンドラ群。
-   ├─ codeBlocks.js          … `pre code` 装飾のエントリ。各責務モジュールを連携。
-   ├─ logModal.js            … 保存ログのモーダル表示とファイルオープン。
-   ├─ chatLogTracker.js      … ユーザー、アシスタント発話とコードブロックを追跡。
-   ├─ chatLogModal.js        … チャット履歴と対応コードブロックを一覧化。
-   ├─ toast.js               … 軽量トースト通知。
-   └─ reloadNotifier.js      … 拡張リロード通知の表示。
+  manifest.json
+  background/
+    index.js
+    applyCode.js
+    logStore.js
+    messageHandlers.js
+    projectFolderSelector.js
+    reloadState.js
+    templateStore.js
+  content/
+    init.js
+    state.js
+    defaultTemplate.js
+    templateStore.js
+    templateEditor.js
+    panel*.js
+    codeSaverFeature.js
+    codeBlocks.js
+    codeBlockObserver.js
+    codeBlockButtons.js
+    codeBlockMetadata.js
+    codeBlockState.js
+    codeBlockViewMode.js
+    saveFlow.js
+    chatToolsFeature.js
+    chatLogTracker.js
+    chatLogObserver.js
+    chatLogModal*.js
+    chatHeadingFold.js
+    chatLogFold.js
+    lightweightMode*.js
+    reloadNotifier.js
+    extensionToggle.js
+    toast.js
+    assistantLabel.js
+    chatInput.js
+  shared/
+    filePathValidation.js
+    projectFolderSettings.js
+    uiStyles.js
 
 tests/
-├─ e2e/       … Playwright の E2E と収集系 spec
-├─ unit/      … Node 組み込み test による unit test
-├─ fixtures/  … 追跡する HTML fixture
-├─ helpers/   … テスト共通 helper
-├─ tools/     … 収集、検証、環境補助コマンド
-├─ config/    … Playwright 補助設定
-└─ artifacts/ … Git 管理しない証跡出力
+  e2e/
+  unit/
+  fixtures/
+  helpers/
+  tools/
+  config/
 ```
 
-## モジュール間の責務
-```mermaid
-classDiagram
-    class BackgroundServiceWorker {
-      +onInstalled()
-      +onMessage(message)
-    }
-    class ApplyCodeHandler {
-      +cgptHandleApplyCodeBlock(msg)
-    }
-    class LogStore {
-      +cgptAppendLog(entry)
-      +cgptGetLogs()
-      +cgptClearLogs()
-    }
-    class TemplateStoreBG {
-      +cgptGetTemplates()
-      +cgptSetTemplates(templates)
-    }
-    class DownloadOpener {
-      +openDownloadedFile(downloadId)
-    }
-    class ContentInit {
-      +init()
-    }
-    class CodeSaverFeature {
-      +cgptInitCodeSaverFeature()
-    }
-    class ChatToolsFeature {
-      +cgptInitChatToolsFeature()
-    }
-    class TemplateStoreContent {
-      +loadTemplatesFromStorage()
-      +saveTemplatesToStorage()
-      +insertTemplateToInput()
-    }
-    class TemplatePanel {
-      +createFloatingPanel()
-    }
-    class TemplateEditor {
-      +openTemplateEditor(mode)
-    }
-    class CodeBlockDecorator {
-      +decorateCodeBlocks()
-      +setupCodeBlockMutationObserver()
-    }
-    class LogViewer {
-      +openLogViewer()
-    }
-    class ChatLogTracker {
-      +initChatLogTracker(root)
-      +startChatLogMutationObserver()
-      +getChatLogEntries()
-      +highlightChatMessageElement()
-    }
-    class ChatLogModal {
-      +openChatLogModal()
-    }
-    class Toast {
-      +showToast(message)
-    }
-    class ReloadNotifier {
-      +checkAndNotifyReloaded()
-    }
+## 初期化フロー
 
-    BackgroundServiceWorker --> ApplyCodeHandler : delegates applyCodeBlock
-    BackgroundServiceWorker --> LogStore : append/get/clear logs
-    BackgroundServiceWorker --> TemplateStoreBG : get/set templates
-    BackgroundServiceWorker --> DownloadOpener : openDownloadedFile
-    ContentInit --> TemplateStoreContent : load templates
-    ContentInit --> TemplatePanel
-    ContentInit --> CodeSaverFeature
-    ContentInit --> ChatToolsFeature
-    CodeSaverFeature --> CodeBlockDecorator
-    ChatToolsFeature --> ChatLogTracker
-    TemplatePanel --> TemplateEditor
-    TemplatePanel --> TemplateStoreContent
-    TemplatePanel --> ChatLogModal
-    TemplateStoreContent --> Toast
-    CodeBlockDecorator --> BackgroundServiceWorker : sendMessage
-    LogViewer --> BackgroundServiceWorker : getLogs/clearLogs
-    ChatLogModal --> ChatLogTracker : readEntries/highlight
-    ChatLogModal --> BackgroundServiceWorker : applyCodeBlock
-    ReloadNotifier --> Toast
+エントリポイントは `extension/content/init.js` です。
+
+1. `checkAndNotifyReloaded()` で再読み込み通知状態を確認
+2. `cgptLoadExtensionEnabled()` で拡張有効状態を読む
+3. `loadTemplatesFromStorage()` でテンプレートを初期化
+4. 各種 panel state を読み込む
+   - view settings
+   - panel visibility
+   - lightweight mode
+   - save options
+5. UI を生成し、機能ごとの初期化を呼ぶ
+   - `cgptInitCodeSaverFeature(document)`
+   - `cgptInitChatToolsFeature(document)`
+
+## ランタイムメッセージ
+
+Background 側のハンドラは `extension/background/messageHandlers.js` で集約しています。
+
+主な message type:
+
+- `applyCodeBlock`
+  - コード保存本体
+- `pickDownloadFolder`
+  - フォルダ選択 UI
+- `getTemplates` / `setTemplates`
+  - テンプレートの取得と保存
+- `getLogs` / `clearLogs`
+  - Download Log の取得と削除
+- `openDownloadedFile`
+  - 保存済みファイルを OS 側で開く
+
+## 保存フロー
+
+共通の保存処理は `extension/content/saveFlow.js` の `cgptRunSaveAction()` に寄せています。
+
+ルール:
+
+- `Save` は既定の project folder を基準に保存します。
+- `Save As` は保存先を都度選びます。
+- `Save All` / `Save As All` は複数コードブロックをまとめて処理します。
+- `file:` メタデータがある場合は、その相対パスを優先します。
+- `Remove the first "file:" line when saving` が有効なら、保存時に先頭メタデータ行を除去します。
+- `overrideFolderPath` は一括保存や別フォルダ保存時に使います。
+
+### Chat Log 由来のコード保存
+
+Chat Log モーダルは、`file:` 行ありのコードブロックと、通常の fenced code block の両方を扱います。
+
+- `file:` 行あり
+  - その相対パスを利用
+- `file:` 行なし
+  - `chat-code-blocks/` 配下に生成パスを割り当て
+  - 例: `<language>-block-<n>.<ext>`
+  - 言語不明時は `code-block-<n>.txt`
+
+この生成パスは `Save` / `Save As` / `Save All` / `Save As All` でそのまま使える前提です。
+
+## 機能ごとの責務
+
+### Background
+
+- `applyCode.js`
+  - `chrome.downloads.download` を使った保存処理
+- `logStore.js`
+  - Download Log の永続化
+- `templateStore.js`
+  - template の永続化
+- `projectFolderSelector.js`
+  - フォルダ選択 UI の橋渡し
+- `reloadState.js`
+  - 拡張再読み込み状態の管理
+
+### Content
+
+- `codeSaverFeature.js`
+  - コード保存機能の初期化
+- `codeBlocks.js`
+  - コードブロック装飾
+- `codeBlockObserver.js`
+  - コードブロック監視
+- `chatToolsFeature.js`
+  - chat tool 系機能の初期化
+- `chatLogTracker.js`
+  - 発話、見出し、コード、リンクの収集
+- `chatLogObserver.js`
+  - Chat Log 用の監視と route watch
+- `templateStore.js` / `templateEditor.js`
+  - template の content-side state と editor UI
+- `panel*.js`
+  - 右下パネルの構築
+- `lightweightMode*.js`
+  - 軽量表示と preview lines 制御
+
+### Shared
+
+- `filePathValidation.js`
+  - 保存パスの検証
+- `projectFolderSettings.js`
+  - project folder state
+- `uiStyles.js`
+  - ボタン、surface、text tone などの共通 UI token
+
+## UI 実装ルール
+
+- 新しいボタンは `extension/shared/uiStyles.js` の共通 API を使う
+- content 側で色、角丸、余白、フォントサイズを直書きしすぎない
+- variant は既存の `primary`, `secondary`, `ghost`, `danger` を優先する
+- disabled 状態は `button.disabled = true` を基本にし、見た目だけで表現しない
+- フォーカス、hover、compact 状態の検証が必要なら既存 E2E を追加・更新する
+
+## テスト
+
+主要なテスト群:
+
+- unit
+  - `tests/unit/*.test.js`
+- regression e2e
+  - `tests/e2e/*.spec.js`
+- UI evidence
+  - `tests/e2e/ui-screens.spec.js`
+- README workflow regression
+  - `tests/e2e/readme-behavior.spec.js`
+
+よく使うコマンド:
+
+```bash
+npm test
+npm run test:unit
+npm run test:e2e
+npm run test:e2e:ui
+npm run test:e2e:live
 ```
 
-## メッセージ フロー
-| 送信元 | 宛先 | type | 役割 |
-| ------ | ---- | ---- | ---- |
-| content/codeBlocks | background/index | `applyCodeBlock` | コード保存を要求し、結果をログ化 |
-| content/chatLogModal | background/index | `applyCodeBlock` | 履歴モーダルから即時ダウンロードを要求 |
-| content/templateStore | background/index | `getTemplates` / `setTemplates` | テンプレートの同期 |
-| content/logModal | background/index | `getLogs` / `clearLogs` | 保存ログをモーダルに表示 |
-| content/logModal | background/index | `openDownloadedFile` | ダウンロード済みファイルを OS で開く |
+## 開発補助ツール
 
-## Save Flow Rules
-- `Save` は既存の project folder を優先して保存します。content script 側で選択パスを整え、background 側で project folder と結合して `chrome.downloads.download` へ渡します。
-- `Save As` は保存先を選ばせる経路として扱います。複数ファイルはブラウザの保存ダイアログ制約上、同一フォルダを選んでから順次保存します。
-- Code Save は `file:` メタデータを優先し、Chat Log の本文保存は専用ファイル名ルールを使います。共通処理は `saveFlow.js` の `cgptRunSaveAction()` に寄せます。
-- `overrideFolderPath` は一括保存などで既存 project folder を一時的に上書きしたい場合だけ使います。通常の `Save` では使いません。
-- 保存ログとトーストの `source` ごとの差異を保ちつつ、失敗時は保存元と失敗理由が分かる文言に揃えます。
+### ChatGPT Share URL から素材を取得する
 
-## 開発フローのメモ
-- 依存する npm パッケージやビルドはなく、拡張本体は `extension/content/` と `extension/background/` を直接編集します。
-- デバッグ時は DevTools > Sources > Service Workers で `extension/background/index.js` のログや `chrome.runtime.sendMessage` のレスポンスを確認します。
-- 既定テンプレート文言は `extension/content/state.js` の `DEFAULT_TEMPLATE_CONTENT` で定義されています。アクセサ (`cgptSetTemplates`, `cgptSetSelectedTemplateId` など) を経由して状態を更新し、単一責務を保ってください。
-- 権限を追加または削除する場合は `extension/manifest.json` を更新し、README の「権限とプライバシー」節の整合性も確認します。
+共有 URL から HTML、スクリーンショット、CSS、先頭コードブロックなどを保存できます。
+README の利用者向け導線ではなく、fixture 作成、UI 調査、回帰確認向けの補助ツールとして扱います。
 
-## UI 方針
-- ボタン UI は `WCAG 2.2` 準拠を前提に、`Fluent 2` の考え方をベースに統一します。最低限、十分なコントラスト、明確な `focus-visible`、`28px` 以上の押下領域を維持してください。
-- 新しいボタンは `extension/shared/uiStyles.js` の `cgptCreateSharedButton` / `cgptApplySharedButtonStyle` / `cgptSetSharedButtonDisabled` を使って実装します。コンテンツ側で色、角丸、文字サイズを直書きしないでください。
-- 新規コードで使う variant は `primary` / `secondary` / `ghost` / `danger` を基本とします。`success` は明確な成功操作に限定し、旧 variant 名 (`accent` / `muted` / `neutral` / `warning`) は互換用 alias としてのみ扱います。
-- ボタンサイズは `sm` / `md` / `lg` の token を使います。密度が高い一覧やコードブロック上は `sm`、モーダルの主要操作は `md` を既定とします。
-- 1 つの操作グループで `primary` は原則 1 個までにします。副次操作は `secondary`、軽い補助操作は `ghost`、破壊的操作は `danger` を使ってください。
-- disabled 状態は `button.disabled = true` のみで済ませず、共有ヘルパー経由で見た目も更新します。理由が分かりにくい場合は `title` などで無効理由を補足します。
+```bash
+npm run fetch:share-assets -- https://chatgpt.com/share/your-share-id
+```
 
-## Heading Fold Visual Rules
-- 見出し fold の横方向のオフセットは、見出しレベルではなくネスト深さで決めます。飛びレベル (`H2 -> H4`) があっても、1 段だけ深く見せます。
-- 見出し fold のインデント幅は一定ピッチで統一し、現在は `12px` ごとに 1 段深くします。
-- 各見出しセクションが追加する補助線は常に 1 本です。親セクションが描いた補助線と合成してネストを表現します。
-- この見た目ルールを変更する場合は、`tests/e2e/heading-variations-offline.spec.js` の視覚確認アサーションも一緒に更新してください。
+主な出力先:
 
-### v0.2.0 リファクタリングのポイント
-- `background/applyCode.js` は入力バリデーション、ログ生成、ダウンロード実行をそれぞれ独立関数に分割し、単体で差し替えやすくしました。
-- `content/init.js` では、オプション読み込みごとのラッパー (`cgptEnsureLoaded` など) を追加して初期化手順を段階化し、読み込み順の可読性を向上させています。
-- バージョンは `manifest.json` と `package.json` を 0.2.0 にそろえています。双方の更新漏れがないか、リリース前に必ず確認してください。
+- `tests/artifacts/chatgpt-share-assets/<share-id>/page.html`
+- `tests/artifacts/chatgpt-share-assets/<share-id>/page.png`
+- `tests/artifacts/chatgpt-share-assets/<share-id>/first-code-block.html`
+- `tests/artifacts/chatgpt-share-assets/<share-id>/metadata.json`
+- `tests/artifacts/chatgpt-share-assets/<share-id>/styles/*.css`
 
-## リリースとバージョン管理
-- 拡張の公開バージョンは `manifest.json` と `package.json` の両方で同じ値にそろえます。権限の追加または削除が伴う場合は、README の説明も合わせて見直してください。
-- リリースタグは `vX.Y.Z` 形式で作成します。タグを打つ前に `git status` がクリーンであることと、サービスワーカーのバージョンが期待どおりに更新されていることを確認してください。
-- 機能追加やリファクタリングでは、保存処理、テンプレ管理、チャットログ管理といった単一機能ごとにファイルを分け、変更範囲を限定します。
+## ドキュメント更新ルール
 
-## 2026-03 Refactor Notes
-- The extension remains a single MV3 package. Internal content-script bootstrap is now split into `cgptInitCodeSaverFeature()` and `cgptInitChatToolsFeature()` so code saving and chat tooling can evolve independently without changing user-facing behavior.
-- `extension/content/codeBlocks.js` now focuses on code-block decoration, while `extension/content/codeBlockObserver.js` owns `setupCodeBlockMutationObserver()`.
-- `extension/content/chatLogTracker.js` now focuses on chat entry collection and rendering, while `extension/content/chatLogObserver.js` owns `startChatLogMutationObserver()` and route watching.
-- `package.json` keeps `test` aligned with `test:unit` without nesting `npm run`, so local unit test invocation stays simple.
+- ユーザー向けの導線変更
+  - README を更新
+- アーキテクチャ、責務分割、メッセージ追加
+  - DEVELOPERS を更新
+- 権限追加や削除
+  - `extension/manifest.json` と README の両方を確認
+- README 画像を更新した場合
+  - `docs/images/readme/` を差し替える
+  - 必要なら `tests/e2e/readme-behavior.spec.js` と `tests/e2e/ui-screens.spec.js` の期待を見直す
 
-## Collaboration Notes
-- If a requested change is likely to become a large-scale modification, confirm with the user before proceeding with implementation.
+## 現在の注意点
 
-## 2026-03-04 Chat Log Generated Paths
-- Chat Log modal treats both file-backed code blocks and plain fenced code blocks as listable code blocks.
-- If a code block does not include a `file:` metadata line, the modal assigns a generated relative path under `chat-code-blocks/`.
-- Generated names follow `<language>-block-<n>.<ext>` when language detection is available, otherwise `code-block-<n>.txt`.
-- Detected extension mapping currently includes common languages such as `python -> .py`, `javascript -> .js`, `c -> .c`, `java -> .java`, and `powershell -> .ps1`.
-- Generated paths are valid save targets for `Save`, `Save As`, `Save All`, and `Save As All`.
-
-## 2026-03-04 Chat Log Regression Fixtures
-- Shared-page-style fenced code blocks without `file:` metadata are pinned by `tests/fixtures/chatgpt-share-code-blocks.html`.
-- Regression coverage for that case lives in `tests/e2e/chatgpt-share-code-blocks-offline.spec.js`.
-- The regression asserts generated filenames are shown in Chat Log and that per-block save buttons remain enabled.
+- `package.json` の version は `0.4.3` ですが、`extension/manifest.json` は `0.4.0` のままです。
+  - 公開バージョンを揃える運用にするなら、この差分は解消したほうがよいです。
+- 環境によっては Playwright の persistent context で content script 注入確認が skip になることがあります。
+  - README 画像更新時は、テスト artifact や保存済み DOM の再利用が必要になる場合があります。
