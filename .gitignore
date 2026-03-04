@@ -1,7 +1,10 @@
 node_modules/
 tests/.local-libs/
 tests/playwright-report/
+tests/playwright-report-full/
 tests/test-results/
+tests/test-results-full/
+tests/test-results-ui/
 tests/artifacts/
 npm-debug.log*
 yarn-debug.log*
