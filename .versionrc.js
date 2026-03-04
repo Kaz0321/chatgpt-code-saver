@@ -5,7 +5,7 @@ module.exports = {
       type: 'json'
     },
     {
-      filename: 'manifest.json',
+      filename: 'extension/manifest.json',
       type: 'json'
     }
   ],
