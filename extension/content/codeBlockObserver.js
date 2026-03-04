@@ -12,10 +12,37 @@ function cgptIsHelperOwnedNode(node) {
   return Boolean(
     element.closest(
       [
+        "#cgpt-code-helper-panel",
+        "#cgpt-helper-chatlog-modal",
+        "[data-cgpt-code-wrapper='1']",
+        "[data-cgpt-code-collapse-cue='1']",
+        "[data-cgpt-code-collapse-top-cue='1']",
+        "[data-cgpt-code-toggle='1']",
         "[data-cgpt-code-file-path='1']",
         "[data-cgpt-code-actions='1']",
+        ".cgpt-helper-fold",
+        ".cgpt-helper-heading-section",
       ].join(",")
     )
+  );
+}
+
+function cgptCanContainCodeBlocks(node) {
+  if (!node) return false;
+  const element =
+    node.nodeType === Node.ELEMENT_NODE
+      ? node
+      : node.nodeType === Node.DOCUMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE
+        ? node
+        : node.parentElement || null;
+  if (!element || cgptIsHelperOwnedNode(element)) {
+    return false;
+  }
+  if (typeof element.matches === "function" && element.matches("pre, code, .cm-content")) {
+    return true;
+  }
+  return Boolean(
+    typeof element.querySelector === "function" && element.querySelector("pre, code, .cm-content")
   );
 }
 
@@ -32,8 +59,11 @@ function setupCodeBlockMutationObserver() {
         if (addedNodes.length === 0) {
           continue;
         }
-        shouldRefreshPanelLayout = true;
         addedNodes.forEach((node) => {
+          if (!cgptCanContainCodeBlocks(node)) {
+            return;
+          }
+          shouldRefreshPanelLayout = true;
           if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.DOCUMENT_NODE) {
             decorateCodeBlocks(node);
           } else if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
@@ -61,4 +91,11 @@ function setupCodeBlockMutationObserver() {
 
 function setupMutationObserver() {
   return setupCodeBlockMutationObserver();
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptIsHelperOwnedNode,
+    cgptCanContainCodeBlocks,
+  };
 }

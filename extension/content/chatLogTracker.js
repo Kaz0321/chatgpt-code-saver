@@ -8,6 +8,32 @@ let chatLogHighlightStyleInjected = false;
 let chatLogTimestampStyleInjected = false;
 const CHAT_LOG_FOLD_DELAY_MS = 120;
 const CHAT_LOG_FOLD_MAX_RETRIES = 8;
+const CHAT_LOG_FOLD_QUIET_PERIOD_MS = 1200;
+
+function cgptIsHelperManagedNode(node) {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+  if (node.id === "cgpt-code-helper-panel" || node.id === "cgpt-helper-chatlog-modal") {
+    return true;
+  }
+  if (node.classList && Array.from(node.classList).some((name) => String(name).startsWith("cgpt-helper-"))) {
+    return true;
+  }
+  return Boolean(
+    typeof node.closest === "function" &&
+      node.closest(
+        "#cgpt-code-helper-panel, #cgpt-helper-chatlog-modal, [class*='cgpt-helper-']"
+      )
+  );
+}
+
+function cgptCanContainChatMessages(node) {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+  if (cgptIsHelperManagedNode(node)) return false;
+  if (node.matches && node.matches(CHAT_LOG_SELECTOR)) return true;
+  return Boolean(
+    typeof node.querySelector === "function" && node.querySelector(CHAT_LOG_SELECTOR)
+  );
+}
 
 function cgptBuildChatFoldActions(entry) {
   const textSupplier = () => (entry && entry.text ? entry.text : "");
@@ -201,6 +227,7 @@ function captureChatLogsFromNode(rootNode) {
   }
 
   if (rootNode.nodeType !== Node.ELEMENT_NODE) return;
+  if (cgptIsHelperManagedNode(rootNode)) return;
 
   const ownerMessage =
     rootNode.matches && rootNode.matches(CHAT_LOG_SELECTOR)
@@ -247,6 +274,7 @@ function processChatMessageElement(el) {
     timestamp: extractChatMessageTimestamp(el),
     element: el,
     order: chatLogOrderCounter++,
+    lastMutationAt: Date.now(),
   };
 
   chatLogEntries.push(entry);
@@ -285,6 +313,7 @@ function cgptRefreshTrackedChatMessage(element) {
   if (!entry) return;
   entry.text = extractChatMessageText(element);
   entry.timestamp = extractChatMessageTimestamp(element);
+  entry.lastMutationAt = Date.now();
   renderChatMessageTimestamp(entry);
   if (element.dataset.cgptHelperFoldApplied !== "1") {
     cgptScheduleChatMessageFolding(entry);
@@ -298,6 +327,16 @@ function cgptHasStableCodeBlocks(element) {
   return preBlocks.every((pre) => pre.querySelector("code, .cm-content"));
 }
 
+function cgptShouldDelayChatMessageFolding(
+  lastMutationAt,
+  now = Date.now(),
+  quietPeriodMs = CHAT_LOG_FOLD_QUIET_PERIOD_MS
+) {
+  const normalizedLastMutationAt = Number(lastMutationAt) || 0;
+  const quietForMs = now - normalizedLastMutationAt;
+  return quietForMs < quietPeriodMs;
+}
+
 function cgptScheduleChatMessageFolding(entry, attempt = 0) {
   if (!entry || !entry.element) return;
   if (entry.element.dataset.cgptHelperFoldApplied === "1") return;
@@ -307,6 +346,12 @@ function cgptScheduleChatMessageFolding(entry, attempt = 0) {
   }
   const timerId = setTimeout(() => {
     chatLogPendingFoldTimers.delete(entry.id);
+    if (cgptShouldDelayChatMessageFolding(entry.lastMutationAt)) {
+      if (attempt < CHAT_LOG_FOLD_MAX_RETRIES) {
+        cgptScheduleChatMessageFolding(entry, attempt + 1);
+      }
+      return;
+    }
     if (!cgptHasStableCodeBlocks(entry.element)) {
       if (attempt < CHAT_LOG_FOLD_MAX_RETRIES) {
         cgptScheduleChatMessageFolding(entry, attempt + 1);
@@ -428,5 +473,8 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     cgptBuildResponseFilePath,
     cgptSanitizeChatLogPathSegment,
+    cgptShouldDelayChatMessageFolding,
+    cgptIsHelperManagedNode,
+    cgptCanContainChatMessages,
   };
 }

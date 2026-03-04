@@ -149,13 +149,60 @@ export function sum(a, b) {
     },
     toggleLevels: [1, 2, 3],
   },
+  {
+    id: "delayed-markdown-hydration",
+    prompt: "過去チャットを開いたときの Markdown 再描画競合を再現したいです。",
+    assistantInnerHtml: `
+      <div data-testid="assistant-content">
+        <p>もちろん。代表的な5言語での \`Hello, World!\` です。</p>
+        <p>\`\`\`python print("Hello, World!") \`\`\` \`\`\`javascript console.log("Hello, World!"); \`\`\`</p>
+      </div>
+    `,
+    assistantScript: `
+      <script>
+        window.setTimeout(() => {
+          const host = document.querySelector("[data-testid='assistant-content']");
+          if (!host) return;
+          host.innerHTML = [
+            "<p>もちろん。代表的な5言語での <code>Hello, World!</code> です。</p>",
+            "<pre><code class='language-python'>print(\\"Hello, World!\\")</code></pre>",
+            "<pre><code class='language-javascript'>console.log(\\"Hello, World!\\");</code></pre>",
+            "<ul><li><strong>実行方法つき</strong></li><li><strong>10言語版</strong></li></ul>"
+          ].join("");
+        }, 450);
+      </script>
+    `,
+    expected: {
+      headingFoldCount: 0,
+      headingLevels: [],
+      rawHeadingTags: [],
+      preCount: 2,
+      inlineCodeCount: 1,
+      strongCount: 2,
+      emCount: 0,
+      delCount: 0,
+      markCount: 0,
+      tableCount: 0,
+      tableRowCount: 0,
+      blockquoteCount: 0,
+      unorderedListCount: 1,
+      orderedListCount: 0,
+      listItemCount: 2,
+      horizontalRuleCount: 0,
+      linkCount: 0,
+      checkboxCount: 0,
+      paragraphCount: 1,
+    },
+    toggleLevels: [],
+    assertNoRawFenceText: true,
+  },
 ];
 
 async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
 }
 
-function buildMockPageHtml({ prompt, assistantInnerHtml }) {
+function buildMockPageHtml({ prompt, assistantInnerHtml, assistantScript = "" }) {
   return `<!doctype html>
 <html lang="ja">
   <head>
@@ -222,6 +269,7 @@ function buildMockPageHtml({ prompt, assistantInnerHtml }) {
       </div>
       <textarea data-testid="chat-input" name="prompt-textarea"></textarea>
     </main>
+    ${assistantScript}
   </body>
 </html>`;
 }
@@ -256,6 +304,7 @@ async function readAssistantStructure(page) {
       linkCount: count("a[href]"),
       checkboxCount: count("input[type='checkbox']"),
       paragraphCount: count("p"),
+      textContent: (scope.textContent || "").trim(),
     };
   });
 }
@@ -347,9 +396,10 @@ test.describe("offline rich markdown fixtures with extension", () => {
             contentType: "text/html; charset=utf-8",
             body: buildMockPageHtml({
               prompt: scenario.prompt,
-              assistantInnerHtml: scenario.assistantInnerHtml,
-            }),
-          });
+    assistantInnerHtml: scenario.assistantInnerHtml,
+            assistantScript: scenario.assistantScript,
+          }),
+        });
         });
 
         await page.goto(`https://chatgpt.com/c/offline-rich-${scenario.id}`, {
@@ -359,15 +409,36 @@ test.describe("offline rich markdown fixtures with extension", () => {
         await expect(page.locator("#cgpt-code-helper-panel")).toBeVisible();
         await expect(page.locator(".cgpt-helper-message-body")).toHaveCount(2);
 
+        const expectedStructure = { ...scenario.expected };
         await expect
-          .poll(async () => readAssistantStructure(page), { timeout: 10_000 })
-          .toEqual(scenario.expected);
+          .poll(async () => {
+            const actual = await readAssistantStructure(page);
+            const { textContent, ...shape } = actual;
+            return shape;
+          }, { timeout: 10_000 })
+          .toEqual(expectedStructure);
+
+        if (scenario.assertNoRawFenceText) {
+          await expect
+            .poll(async () => {
+              const actual = await readAssistantStructure(page);
+              return /```/.test(actual.textContent);
+            }, { timeout: 10_000 })
+            .toBeFalsy();
+        }
 
         for (const level of scenario.toggleLevels) {
           await assertToggleWorksForLevel(page, level);
         }
 
-        await expect(readAssistantStructure(page)).resolves.toEqual(scenario.expected);
+        await expect(async () => {
+          const actual = await readAssistantStructure(page);
+          const { textContent, ...shape } = actual;
+          expect(shape).toEqual(expectedStructure);
+          if (scenario.assertNoRawFenceText) {
+            expect(textContent).not.toMatch(/```/);
+          }
+        }).toPass();
 
         const actual = await readAssistantStructure(page);
         await Promise.all([

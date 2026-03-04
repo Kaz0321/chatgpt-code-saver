@@ -24,6 +24,15 @@ function startChatLogMutationObserver() {
         return;
       }
       mutation.addedNodes.forEach((node) => {
+        if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+          return;
+        }
+        if (
+          typeof cgptCanContainChatMessages === "function" &&
+          !cgptCanContainChatMessages(node)
+        ) {
+          return;
+        }
         captureChatLogsFromNode(node);
       });
     });
