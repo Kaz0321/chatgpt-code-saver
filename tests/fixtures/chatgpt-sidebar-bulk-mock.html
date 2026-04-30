@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mock ChatGPT Sidebar Bulk</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #eef2ff;
+        color: #0f172a;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        min-height: 100vh;
+      }
+
+      aside {
+        border-right: 1px solid #cbd5e1;
+        background: #ffffff;
+        padding: 16px 12px 96px;
+        overflow: auto;
+      }
+
+      main {
+        padding: 32px 24px 120px;
+      }
+
+      [data-cgpt-section-heading] {
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+        margin: 16px 8px 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      [data-cgpt-conversation-row="1"] {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin: 4px 0;
+        padding: 6px 8px;
+        border-radius: 10px;
+      }
+
+      [data-cgpt-conversation-row="1"] a {
+        flex: 1;
+        min-width: 0;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      [data-cgpt-conversation-menu="1"] {
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+
+      [data-cgpt-project-group="1"] {
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 8px;
+        margin-top: 8px;
+      }
+
+      [data-cgpt-menu="1"],
+      [data-cgpt-dialog="1"] {
+        position: fixed;
+        z-index: 10020;
+      }
+
+      [data-cgpt-menu="1"] {
+        right: 24px;
+        top: 24px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      [data-cgpt-menu-item] {
+        min-width: 180px;
+      }
+
+      [data-cgpt-dialog="1"] {
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.28);
+      }
+
+      [data-cgpt-dialog-card="1"] {
+        width: min(320px, calc(100vw - 32px));
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      [data-cgpt-dialog-card="1"] button,
+      [data-cgpt-dialog-card="1"] input {
+        min-height: 32px;
+      }
+    </style>
+  </head>
+  <body>
+    <aside data-cgpt-sidebar-root="1">
+      <div data-cgpt-section-label="Chats">
+        <div data-cgpt-section-heading>Chats</div>
+        <ul>
+          <li data-cgpt-conversation-row="1" data-cgpt-conversation-id="alpha">
+            <a href="/c/alpha" data-cgpt-conversation-title="Alpha planning">Alpha planning</a>
+            <button data-cgpt-conversation-menu="1" aria-haspopup="menu">...</button>
+          </li>
+          <li data-cgpt-conversation-row="1" data-cgpt-conversation-id="beta">
+            <a href="/c/beta" data-cgpt-conversation-title="Beta migration">Beta migration</a>
+            <button data-cgpt-conversation-menu="1" aria-haspopup="menu">...</button>
+          </li>
+          <li data-cgpt-conversation-row="1" data-cgpt-conversation-id="gamma">
+            <a href="/c/gamma" data-cgpt-conversation-title="Gamma refactor">Gamma refactor</a>
+            <button data-cgpt-conversation-menu="1" aria-haspopup="menu">...</button>
+          </li>
+        </ul>
+      </div>
+      <div data-cgpt-section-label="Projects" data-cgpt-project-list="1">
+        <div data-cgpt-section-heading>Projects</div>
+        <button data-cgpt-open-project-create="1">New project</button>
+        <button data-cgpt-project="1" data-cgpt-project-id="proj-alpha" data-cgpt-project-name="Project Alpha">Project Alpha</button>
+        <div data-cgpt-project-group="1" data-cgpt-project-name="Project Alpha">
+          <ul>
+            <li data-cgpt-conversation-row="1" data-cgpt-conversation-id="proj-task" data-cgpt-project-item="1" data-cgpt-project-name="Project Alpha">
+              <a href="/c/proj-task" data-cgpt-conversation-title="Project task" data-cgpt-project-item="1">Project task</a>
+              <button data-cgpt-conversation-menu="1" aria-haspopup="menu">...</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <main>
+      <h1>Sidebar bulk operations mock</h1>
+      <p>Use the sidebar data for bulk operations.</p>
+    </main>
+    <script>
+      (() => {
+        let activeConversationRow = null;
+        let projectSelectionTarget = null;
+
+        function closeMenu() {
+          const menu = document.querySelector("[data-cgpt-menu='1']");
+          if (menu) menu.remove();
+        }
+
+        function closeDialogs() {
+          document.querySelectorAll("[data-cgpt-dialog='1']").forEach((dialog) => dialog.remove());
+        }
+
+        function createButton(label, attrs = {}) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = label;
+          Object.entries(attrs).forEach(([key, value]) => {
+            if (key === "dataset") {
+              Object.entries(value).forEach(([dataKey, dataValue]) => {
+                button.dataset[dataKey] = dataValue;
+              });
+            } else {
+              button.setAttribute(key, value);
+            }
+          });
+          return button;
+        }
+
+        function openConfirmDialog(label, onConfirm) {
+          closeDialogs();
+          const dialog = document.createElement("div");
+          dialog.dataset.cgptDialog = "1";
+          dialog.setAttribute("role", "dialog");
+          const card = document.createElement("div");
+          card.dataset.cgptDialogCard = "1";
+          const title = document.createElement("div");
+          title.textContent = label;
+          const confirm = createButton(label);
+          confirm.addEventListener("click", () => {
+            onConfirm();
+            closeDialogs();
+          });
+          card.appendChild(title);
+          card.appendChild(confirm);
+          dialog.appendChild(card);
+          document.body.appendChild(dialog);
+        }
+
+        function ensureProjectGroup(projectName, projectId) {
+          let projectButton = Array.from(document.querySelectorAll("[data-cgpt-project='1']")).find(
+            (button) => button.dataset.cgptProjectName === projectName
+          );
+          if (!projectButton) {
+            projectButton = createButton(projectName, {
+              "data-cgpt-project": "1",
+              "data-cgpt-project-id": projectId || projectName,
+              "data-cgpt-project-name": projectName,
+            });
+            projectButton.dataset.cgptProject = "1";
+            projectButton.dataset.cgptProjectId = projectId || projectName;
+            projectButton.dataset.cgptProjectName = projectName;
+            document.querySelector("[data-cgpt-project-list='1']").appendChild(projectButton);
+          }
+          let group = Array.from(document.querySelectorAll("[data-cgpt-project-group='1']")).find(
+            (candidate) => candidate.dataset.cgptProjectName === projectName
+          );
+          if (!group) {
+            group = document.createElement("div");
+            group.dataset.cgptProjectGroup = "1";
+            group.dataset.cgptProjectName = projectName;
+            const list = document.createElement("ul");
+            group.appendChild(list);
+            document.querySelector("[data-cgpt-project-list='1']").appendChild(group);
+          }
+          return group.querySelector("ul");
+        }
+
+        function moveConversationToProject(row, projectName, projectId) {
+          const list = ensureProjectGroup(projectName, projectId);
+          row.dataset.cgptProjectItem = "1";
+          row.dataset.cgptProjectName = projectName;
+          const anchor = row.querySelector("a[href*='/c/']");
+          if (anchor) {
+            anchor.dataset.cgptProjectItem = "1";
+          }
+          list.appendChild(row);
+        }
+
+        function openProjectSelectionDialog() {
+          closeDialogs();
+          const dialog = document.createElement("div");
+          dialog.dataset.cgptDialog = "1";
+          dialog.setAttribute("role", "dialog");
+          const card = document.createElement("div");
+          card.dataset.cgptDialogCard = "1";
+          const title = document.createElement("div");
+          title.textContent = "Choose project";
+          card.appendChild(title);
+
+          document.querySelectorAll("[data-cgpt-project='1']").forEach((projectButton) => {
+            const button = createButton(projectButton.dataset.cgptProjectName);
+            button.dataset.cgptMenuItem = "1";
+            button.addEventListener("click", () => {
+              moveConversationToProject(
+                projectSelectionTarget,
+                projectButton.dataset.cgptProjectName,
+                projectButton.dataset.cgptProjectId
+              );
+              closeDialogs();
+            });
+            card.appendChild(button);
+          });
+
+          const newProject = createButton("New project");
+          newProject.dataset.cgptMenuItem = "1";
+          newProject.addEventListener("click", () => {
+            closeDialogs();
+            const createDialog = document.createElement("div");
+            createDialog.dataset.cgptDialog = "1";
+            createDialog.setAttribute("role", "dialog");
+            const createCard = document.createElement("div");
+            createCard.dataset.cgptDialogCard = "1";
+            const input = document.createElement("input");
+            input.type = "text";
+            input.dataset.cgptProjectNameInput = "1";
+            const createButtonEl = createButton("Create");
+            createButtonEl.addEventListener("click", () => {
+              const projectName = input.value.trim() || "Untitled Project";
+              moveConversationToProject(projectSelectionTarget, projectName, projectName.toLowerCase());
+              closeDialogs();
+            });
+            createCard.appendChild(input);
+            createCard.appendChild(createButtonEl);
+            createDialog.appendChild(createCard);
+            document.body.appendChild(createDialog);
+          });
+          card.appendChild(newProject);
+
+          dialog.appendChild(card);
+          document.body.appendChild(dialog);
+        }
+
+        function openStandaloneProjectCreateDialog() {
+          closeDialogs();
+          const dialog = document.createElement("div");
+          dialog.dataset.cgptDialog = "1";
+          dialog.setAttribute("role", "dialog");
+          const card = document.createElement("div");
+          card.dataset.cgptDialogCard = "1";
+          const input = document.createElement("input");
+          input.type = "text";
+          input.dataset.cgptProjectNameInput = "1";
+          const createButtonEl = createButton("Create");
+          createButtonEl.addEventListener("click", () => {
+            const projectName = input.value.trim() || "Untitled Project";
+            ensureProjectGroup(projectName, projectName.toLowerCase());
+            closeDialogs();
+          });
+          const cancelButtonEl = createButton("Cancel");
+          cancelButtonEl.addEventListener("click", () => {
+            closeDialogs();
+          });
+          card.appendChild(input);
+          card.appendChild(createButtonEl);
+          card.appendChild(cancelButtonEl);
+          dialog.appendChild(card);
+          document.body.appendChild(dialog);
+        }
+
+        function openRenameDialog(row) {
+          closeDialogs();
+          const dialog = document.createElement("div");
+          dialog.dataset.cgptDialog = "1";
+          dialog.setAttribute("role", "dialog");
+          const card = document.createElement("div");
+          card.dataset.cgptDialogCard = "1";
+          const input = document.createElement("input");
+          input.type = "text";
+          input.dataset.cgptRenameInput = "1";
+          const anchor = row.querySelector("a[href*='/c/']");
+          input.value = anchor ? anchor.textContent.trim() : "";
+          const saveButton = createButton("Save");
+          saveButton.addEventListener("click", () => {
+            const nextTitle = input.value.trim() || "Untitled Chat";
+            if (anchor) {
+              anchor.textContent = nextTitle;
+              anchor.dataset.cgptConversationTitle = nextTitle;
+            }
+            closeDialogs();
+          });
+          const cancelButton = createButton("Cancel");
+          cancelButton.addEventListener("click", () => {
+            closeDialogs();
+          });
+          card.appendChild(input);
+          card.appendChild(saveButton);
+          card.appendChild(cancelButton);
+          dialog.appendChild(card);
+          document.body.appendChild(dialog);
+        }
+
+        document.addEventListener("click", (event) => {
+          const standaloneProjectCreateButton = event.target.closest("[data-cgpt-open-project-create='1']");
+          if (standaloneProjectCreateButton) {
+            event.preventDefault();
+            openStandaloneProjectCreateDialog();
+            return;
+          }
+          const menuButton = event.target.closest("[data-cgpt-conversation-menu='1']");
+          if (menuButton) {
+            event.preventDefault();
+            activeConversationRow = menuButton.closest("[data-cgpt-conversation-row='1']");
+            closeMenu();
+            const menu = document.createElement("div");
+            menu.dataset.cgptMenu = "1";
+            menu.setAttribute("role", "menu");
+
+            const archiveButton = createButton("Archive");
+            archiveButton.dataset.cgptMenuItem = "1";
+            archiveButton.addEventListener("click", () => {
+              closeMenu();
+              activeConversationRow.remove();
+            });
+
+            const deleteButton = createButton("Delete");
+            deleteButton.dataset.cgptMenuItem = "1";
+            deleteButton.addEventListener("click", () => {
+              closeMenu();
+              openConfirmDialog("Delete", () => activeConversationRow.remove());
+            });
+
+            const projectButton = createButton("Add to project");
+            projectButton.dataset.cgptMenuItem = "1";
+            projectButton.addEventListener("click", () => {
+              closeMenu();
+              projectSelectionTarget = activeConversationRow;
+              openProjectSelectionDialog();
+            });
+
+            const renameButton = createButton("Rename");
+            renameButton.dataset.cgptMenuItem = "1";
+            renameButton.addEventListener("click", () => {
+              closeMenu();
+              openRenameDialog(activeConversationRow);
+            });
+
+            menu.appendChild(archiveButton);
+            menu.appendChild(deleteButton);
+            menu.appendChild(renameButton);
+            menu.appendChild(projectButton);
+            document.body.appendChild(menu);
+            return;
+          }
+
+          if (!event.target.closest("[data-cgpt-menu='1']")) {
+            closeMenu();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

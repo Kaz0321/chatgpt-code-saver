@@ -1,0 +1,722 @@
+function cgptCreateSidebarBulkToggleButton() {
+  const existing = document.getElementById("cgpt-helper-sidebar-bulk-toggle");
+  if (existing) return existing;
+  const button =
+    typeof cgptCreateSharedChipButton === "function"
+      ? cgptCreateSharedChipButton("Bulk Chats", "md")
+      : document.createElement("button");
+  button.id = "cgpt-helper-sidebar-bulk-toggle";
+  button.textContent = "Bulk Chats";
+  button.style.position = "fixed";
+  button.style.right = "200px";
+  button.style.bottom = "16px";
+  button.style.zIndex = "9999";
+  button.style.minWidth = "88px";
+  button.style.padding = "0 14px";
+  return button;
+}
+
+function cgptOpenSidebarBulkPanel() {
+  let panel = document.getElementById("cgpt-helper-sidebar-bulk-panel");
+  if (!panel) {
+    panel = cgptCreateSidebarBulkPanel();
+    document.body.appendChild(panel);
+  }
+  panel.style.display = "flex";
+  cgptRenderSidebarBulkPanel();
+  return panel;
+}
+
+function cgptCloseSidebarBulkPanel() {
+  const panel = document.getElementById("cgpt-helper-sidebar-bulk-panel");
+  if (panel) {
+    panel.style.display = "none";
+  }
+}
+
+function cgptCreateSidebarBulkPanel() {
+  const panel = document.createElement("div");
+  panel.id = "cgpt-helper-sidebar-bulk-panel";
+  panel.style.position = "fixed";
+  panel.style.right = "216px";
+  panel.style.bottom = "72px";
+  panel.style.zIndex = "9999";
+  panel.style.boxSizing = "border-box";
+  panel.style.borderRadius = "8px";
+  panel.style.padding = "8px";
+  panel.style.fontSize = "12px";
+  panel.style.display = "flex";
+  panel.style.flexDirection = "column";
+  panel.style.gap = "8px";
+  panel.style.width = "min(520px, calc(100vw - 48px))";
+  panel.style.maxWidth = "520px";
+  panel.style.height = "min(620px, calc(100vh - 112px))";
+  panel.style.maxHeight = "calc(100vh - 112px)";
+  panel.style.overflow = "hidden";
+  panel.style.backdropFilter = "blur(8px)";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(panel, "panel");
+  }
+
+  const header = document.createElement("div");
+  header.style.display = "flex";
+  header.style.alignItems = "center";
+  header.style.gap = "6px";
+
+  const title = document.createElement("div");
+  title.textContent = "Bulk Chats";
+  title.style.flex = "1";
+  title.style.fontWeight = "700";
+  title.style.fontSize = "13px";
+  if (typeof cgptApplyPanelTextTone === "function") {
+    cgptApplyPanelTextTone(title, "primary");
+  }
+  header.appendChild(title);
+
+  const refreshButton = createPanelButton("Refresh", "secondary");
+  refreshButton.id = "cgpt-helper-sidebar-bulk-refresh";
+  refreshButton.addEventListener("click", () => {
+    if (typeof cgptRefreshSidebarConversationSnapshot === "function") {
+      cgptRefreshSidebarConversationSnapshot(document);
+    }
+    cgptRenderSidebarBulkPanel();
+  });
+  header.appendChild(refreshButton);
+
+  const hideButton = createPanelButton("Hide", "ghost");
+  hideButton.addEventListener("click", () => cgptCloseSidebarBulkPanel());
+  header.appendChild(hideButton);
+  panel.appendChild(header);
+
+  const summary = document.createElement("div");
+  summary.id = "cgpt-helper-sidebar-bulk-summary";
+  summary.style.fontSize = "11px";
+  summary.style.lineHeight = "1.45";
+  if (typeof cgptApplyPanelTextTone === "function") {
+    cgptApplyPanelTextTone(summary, "secondary");
+  }
+  panel.appendChild(summary);
+
+  const selectionSection = document.createElement("div");
+  selectionSection.id = "cgpt-helper-sidebar-bulk-selection-section";
+  selectionSection.style.display = "flex";
+  selectionSection.style.flexDirection = "column";
+  selectionSection.style.gap = "6px";
+  selectionSection.style.padding = "8px";
+  selectionSection.style.borderRadius = "10px";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(selectionSection, "subtle");
+  }
+  const selectionLabel = document.createElement("div");
+  selectionLabel.textContent = "Filter & Selection";
+  selectionLabel.style.fontSize = "11px";
+  selectionLabel.style.fontWeight = "700";
+  if (typeof cgptApplyPanelTextTone === "function") {
+    cgptApplyPanelTextTone(selectionLabel, "secondary");
+  }
+  selectionSection.appendChild(selectionLabel);
+  const selectionControls = createButtonRow();
+  selectionControls.id = "cgpt-helper-sidebar-bulk-selection-controls";
+  selectionControls.style.flexWrap = "nowrap";
+  selectionSection.appendChild(selectionControls);
+  panel.appendChild(selectionSection);
+
+  const projectControls = document.createElement("div");
+  projectControls.id = "cgpt-helper-sidebar-bulk-project-controls";
+  projectControls.style.display = "flex";
+  projectControls.style.flexDirection = "column";
+  projectControls.style.gap = "6px";
+  panel.appendChild(projectControls);
+
+  const actionSection = document.createElement("div");
+  actionSection.id = "cgpt-helper-sidebar-bulk-action-section";
+  actionSection.style.display = "flex";
+  actionSection.style.flexDirection = "column";
+  actionSection.style.gap = "6px";
+  actionSection.style.padding = "8px";
+  actionSection.style.borderRadius = "10px";
+  if (typeof cgptApplySurfaceStyle === "function") {
+    cgptApplySurfaceStyle(actionSection, "subtle");
+  }
+  const actionLabel = document.createElement("div");
+  actionLabel.textContent = "Chat Actions";
+  actionLabel.style.fontSize = "11px";
+  actionLabel.style.fontWeight = "700";
+  if (typeof cgptApplyPanelTextTone === "function") {
+    cgptApplyPanelTextTone(actionLabel, "secondary");
+  }
+  actionSection.appendChild(actionLabel);
+  const actionControls = createButtonRow();
+  actionControls.id = "cgpt-helper-sidebar-bulk-action-controls";
+  actionControls.style.flexWrap = "nowrap";
+  actionSection.appendChild(actionControls);
+  panel.appendChild(actionSection);
+
+  const filterRow = document.createElement("div");
+  filterRow.id = "cgpt-helper-sidebar-bulk-filter-row";
+  filterRow.style.display = "flex";
+  filterRow.style.alignItems = "center";
+  filterRow.style.gap = "6px";
+
+  const input = document.createElement("input");
+  input.id = "cgpt-helper-sidebar-bulk-search";
+  input.type = "search";
+  input.placeholder = "Filter by title";
+  input.style.flex = "1";
+  input.style.minWidth = "0";
+  input.style.minHeight = "30px";
+  input.style.padding = "6px 10px";
+  input.style.borderRadius = "8px";
+  if (typeof cgptApplyPanelInputStyle === "function") {
+    cgptApplyPanelInputStyle(input);
+  }
+  input.addEventListener("input", (event) => {
+    if (typeof cgptSetSidebarBulkQuery === "function") {
+      cgptSetSidebarBulkQuery(event.target.value || "");
+    }
+  });
+  filterRow.appendChild(input);
+
+  const inlineSelectionControls = createButtonRow();
+  inlineSelectionControls.id = "cgpt-helper-sidebar-bulk-inline-selection-controls";
+  inlineSelectionControls.style.flexWrap = "nowrap";
+  inlineSelectionControls.style.width = "auto";
+  inlineSelectionControls.style.flexShrink = "0";
+  filterRow.appendChild(inlineSelectionControls);
+  panel.appendChild(filterRow);
+
+  const list = document.createElement("div");
+  list.id = "cgpt-helper-sidebar-bulk-list";
+  list.style.display = "flex";
+  list.style.flexDirection = "column";
+  list.style.flex = "1";
+  list.style.minHeight = "0";
+  list.style.gap = "6px";
+  list.style.overflowY = "auto";
+  list.style.paddingRight = "2px";
+  panel.appendChild(list);
+
+  const results = document.createElement("div");
+  results.id = "cgpt-helper-sidebar-bulk-results";
+  results.style.display = "flex";
+  results.style.flexDirection = "column";
+  results.style.gap = "4px";
+  results.style.flexShrink = "0";
+  results.style.minHeight = "0";
+  results.style.maxHeight = "96px";
+  results.style.overflowY = "auto";
+  panel.appendChild(results);
+  return panel;
+}
+
+function cgptSidebarBulkCreateControlButton(label, variant, onClick) {
+  const button = createPanelButton(label, variant);
+  button.style.flex = "1";
+  button.style.minWidth = "0";
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function cgptSyncSidebarProjectSelectEnabled(panel, snapshot, state) {
+  if (!panel) return;
+  const select = panel.querySelector("#cgpt-helper-sidebar-bulk-project-select");
+  if (!select) return;
+  select.disabled = !snapshot.projects.length || state.runningAction !== "";
+}
+
+function cgptWatchSidebarProjectCreationDialog(panel) {
+  if (!panel) return;
+  if (panel.__cgptSidebarProjectDialogWatchTimer) {
+    clearInterval(panel.__cgptSidebarProjectDialogWatchTimer);
+  }
+  let sawDialog = false;
+  let ticks = 0;
+  panel.__cgptSidebarProjectDialogWatchTimer = setInterval(() => {
+    ticks += 1;
+    const hasDialog = typeof cgptHasOpenSidebarDialog === "function" && cgptHasOpenSidebarDialog();
+    if (hasDialog) {
+      sawDialog = true;
+      return;
+    }
+    if (!sawDialog && ticks < 20) {
+      return;
+    }
+    clearInterval(panel.__cgptSidebarProjectDialogWatchTimer);
+    panel.__cgptSidebarProjectDialogWatchTimer = null;
+    if (typeof cgptRefreshSidebarConversationSnapshot === "function") {
+      cgptRefreshSidebarConversationSnapshot(document);
+    }
+    const snapshot =
+      typeof cgptGetSidebarConversationSnapshot === "function"
+        ? cgptGetSidebarConversationSnapshot()
+        : { sidebarFound: false, conversations: [], projects: [] };
+    const state = typeof cgptGetSidebarBulkState === "function" ? cgptGetSidebarBulkState() : null;
+    if (!state) return;
+    cgptSyncSidebarProjectSelectEnabled(panel, snapshot, state);
+    cgptRenderSidebarBulkPanel();
+  }, 150);
+}
+
+async function cgptHandleOpenSidebarProjectCreation() {
+  const panel = document.getElementById("cgpt-helper-sidebar-bulk-panel");
+  const state = typeof cgptGetSidebarBulkState === "function" ? cgptGetSidebarBulkState() : null;
+  if (state && typeof cgptSetSidebarBulkProjectTarget === "function") {
+    cgptSetSidebarBulkProjectTarget({
+      mode: "existing",
+      projectId: state.projectTarget ? state.projectTarget.projectId : "",
+      projectName: state.projectTarget ? state.projectTarget.projectName : "",
+    });
+  }
+  const opened = typeof cgptOpenSidebarProjectCreationUi === "function"
+    ? await cgptOpenSidebarProjectCreationUi()
+    : false;
+  if (!opened) {
+    showToast("Could not open the ChatGPT project UI.", "error");
+    return;
+  }
+  cgptWatchSidebarProjectCreationDialog(panel);
+}
+
+async function cgptHandleSidebarConversationRename(conversation) {
+  const currentTitle = String((conversation && conversation.title) || "").trim();
+  const nextTitle =
+    typeof window !== "undefined" && typeof window.prompt === "function"
+      ? window.prompt("Rename chat", currentTitle)
+      : "";
+  if (nextTitle === null) {
+    return;
+  }
+  const normalizedTitle = String(nextTitle || "").trim();
+  if (!normalizedTitle || normalizedTitle === currentTitle) {
+    return;
+  }
+  try {
+    if (typeof cgptSetSidebarBulkRunningAction === "function") {
+      cgptSetSidebarBulkRunningAction("rename");
+    }
+    if (typeof cgptRenameSidebarConversationViaUi !== "function") {
+      throw new Error("failed_action_not_found");
+    }
+    await cgptRenameSidebarConversationViaUi(conversation, normalizedTitle);
+    showToast("Chat renamed.", "success");
+  } catch (error) {
+    showToast(`Rename failed: ${error && error.message ? error.message : "unknown"}`, "error");
+  } finally {
+    if (typeof cgptSetSidebarBulkRunningAction === "function") {
+      cgptSetSidebarBulkRunningAction("");
+    }
+    if (typeof cgptRefreshSidebarConversationSnapshot === "function") {
+      cgptRefreshSidebarConversationSnapshot(document);
+    }
+    cgptRenderSidebarBulkPanel();
+  }
+}
+
+function cgptSyncSidebarBulkSelectionSummary(panel, snapshot, state) {
+  if (!panel) return;
+  const visibleConversations = cgptFilterSidebarConversations(snapshot.conversations, state.query);
+  const excludedCount = (snapshot.conversations || []).filter((conversation) => conversation.isProjectItem).length;
+  const selectionSummary = cgptSummarizeSidebarSelection(
+    snapshot.conversations,
+    state.selectedConversationIds
+  );
+  const summary = panel.querySelector("#cgpt-helper-sidebar-bulk-summary");
+  if (summary) {
+    summary.textContent = snapshot.sidebarFound
+      ? `Visible ${snapshot.conversations.length} / Filtered ${visibleConversations.length} / Selected ${selectionSummary.selectedCount} / Excluded ${excludedCount}`
+      : "Sidebar structure could not be detected.";
+  }
+}
+
+function cgptSyncSidebarBulkCheckboxes(panel, state) {
+  if (!panel) return;
+  Array.from(panel.querySelectorAll("#cgpt-helper-sidebar-bulk-list input[type='checkbox']")).forEach((checkbox) => {
+    const key = String(checkbox.dataset.cgptConversationKey || "");
+    if (!key) return;
+    checkbox.checked = cgptIsSidebarConversationSelected(key);
+    checkbox.disabled = state.runningAction !== "";
+  });
+}
+
+function cgptUpdateSidebarBulkSelectionUi() {
+  const panel = document.getElementById("cgpt-helper-sidebar-bulk-panel");
+  if (!panel) return;
+  const snapshot =
+    typeof cgptGetSidebarConversationSnapshot === "function"
+      ? cgptGetSidebarConversationSnapshot()
+      : { sidebarFound: false, conversations: [] };
+  const state = typeof cgptGetSidebarBulkState === "function" ? cgptGetSidebarBulkState() : null;
+  if (!state) return;
+  cgptSyncSidebarBulkSelectionSummary(panel, snapshot, state);
+  cgptSyncSidebarBulkCheckboxes(panel, state);
+}
+
+function cgptToggleSidebarBulkConversationSelection(selectionKey, checkbox) {
+  const nextChecked = !cgptIsSidebarConversationSelected(selectionKey);
+  cgptSetSidebarConversationSelected(selectionKey, nextChecked);
+  if (checkbox) {
+    checkbox.checked = nextChecked;
+  }
+}
+
+function cgptResolveSidebarBulkSelectedProject() {
+  const select = document.getElementById("cgpt-helper-sidebar-bulk-project-select");
+  if (!select || !select.value) {
+    return null;
+  }
+  const snapshot =
+    typeof cgptGetSidebarConversationSnapshot === "function"
+      ? cgptGetSidebarConversationSnapshot()
+      : { projects: [] };
+  return snapshot.projects.find((project) => project.id === select.value) || null;
+}
+
+async function cgptHandleSidebarBulkAction(action) {
+  let state = typeof cgptGetSidebarBulkState === "function" ? cgptGetSidebarBulkState() : null;
+  if (!state || !state.selectedConversationIds || state.selectedConversationIds.size === 0) {
+    showToast("No chats selected.", "error");
+    return;
+  }
+  if (action === "project") {
+    const selectedProject = cgptResolveSidebarBulkSelectedProject();
+    if (!selectedProject) {
+      showToast("Select a project first.", "error");
+      return;
+    }
+    if (typeof cgptSetSidebarBulkProjectTarget === "function") {
+      cgptSetSidebarBulkProjectTarget({
+        mode: "existing",
+        projectId: selectedProject.id,
+        projectName: selectedProject.name,
+      });
+      state = typeof cgptGetSidebarBulkState === "function" ? cgptGetSidebarBulkState() : state;
+    }
+  }
+  if (typeof cgptSetSidebarBulkRunningAction === "function") {
+    cgptSetSidebarBulkRunningAction(action);
+  }
+  try {
+    const result = await cgptRunSidebarBulkAction({
+      action,
+      conversationIds: Array.from(state.selectedConversationIds),
+      projectTarget: state.projectTarget,
+    });
+    if (typeof cgptSetSidebarBulkResult === "function") {
+      cgptSetSidebarBulkResult(result);
+    }
+    const tone = result.counts.failed > 0 ? "error" : "success";
+    showToast(
+      `${action}: ${result.counts.success} success, ${result.counts.failed} failed, ${result.counts.skipped} skipped`,
+      tone
+    );
+  } finally {
+    if (typeof cgptSetSidebarBulkRunningAction === "function") {
+      cgptSetSidebarBulkRunningAction("");
+    }
+    if (typeof cgptRefreshSidebarConversationSnapshot === "function") {
+      cgptRefreshSidebarConversationSnapshot(document);
+    }
+    if (
+      typeof cgptGetSidebarConversationSnapshot === "function" &&
+      typeof cgptPruneSidebarConversationSelection === "function"
+    ) {
+      const refreshedSnapshot = cgptGetSidebarConversationSnapshot();
+      cgptPruneSidebarConversationSelection(refreshedSnapshot.conversations, {
+        dropProjectItems: action === "project" || action === "archive" || action === "delete",
+      });
+    }
+    cgptRenderSidebarBulkPanel();
+  }
+}
+
+function cgptRenderSidebarBulkProjectControls(panel, snapshot, state) {
+  const host = panel.querySelector("#cgpt-helper-sidebar-bulk-project-controls");
+  if (!host) return;
+  let row = host.querySelector("[data-cgpt-project-controls-row='1']");
+  let select = host.querySelector("#cgpt-helper-sidebar-bulk-project-select");
+  let newButton = host.querySelector("#cgpt-helper-sidebar-bulk-project-toggle");
+
+  if (!row) {
+    host.replaceChildren();
+    row = document.createElement("div");
+    row.dataset.cgptProjectControlsRow = "1";
+    row.style.display = "flex";
+    row.style.flexDirection = "row";
+    row.style.gap = "6px";
+    row.style.alignItems = "center";
+
+    select = document.createElement("select");
+    select.id = "cgpt-helper-sidebar-bulk-project-select";
+    select.style.flex = "1";
+    select.style.minHeight = "30px";
+    select.style.borderRadius = "8px";
+    select.style.padding = "0 8px";
+    if (typeof cgptApplyPanelInputStyle === "function") {
+      cgptApplyPanelInputStyle(select);
+    }
+    select.addEventListener("change", (event) => {
+      const latestSnapshot =
+        typeof cgptGetSidebarConversationSnapshot === "function"
+          ? cgptGetSidebarConversationSnapshot()
+          : { projects: [] };
+      const project = latestSnapshot.projects.find((item) => item.id === event.target.value);
+      if (typeof cgptSetSidebarBulkProjectTarget === "function") {
+        cgptSetSidebarBulkProjectTarget({
+          mode: "existing",
+          projectId: project ? project.id : "",
+          projectName: project ? project.name : "",
+        });
+      }
+    });
+    row.appendChild(select);
+
+    newButton = createPanelButton("+ New Project", "secondary");
+    newButton.id = "cgpt-helper-sidebar-bulk-project-toggle";
+    newButton.addEventListener("click", () => {
+      cgptHandleOpenSidebarProjectCreation();
+    });
+    row.appendChild(newButton);
+    host.appendChild(row);
+  }
+
+  const currentValue = state.projectTarget.mode === "existing" ? state.projectTarget.projectId : "";
+  const optionSignature = snapshot.projects.map((project) => `${project.id}:${project.name}`).join("|");
+  if (select.dataset.cgptOptionSignature !== optionSignature) {
+    select.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = snapshot.projects.length ? "Select project" : "Project unavailable";
+    select.appendChild(placeholder);
+    snapshot.projects.forEach((project) => {
+      const option = document.createElement("option");
+      option.value = project.id;
+      option.textContent = project.name;
+      select.appendChild(option);
+    });
+    select.dataset.cgptOptionSignature = optionSignature;
+  }
+  select.value = currentValue;
+  cgptSyncSidebarProjectSelectEnabled(panel, snapshot, state);
+}
+
+function cgptRenderSidebarBulkControls(panel, visibleConversations, state) {
+  const selectionSection = panel.querySelector("#cgpt-helper-sidebar-bulk-selection-section");
+  const selectionControls = panel.querySelector("#cgpt-helper-sidebar-bulk-inline-selection-controls");
+  const actionControls = panel.querySelector("#cgpt-helper-sidebar-bulk-action-controls");
+  if (!selectionControls || !actionControls || !selectionSection) return;
+  selectionControls.replaceChildren();
+  actionControls.replaceChildren();
+  selectionSection.style.display = "none";
+  selectionControls.appendChild(
+    cgptSidebarBulkCreateControlButton("Select All", "secondary", () => {
+      cgptAddVisibleSidebarConversationSelections(
+        visibleConversations.map((conversation) => cgptGetSidebarConversationSelectionKey(conversation))
+      );
+    })
+  );
+  selectionControls.appendChild(
+    cgptSidebarBulkCreateControlButton("Clear", "ghost", () => {
+      cgptClearSidebarConversationSelection();
+    })
+  );
+  actionControls.appendChild(
+    cgptSidebarBulkCreateControlButton("Archive Selected", "secondary", () => {
+      cgptHandleSidebarBulkAction("archive");
+    })
+  );
+  actionControls.appendChild(
+    cgptSidebarBulkCreateControlButton("Delete Selected", "danger", () => {
+      cgptHandleSidebarBulkAction("delete");
+    })
+  );
+  actionControls.appendChild(
+    cgptSidebarBulkCreateControlButton("Add to Project", "primary", () => {
+      cgptHandleSidebarBulkAction("project");
+    })
+  );
+  Array.from(panel.querySelectorAll("#cgpt-helper-sidebar-bulk-selection-controls button, #cgpt-helper-sidebar-bulk-action-controls button")).forEach((button) => {
+    button.disabled = state.runningAction !== "";
+  });
+}
+
+function cgptRenderSidebarBulkList(panel, visibleConversations, state) {
+  const list = panel.querySelector("#cgpt-helper-sidebar-bulk-list");
+  if (!list) return;
+  const previousScrollTop = list.scrollTop;
+  list.replaceChildren();
+  if (!visibleConversations.length) {
+    const empty = document.createElement("div");
+    empty.textContent = "No visible chats match the current filter.";
+    empty.style.padding = "10px";
+    empty.style.borderRadius = "10px";
+    if (typeof cgptApplySurfaceStyle === "function") {
+      cgptApplySurfaceStyle(empty, "subtle");
+    }
+    list.appendChild(empty);
+    list.scrollTop = 0;
+    return;
+  }
+  visibleConversations.forEach((conversation) => {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.gap = "8px";
+    row.style.alignItems = "center";
+    row.style.padding = "4px 0";
+    row.style.cursor = state.runningAction !== "" ? "default" : "pointer";
+    row.style.borderBottom = "1px solid rgba(203, 213, 225, 0.55)";
+
+    const selectionKey = cgptGetSidebarConversationSelectionKey(conversation);
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.dataset.cgptConversationKey = selectionKey;
+    checkbox.checked = cgptIsSidebarConversationSelected(selectionKey);
+    checkbox.disabled = state.runningAction !== "";
+    checkbox.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+    checkbox.addEventListener("click", (event) => {
+      event.stopPropagation();
+      cgptToggleSidebarBulkConversationSelection(selectionKey, checkbox);
+    });
+    row.appendChild(checkbox);
+
+    const content = document.createElement("div");
+    content.style.display = "flex";
+    content.style.alignItems = "baseline";
+    content.style.gap = "8px";
+    content.style.minWidth = "0";
+    content.style.flex = "1";
+
+    const titleRow = document.createElement("div");
+    titleRow.style.display = "flex";
+    titleRow.style.alignItems = "baseline";
+    titleRow.style.gap = "4px";
+    titleRow.style.minWidth = "0";
+    titleRow.style.flex = "0 1 auto";
+
+    const title = document.createElement("div");
+    title.textContent = conversation.title || "(untitled chat)";
+    title.style.fontWeight = "600";
+    title.style.minWidth = "0";
+    title.style.flex = "0 1 auto";
+    title.style.display = "inline-block";
+    title.style.maxWidth = "100%";
+    title.style.whiteSpace = "nowrap";
+    title.style.overflow = "hidden";
+    title.style.textOverflow = "ellipsis";
+    titleRow.appendChild(title);
+
+    const renameButton = document.createElement("button");
+    renameButton.type = "button";
+    renameButton.textContent = "✎";
+    renameButton.title = "Rename";
+    renameButton.setAttribute("aria-label", "Rename chat");
+    renameButton.style.flexShrink = "0";
+    renameButton.style.display = "inline-flex";
+    renameButton.style.alignItems = "center";
+    renameButton.style.justifyContent = "center";
+    renameButton.style.margin = "0";
+    renameButton.style.padding = "0";
+    renameButton.style.border = "none";
+    renameButton.style.background = "transparent";
+    renameButton.style.boxShadow = "none";
+    renameButton.style.borderRadius = "0";
+    renameButton.style.minWidth = "auto";
+    renameButton.style.width = "auto";
+    renameButton.style.minHeight = "auto";
+    renameButton.style.lineHeight = "1";
+    renameButton.style.fontSize = "12px";
+    renameButton.style.cursor = state.runningAction !== "" ? "default" : "pointer";
+    renameButton.style.transform = "none";
+    renameButton.style.verticalAlign = "baseline";
+    renameButton.style.position = "relative";
+    renameButton.style.top = "-1px";
+    if (typeof cgptApplyPanelTextTone === "function") {
+      cgptApplyPanelTextTone(renameButton, "muted");
+    }
+    renameButton.disabled = state.runningAction !== "";
+    renameButton.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+    renameButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      cgptHandleSidebarConversationRename(conversation);
+    });
+    titleRow.appendChild(renameButton);
+    content.appendChild(titleRow);
+
+    const meta = document.createElement("div");
+    meta.textContent = conversation.isActive ? "Current chat" : conversation.conversationId || conversation.id;
+    meta.title = meta.textContent;
+    meta.style.fontSize = "11px";
+    meta.style.whiteSpace = "nowrap";
+    meta.style.flexShrink = "0";
+    if (typeof cgptApplyPanelTextTone === "function") {
+      cgptApplyPanelTextTone(meta, "muted");
+    }
+    content.appendChild(meta);
+    if (state.runningAction === "") {
+      row.addEventListener("click", () => {
+        cgptToggleSidebarBulkConversationSelection(selectionKey, checkbox);
+      });
+    }
+    row.appendChild(content);
+    list.appendChild(row);
+  });
+  const lastRow = list.lastElementChild;
+  if (lastRow && lastRow.style) {
+    lastRow.style.borderBottom = "none";
+  }
+  list.scrollTop = previousScrollTop;
+}
+
+function cgptRenderSidebarBulkResults(panel, state) {
+  const host = panel.querySelector("#cgpt-helper-sidebar-bulk-results");
+  if (!host) return;
+  host.replaceChildren();
+  if (!state.lastResult) return;
+  const summary = document.createElement("div");
+  summary.textContent = `Result: ${state.lastResult.counts.success} success / ${state.lastResult.counts.failed} failed / ${state.lastResult.counts.skipped} skipped`;
+  summary.style.fontSize = "11px";
+  summary.style.fontWeight = "600";
+  if (typeof cgptApplyPanelTextTone === "function") {
+    cgptApplyPanelTextTone(summary, state.lastResult.counts.failed ? "danger" : "success");
+  }
+  host.appendChild(summary);
+  state.lastResult.results
+    .filter((item) => !item.ok)
+    .slice(0, 6)
+    .forEach((item) => {
+      const line = document.createElement("div");
+      line.textContent = `${item.title || item.conversationId || "unknown"}: ${item.status}`;
+      line.style.fontSize = "11px";
+      if (typeof cgptApplyPanelTextTone === "function") {
+        cgptApplyPanelTextTone(line, "muted");
+      }
+      host.appendChild(line);
+    });
+}
+
+function cgptRenderSidebarBulkPanel() {
+  const panel = document.getElementById("cgpt-helper-sidebar-bulk-panel");
+  if (!panel) return;
+  const snapshot =
+    typeof cgptGetSidebarConversationSnapshot === "function"
+      ? cgptGetSidebarConversationSnapshot()
+      : { sidebarFound: false, conversations: [], projects: [] };
+  const state = typeof cgptGetSidebarBulkState === "function" ? cgptGetSidebarBulkState() : null;
+  if (!state) return;
+
+  const input = panel.querySelector("#cgpt-helper-sidebar-bulk-search");
+  if (input && input.value !== state.query) {
+    input.value = state.query;
+  }
+
+  const visibleConversations = cgptFilterSidebarConversations(snapshot.conversations, state.query);
+  cgptSyncSidebarBulkSelectionSummary(panel, snapshot, state);
+
+  cgptRenderSidebarBulkControls(panel, visibleConversations, state);
+  cgptRenderSidebarBulkProjectControls(panel, snapshot, state);
+  cgptRenderSidebarBulkList(panel, visibleConversations, state);
+  cgptRenderSidebarBulkResults(panel, state);
+}

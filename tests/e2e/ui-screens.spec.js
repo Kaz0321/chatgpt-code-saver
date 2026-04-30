@@ -9,6 +9,7 @@ const repoRoot = path.join(__dirname, "..", "..");
 const testsRoot = path.join(__dirname, "..");
 const extensionPath = path.join(repoRoot, "extension");
 const fixturePath = path.join(testsRoot, "fixtures", "chatgpt-mock.html");
+const sidebarFixturePath = path.join(testsRoot, "fixtures", "chatgpt-sidebar-bulk-mock.html");
 const artifactsRoot = path.join(testsRoot, "artifacts", "ui-screen-checks");
 
 const LOG_STORAGE_KEY = "cgptHelper.logs";
@@ -29,6 +30,15 @@ async function createMockPage(context) {
   const fixtureHtml = await loadFixtureHtml(fixturePath);
   const page = await context.newPage();
   await openStaticChatgptPage(page, "https://chatgpt.com/c/ui-screen-checks", fixtureHtml, {
+    documentOnly: false,
+  });
+  return page;
+}
+
+async function createSidebarMockPage(context) {
+  const fixtureHtml = await loadFixtureHtml(sidebarFixturePath);
+  const page = await context.newPage();
+  await openStaticChatgptPage(page, "https://chatgpt.com/c/sidebar-ui-screen-checks", fixtureHtml, {
     documentOnly: false,
   });
   return page;
@@ -176,6 +186,27 @@ test.describe("UI screen checks @ui-evidence", () => {
       await expect(modal).toContainText("Implementation...");
       await expect(modal).toContainText("Code blocks (1)");
       await modal.screenshot({ path: path.join(screenshotDir, "chat-log-modal.png") });
+    } finally {
+      await page.close().catch(() => {});
+    }
+  });
+
+  test("sidebar bulk panel opens and shows search, actions, and project controls", async () => {
+    const screenshotDir = path.join(artifactsRoot, "sidebar-bulk-panel", "screenshots");
+    await ensureDir(screenshotDir);
+    const page = await createSidebarMockPage(sharedContext);
+    try {
+      await page.getByRole("button", { name: "Bulk Chats" }).click();
+      const panel = page.locator("#cgpt-helper-sidebar-bulk-panel");
+      await expect(panel).toBeVisible();
+      await expect(panel).toContainText("Bulk Chats");
+      await expect(panel.locator("#cgpt-helper-sidebar-bulk-search")).toBeVisible();
+      await expect(panel).toContainText("Select All");
+      await expect(panel).toContainText("Add to Project");
+      await expect(panel.locator("#cgpt-helper-sidebar-bulk-project-select")).toBeVisible();
+      await expect(panel.getByRole("button", { name: "Rename chat" }).first()).toBeVisible();
+      await expect(panel.getByRole("button", { name: "Rename" })).toHaveCount(0);
+      await panel.screenshot({ path: path.join(screenshotDir, "sidebar-bulk-panel.png") });
     } finally {
       await page.close().catch(() => {});
     }

@@ -12,6 +12,7 @@
   - Templates
   - Chat Log
   - Download Log
+  - Sidebar Bulk Chats
   - Heading / code block view controls
 
 ## ディレクトリ構成
@@ -43,6 +44,11 @@ extension/
     codeBlockViewMode.js
     saveFlow.js
     chatToolsFeature.js
+    sidebarBulkFeature.js
+    sidebarBulkState.js
+    sidebarConversationTracker.js
+    sidebarBulkActions.js
+    sidebarBulkPanel.js
     chatLogTracker.js
     chatLogObserver.js
     chatLogModal*.js
@@ -83,6 +89,7 @@ tests/
 5. UI を生成し、機能ごとの初期化を呼ぶ
    - `cgptInitCodeSaverFeature(document)`
    - `cgptInitChatToolsFeature(document)`
+   - `cgptInitSidebarBulkFeature(document)`
 
 ## ランタイムメッセージ
 
@@ -152,6 +159,16 @@ Chat Log モーダルは、`file:` 行ありのコードブロックと、通常
   - コードブロック監視
 - `chatToolsFeature.js`
   - chat tool 系機能の初期化
+- `sidebarBulkFeature.js`
+  - Bulk Chats 機能の初期化
+- `sidebarBulkState.js`
+  - 検索文字列、選択 Set、実行状態の保持
+- `sidebarConversationTracker.js`
+  - 左ペイン DOM から会話一覧と Project 一覧を収集
+- `sidebarBulkActions.js`
+  - 左ペイン会話メニューを順に操作して archive / delete / project move を実行
+- `sidebarBulkPanel.js`
+  - Bulk Chats のトグルボタンと独立パネル UI
 - `chatLogTracker.js`
   - 発話、見出し、コード、リンクの収集
 - `chatLogObserver.js`
@@ -175,6 +192,7 @@ Chat Log モーダルは、`file:` 行ありのコードブロックと、通常
 ## UI 実装ルール
 
 - 新しいボタンは `extension/shared/uiStyles.js` の共通 API を使う
+- Bulk Chats の検索選択 state は DOM 表示状態に持たせず、会話 id ベースで保持する
 - content 側で色、角丸、余白、フォントサイズを直書きしすぎない
 - variant は既存の `primary`, `secondary`, `ghost`, `danger` を優先する
 - disabled 状態は `button.disabled = true` を基本にし、見た目だけで表現しない
@@ -240,3 +258,4 @@ npm run fetch:share-assets -- https://chatgpt.com/share/your-share-id
   - 公開バージョンを揃える運用にするなら、この差分は解消したほうがよいです。
 - 環境によっては Playwright の persistent context で content script 注入確認が skip になることがあります。
   - README 画像更新時は、テスト artifact や保存済み DOM の再利用が必要になる場合があります。
+- Bulk Chats は ChatGPT 左ペイン DOM に依存するため、UI 変更時は `tests/fixtures/chatgpt-sidebar-bulk-mock.html` と関連 e2e を先に確認する。

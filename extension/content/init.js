@@ -32,6 +32,9 @@ function cgptInitializeUi() {
   } else if (typeof initChatLogTracker === "function") {
     initChatLogTracker(document);
   }
+  if (typeof cgptInitSidebarBulkFeature === "function") {
+    cgptInitSidebarBulkFeature(document);
+  }
 }
 
 function cgptLoadPanelStateAndStart() {
