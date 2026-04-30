@@ -79,3 +79,69 @@ test("cgptCanContainChatMessages ignores helper subtrees and accepts message hos
   assert.equal(cgptCanContainChatMessages(messageNode), true);
   resetGlobals();
 });
+
+test("extractChatMessageTimestamp does not fabricate the current time when none is present", () => {
+  const { extractChatMessageTimestamp } = loadModule();
+  const element = {
+    querySelector: () => null,
+  };
+  assert.equal(extractChatMessageTimestamp(element), "");
+  resetGlobals();
+});
+
+test("cgptResolveCachedChatTimestamp restores a timestamp from the message id cache", () => {
+  const tracker = loadModule();
+  const entries = tracker.cgptUpsertConversationTimestampEntry([], {
+    messageId: "message-1",
+    role: "assistant",
+    order: 3,
+    textHash: tracker.cgptHashChatMessageText("hello"),
+    timestamp: "2026-03-01T12:00:00.000Z",
+  });
+  assert.equal(
+    tracker.cgptFindCachedChatTimestampEntry(entries, { messageId: "message-1" }).timestamp,
+    "2026-03-01T12:00:00.000Z"
+  );
+  resetGlobals();
+});
+
+test("cgptFindCachedChatTimestampEntry falls back to role and order when the message id is absent", () => {
+  const tracker = loadModule();
+  const entries = tracker.cgptUpsertConversationTimestampEntry([], {
+    messageId: "",
+    role: "user",
+    order: 1,
+    textHash: tracker.cgptHashChatMessageText("repeat"),
+    timestamp: "2026-03-01T12:00:05.000Z",
+  });
+  assert.equal(
+    tracker.cgptFindCachedChatTimestampEntry(entries, {
+      role: "user",
+      order: 1,
+      textHash: tracker.cgptHashChatMessageText("other"),
+    }).timestamp,
+    "2026-03-01T12:00:05.000Z"
+  );
+  resetGlobals();
+});
+
+test("cgptFindCachedChatTimestampEntry falls back to role and text hash when order differs", () => {
+  const tracker = loadModule();
+  const textHash = tracker.cgptHashChatMessageText("same text");
+  const entries = tracker.cgptUpsertConversationTimestampEntry([], {
+    messageId: "",
+    role: "assistant",
+    order: 8,
+    textHash,
+    timestamp: "2026-03-01T12:00:10.000Z",
+  });
+  assert.equal(
+    tracker.cgptFindCachedChatTimestampEntry(entries, {
+      role: "assistant",
+      order: 99,
+      textHash,
+    }).timestamp,
+    "2026-03-01T12:00:10.000Z"
+  );
+  resetGlobals();
+});

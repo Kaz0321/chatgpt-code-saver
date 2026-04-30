@@ -256,6 +256,121 @@ function tryDecorateSingleCodeBlock(pre) {
   cgptRefreshSaveButtonState(pre, code, metadata);
 }
 
+function cgptResetCodeBlockHelperState(pre) {
+  if (!pre) {
+    return typeof CGPT_VIEW_MODE !== "undefined" ? CGPT_VIEW_MODE.COMPACT : "compact";
+  }
+
+  const compactMode =
+    typeof CGPT_VIEW_MODE !== "undefined" ? CGPT_VIEW_MODE.COMPACT : "compact";
+  const expandedMode =
+    typeof CGPT_VIEW_MODE !== "undefined" ? CGPT_VIEW_MODE.EXPANDED : "expanded";
+  const previousMode =
+    typeof cgptGetPreViewMode === "function"
+      ? cgptGetPreViewMode(pre)
+      : pre.dataset.cgptViewMode || compactMode;
+  const normalizedMode = previousMode === expandedMode ? expandedMode : compactMode;
+
+  const wrapper =
+    pre.parentElement && pre.parentElement.dataset.cgptCodeWrapper === "1"
+      ? pre.parentElement
+      : null;
+  const state =
+    typeof cgptGetCodeBlockState === "function" ? cgptGetCodeBlockState(pre) : null;
+  const host =
+    typeof cgptGetCompactContentHost === "function" ? cgptGetCompactContentHost(pre) : pre;
+  const cueHost =
+    typeof cgptGetCompactCueHost === "function" ? cgptGetCompactCueHost(pre) : host;
+  const collapsibleEl =
+    typeof cgptGetCollapsibleElement === "function" ? cgptGetCollapsibleElement(pre) : pre;
+
+  if (typeof cgptRestoreCompactHostStyles === "function") {
+    cgptRestoreCompactHostStyles(host);
+  }
+  if (cueHost && typeof cgptRestoreCueHostStyles === "function") {
+    cgptRestoreCueHostStyles(cueHost);
+  }
+
+  [wrapper, cueHost, pre].filter(Boolean).forEach((root) => {
+    if (typeof root.querySelectorAll !== "function") return;
+    root
+      .querySelectorAll(
+        [
+          "[data-cgpt-code-actions='1']",
+          "[data-cgpt-code-collapse-cue='1']",
+          "[data-cgpt-code-collapse-top-cue='1']",
+          "[data-cgpt-code-file-path='1']",
+        ].join(",")
+      )
+      .forEach((node) => {
+        node.remove();
+      });
+    root.querySelectorAll("[data-cgpt-code-path-host='1']").forEach((node) => {
+      delete node.dataset.cgptCodePathHost;
+    });
+  });
+
+  if (pre.style) {
+    pre.style.overflow = pre.dataset.cgptOriginalOverflow || "";
+    pre.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
+  }
+  if (collapsibleEl && collapsibleEl !== pre && collapsibleEl.style) {
+    collapsibleEl.style.overflow = pre.dataset.cgptOriginalOverflow || "";
+    collapsibleEl.style.maxHeight = pre.dataset.cgptOriginalMaxHeight || "";
+    collapsibleEl.classList.remove(CGPT_CODE_COLLAPSED_CLASS);
+    collapsibleEl.classList.remove(CGPT_CODE_WRAPPER_CLASS);
+  }
+
+  delete pre.dataset.cgptCodeHelperApplied;
+  delete pre.dataset.cgptCollapsibleApplied;
+  delete pre.dataset.cgptViewMode;
+  delete pre.dataset.cgptHasMetadata;
+  delete pre.dataset.cgptFilePath;
+  delete pre.dataset.cgptOriginalOverflow;
+  delete pre.dataset.cgptOriginalMaxHeight;
+
+  if (host && host.dataset) {
+    delete host.dataset.cgptOriginalOverflow;
+    delete host.dataset.cgptOriginalMaxHeight;
+    delete host.dataset.cgptOriginalBackgroundColor;
+    delete host.dataset.cgptOriginalBoxShadow;
+  }
+  if (cueHost && cueHost.dataset) {
+    delete cueHost.dataset.cgptOriginalPosition;
+  }
+
+  if (state) {
+    state.saveButton = null;
+    state.buttonContainer = null;
+    state.buttonOverlayOffset = null;
+    state.viewButtons = null;
+    state.metadata = null;
+  }
+
+  if (wrapper && wrapper.parentNode) {
+    wrapper.parentNode.insertBefore(pre, wrapper);
+    wrapper.remove();
+  }
+
+  return normalizedMode;
+}
+
+function cgptReapplyCodeSaverDecorations(root = document) {
+  if (!root || typeof root.querySelectorAll !== "function") return;
+  cgptEnsureCodeBlockStyles();
+  const pres = cgptCollectDecoratablePres(root);
+  pres.forEach((pre) => {
+    const mode = cgptResetCodeBlockHelperState(pre);
+    tryDecorateSingleCodeBlock(pre);
+    if (typeof cgptSetPreViewMode === "function") {
+      cgptSetPreViewMode(pre, mode);
+    }
+  });
+  if (typeof cgptSchedulePanelLayoutRefresh === "function") {
+    cgptSchedulePanelLayoutRefresh();
+  }
+}
+
 function tryDecorateFromTextNode(node) {
   if (!node || node.nodeType !== Node.TEXT_NODE) return;
   const elementParent = node.parentElement;
@@ -264,4 +379,11 @@ function tryDecorateFromTextNode(node) {
   const pre = content ? content.closest("pre") : elementParent.closest("pre");
   if (!pre) return;
   tryDecorateSingleCodeBlock(pre);
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptCollectDecoratablePres,
+    cgptResetCodeBlockHelperState,
+  };
 }

@@ -68,6 +68,34 @@ function cgptCreateAsyncGuard(callback, options = {}) {
   };
 }
 
+function cgptIsExtensionContextInvalidatedError(error) {
+  const message =
+    error && typeof error.message === "string"
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+  return /extension context invalidated/i.test(message);
+}
+
+function cgptInvokeExtensionApi(action, onError) {
+  if (typeof action !== "function") {
+    return false;
+  }
+  try {
+    action();
+    return true;
+  } catch (error) {
+    if (cgptIsExtensionContextInvalidatedError(error)) {
+      if (typeof onError === "function") {
+        onError(error);
+      }
+      return false;
+    }
+    throw error;
+  }
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     cgptGetTemplates,
@@ -77,5 +105,7 @@ if (typeof module !== "undefined" && module.exports) {
     cgptGenerateTemplateId,
     cgptGetAsyncFallbackTimeoutMs,
     cgptCreateAsyncGuard,
+    cgptIsExtensionContextInvalidatedError,
+    cgptInvokeExtensionApi,
   };
 }

@@ -8,8 +8,18 @@ function startChatRouteWatcher() {
     const key = getConversationKey();
     if (key !== currentConversationKey) {
       currentConversationKey = key;
-      resetChatLogEntries();
-      captureChatLogsFromNode(document);
+      const rebuildChatLogView = () => {
+        if (key !== currentConversationKey) {
+          return;
+        }
+        resetChatLogEntries();
+        captureChatLogsFromNode(document);
+      };
+      if (typeof cgptPrepareChatTimestampCache === "function") {
+        cgptPrepareChatTimestampCache(key, rebuildChatLogView);
+        return;
+      }
+      rebuildChatLogView();
     }
   }, 1000);
 }

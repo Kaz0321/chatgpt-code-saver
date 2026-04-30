@@ -6,9 +6,278 @@ let chatLogOrderCounter = 0;
 let chatLogTrackerInitialized = false;
 let chatLogHighlightStyleInjected = false;
 let chatLogTimestampStyleInjected = false;
+let cgptChatTimestampStoreLoaded = false;
+let cgptChatTimestampStore = {};
+let cgptActiveConversationTimestampKey = "";
+let cgptActiveConversationTimestampEntries = [];
+let cgptChatTimestampPersistTimer = null;
 const CHAT_LOG_FOLD_DELAY_MS = 120;
 const CHAT_LOG_FOLD_MAX_RETRIES = 8;
 const CHAT_LOG_FOLD_QUIET_PERIOD_MS = 1200;
+const CGPT_CHAT_TIMESTAMP_STORAGE_KEY = "cgptHelper.chatMessageTimeline";
+const CGPT_CHAT_TIMESTAMP_CONVERSATION_LIMIT = 50;
+const CGPT_CHAT_TIMESTAMP_ENTRY_LIMIT = 300;
+
+function cgptCanUseChatTimestampStorage() {
+  return Boolean(
+    typeof chrome !== "undefined" &&
+      chrome.storage &&
+      chrome.storage.local &&
+      typeof chrome.storage.local.get === "function" &&
+      typeof chrome.storage.local.set === "function"
+  );
+}
+
+function cgptHashChatMessageText(text) {
+  const normalized = cgptNormalizePlainText(text).trim();
+  if (!normalized) return "";
+  let hash = 2166136261;
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash ^= normalized.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function cgptNormalizeConversationTimestampEntry(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const timestamp = typeof entry.timestamp === "string" ? entry.timestamp.trim() : "";
+  if (!timestamp) return null;
+  const numericOrder = Number.parseInt(entry.order, 10);
+  return {
+    messageId: typeof entry.messageId === "string" ? entry.messageId : "",
+    role: typeof entry.role === "string" ? entry.role : "",
+    order: Number.isFinite(numericOrder) ? numericOrder : -1,
+    textHash: typeof entry.textHash === "string" ? entry.textHash : "",
+    timestamp,
+    capturedAt: typeof entry.capturedAt === "string" ? entry.capturedAt : "",
+    updatedAt: typeof entry.updatedAt === "string" ? entry.updatedAt : "",
+  };
+}
+
+function cgptNormalizeConversationTimestampBucket(bucket) {
+  const entries = Array.isArray(bucket && bucket.entries)
+    ? bucket.entries
+        .map((entry) => cgptNormalizeConversationTimestampEntry(entry))
+        .filter(Boolean)
+        .slice(-CGPT_CHAT_TIMESTAMP_ENTRY_LIMIT)
+    : [];
+  return {
+    updatedAt: typeof (bucket && bucket.updatedAt) === "string" ? bucket.updatedAt : "",
+    entries,
+  };
+}
+
+function cgptTrimChatTimestampStore(store) {
+  const normalizedEntries = Object.entries(store || {}).map(([conversationKey, bucket]) => [
+    conversationKey,
+    cgptNormalizeConversationTimestampBucket(bucket),
+  ]);
+  normalizedEntries.sort((left, right) => {
+    const leftTime = Date.parse(left[1].updatedAt || "") || 0;
+    const rightTime = Date.parse(right[1].updatedAt || "") || 0;
+    return leftTime - rightTime;
+  });
+  return normalizedEntries.slice(-CGPT_CHAT_TIMESTAMP_CONVERSATION_LIMIT).reduce((acc, [key, bucket]) => {
+    acc[key] = bucket;
+    return acc;
+  }, {});
+}
+
+function cgptLoadChatTimestampStore(callback = () => {}) {
+  if (cgptChatTimestampStoreLoaded) {
+    callback(cgptChatTimestampStore);
+    return;
+  }
+  if (!cgptCanUseChatTimestampStorage()) {
+    cgptChatTimestampStoreLoaded = true;
+    cgptChatTimestampStore = {};
+    callback(cgptChatTimestampStore);
+    return;
+  }
+  const finalizeWith = (rawStore) => {
+    const normalizedStore = {};
+    Object.entries(rawStore || {}).forEach(([conversationKey, bucket]) => {
+      normalizedStore[conversationKey] = cgptNormalizeConversationTimestampBucket(bucket);
+    });
+    cgptChatTimestampStoreLoaded = true;
+    cgptChatTimestampStore = cgptTrimChatTimestampStore(normalizedStore);
+    callback(cgptChatTimestampStore);
+  };
+  const invokeLoad = () => {
+    chrome.storage.local.get([CGPT_CHAT_TIMESTAMP_STORAGE_KEY], (result) => {
+      if (chrome.runtime && chrome.runtime.lastError) {
+        finalizeWith({});
+        return;
+      }
+      const rawStore =
+        result &&
+        result[CGPT_CHAT_TIMESTAMP_STORAGE_KEY] &&
+        typeof result[CGPT_CHAT_TIMESTAMP_STORAGE_KEY] === "object"
+          ? result[CGPT_CHAT_TIMESTAMP_STORAGE_KEY]
+          : {};
+      finalizeWith(rawStore);
+    });
+  };
+  if (typeof cgptInvokeExtensionApi === "function") {
+    cgptInvokeExtensionApi(invokeLoad, () => finalizeWith({}));
+    return;
+  }
+  try {
+    invokeLoad();
+  } catch (error) {
+    if (typeof cgptIsExtensionContextInvalidatedError === "function" &&
+      cgptIsExtensionContextInvalidatedError(error)) {
+      finalizeWith({});
+      return;
+    }
+    throw error;
+  }
+}
+
+function cgptSetActiveConversationTimestampCache(conversationKey) {
+  const normalizedKey = String(conversationKey || "");
+  cgptActiveConversationTimestampKey = normalizedKey;
+  const bucket = cgptChatTimestampStore[normalizedKey];
+  cgptActiveConversationTimestampEntries = bucket && Array.isArray(bucket.entries) ? bucket.entries : [];
+}
+
+function cgptPrepareChatTimestampCache(conversationKey, callback = () => {}) {
+  cgptLoadChatTimestampStore(() => {
+    cgptSetActiveConversationTimestampCache(conversationKey);
+    callback();
+  });
+}
+
+function cgptFindCachedChatTimestampEntry(entries, criteria = {}) {
+  const normalizedEntries = Array.isArray(entries) ? entries : [];
+  const messageId = typeof criteria.messageId === "string" ? criteria.messageId : "";
+  const role = typeof criteria.role === "string" ? criteria.role : "";
+  const numericOrder = Number.parseInt(criteria.order, 10);
+  const order = Number.isFinite(numericOrder) ? numericOrder : -1;
+  const textHash = typeof criteria.textHash === "string" ? criteria.textHash : "";
+
+  if (messageId) {
+    const exactMessageMatch = normalizedEntries.find((entry) => entry && entry.messageId === messageId);
+    if (exactMessageMatch) {
+      return exactMessageMatch;
+    }
+  }
+  if (role && order >= 0) {
+    const orderMatch = normalizedEntries.find(
+      (entry) => entry && entry.role === role && entry.order === order
+    );
+    if (orderMatch) {
+      return orderMatch;
+    }
+  }
+  if (role && textHash) {
+    return (
+      normalizedEntries.find(
+        (entry) => entry && entry.role === role && entry.textHash === textHash
+      ) || null
+    );
+  }
+  return null;
+}
+
+function cgptResolveCachedChatTimestamp(criteria = {}) {
+  const textHash =
+    typeof criteria.textHash === "string" && criteria.textHash
+      ? criteria.textHash
+      : cgptHashChatMessageText(criteria.text || "");
+  const match = cgptFindCachedChatTimestampEntry(cgptActiveConversationTimestampEntries, {
+    messageId: criteria.messageId || "",
+    role: criteria.role || "",
+    order: criteria.order,
+    textHash,
+  });
+  return match && match.timestamp ? match.timestamp : "";
+}
+
+function cgptUpsertConversationTimestampEntry(entries, entry) {
+  const normalizedEntry = cgptNormalizeConversationTimestampEntry(entry);
+  if (!normalizedEntry) {
+    return Array.isArray(entries) ? entries.slice() : [];
+  }
+  const nextEntries = Array.isArray(entries) ? entries.slice() : [];
+  const existing = cgptFindCachedChatTimestampEntry(nextEntries, normalizedEntry);
+  const existingIndex = existing ? nextEntries.indexOf(existing) : -1;
+  if (existingIndex >= 0) {
+    const mergedEntry = {
+      ...existing,
+      ...normalizedEntry,
+      capturedAt: existing.capturedAt || normalizedEntry.capturedAt,
+    };
+    nextEntries.splice(existingIndex, 1);
+    nextEntries.push(mergedEntry);
+  } else {
+    nextEntries.push(normalizedEntry);
+  }
+  return nextEntries.slice(-CGPT_CHAT_TIMESTAMP_ENTRY_LIMIT);
+}
+
+function cgptScheduleChatTimestampStorePersist() {
+  if (!cgptCanUseChatTimestampStorage()) {
+    return;
+  }
+  if (cgptChatTimestampPersistTimer) {
+    clearTimeout(cgptChatTimestampPersistTimer);
+  }
+  cgptChatTimestampPersistTimer = setTimeout(() => {
+    cgptChatTimestampPersistTimer = null;
+    cgptChatTimestampStore = cgptTrimChatTimestampStore(cgptChatTimestampStore);
+    const persist = () => {
+      chrome.storage.local.set({ [CGPT_CHAT_TIMESTAMP_STORAGE_KEY]: cgptChatTimestampStore }, () => {});
+    };
+    if (typeof cgptInvokeExtensionApi === "function") {
+      cgptInvokeExtensionApi(persist, () => {});
+      return;
+    }
+    try {
+      persist();
+    } catch (error) {
+      if (typeof cgptIsExtensionContextInvalidatedError === "function" &&
+        cgptIsExtensionContextInvalidatedError(error)) {
+        return;
+      }
+      throw error;
+    }
+  }, 120);
+}
+
+function cgptRememberChatTimestamp(record = {}) {
+  const conversationKey = String(record.conversationKey || "");
+  const timestamp = typeof record.timestamp === "string" ? record.timestamp.trim() : "";
+  if (!conversationKey || !timestamp) {
+    return;
+  }
+  if (!cgptChatTimestampStoreLoaded) {
+    cgptChatTimestampStoreLoaded = true;
+  }
+  const currentBucket = cgptNormalizeConversationTimestampBucket(cgptChatTimestampStore[conversationKey]);
+  const now = new Date().toISOString();
+  const nextEntries = cgptUpsertConversationTimestampEntry(currentBucket.entries, {
+    messageId: record.messageId || "",
+    role: record.role || "",
+    order: record.order,
+    textHash:
+      typeof record.textHash === "string" && record.textHash
+        ? record.textHash
+        : cgptHashChatMessageText(record.text || ""),
+    timestamp,
+    capturedAt: record.capturedAt || now,
+    updatedAt: now,
+  });
+  cgptChatTimestampStore[conversationKey] = {
+    updatedAt: now,
+    entries: nextEntries,
+  };
+  if (conversationKey === cgptActiveConversationTimestampKey) {
+    cgptActiveConversationTimestampEntries = nextEntries;
+  }
+  cgptScheduleChatTimestampStorePersist();
+}
 
 function cgptIsHelperManagedNode(node) {
   if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
@@ -150,12 +419,20 @@ function initChatLogTracker(root = document) {
   if (chatLogTrackerInitialized) return;
   chatLogTrackerInitialized = true;
   ensureChatLogHighlightStyle();
+  const conversationKey = typeof getConversationKey === "function" ? getConversationKey() : "";
   if (typeof cgptSetCurrentConversationKey === "function") {
-    cgptSetCurrentConversationKey(getConversationKey());
+    cgptSetCurrentConversationKey(conversationKey);
   }
-  captureChatLogsFromNode(root);
-  startChatLogMutationObserver();
-  startChatRouteWatcher();
+  const startTracking = () => {
+    captureChatLogsFromNode(root);
+    startChatLogMutationObserver();
+    startChatRouteWatcher();
+  };
+  if (typeof cgptPrepareChatTimestampCache === "function") {
+    cgptPrepareChatTimestampCache(conversationKey, startTracking);
+    return;
+  }
+  startTracking();
 }
 
 function resetChatLogEntries() {
@@ -266,17 +543,31 @@ function processChatMessageElement(el) {
 
   chatLogTrackedIds.add(entryId);
   el.dataset.cgptHelperChatTracked = "1";
+  const text = extractChatMessageText(el);
+  const conversationKey = typeof getConversationKey === "function" ? getConversationKey() : "";
+  const order = chatLogOrderCounter++;
+  const textHash = cgptHashChatMessageText(text);
+  const timestamp = extractChatMessageTimestamp(el) || cgptResolveCachedChatTimestamp({
+    messageId: rawId || "",
+    role,
+    order,
+    textHash,
+  });
 
   const entry = {
     id: entryId,
     role,
-    text: extractChatMessageText(el),
-    timestamp: extractChatMessageTimestamp(el),
+    text,
+    textHash,
+    timestamp,
+    messageId: rawId || "",
+    conversationKey,
     element: el,
-    order: chatLogOrderCounter++,
+    order,
     lastMutationAt: Date.now(),
   };
 
+  cgptRememberChatTimestamp(entry);
   chatLogEntries.push(entry);
   renderChatMessageTimestamp(entry);
   cgptScheduleChatMessageFolding(entry);
@@ -291,7 +582,7 @@ function extractChatMessageTimestamp(el) {
       (timeEl.textContent ? timeEl.textContent.trim() : "");
     if (dt) return dt;
   }
-  return new Date().toISOString();
+  return "";
 }
 
 function cgptGetTrackedChatEntry(element) {
@@ -312,8 +603,19 @@ function cgptRefreshTrackedChatMessage(element) {
   const entry = cgptGetTrackedChatEntry(element);
   if (!entry) return;
   entry.text = extractChatMessageText(element);
-  entry.timestamp = extractChatMessageTimestamp(element);
+  entry.textHash = cgptHashChatMessageText(entry.text);
+  entry.conversationKey = typeof getConversationKey === "function" ? getConversationKey() : "";
+  entry.timestamp =
+    extractChatMessageTimestamp(element) ||
+    entry.timestamp ||
+    cgptResolveCachedChatTimestamp({
+      messageId: entry.messageId || "",
+      role: entry.role || "",
+      order: entry.order,
+      textHash: entry.textHash || "",
+    });
   entry.lastMutationAt = Date.now();
+  cgptRememberChatTimestamp(entry);
   renderChatMessageTimestamp(entry);
   if (element.dataset.cgptHelperFoldApplied !== "1") {
     cgptScheduleChatMessageFolding(entry);
@@ -369,10 +671,17 @@ function renderChatMessageTimestamp(entry) {
   const container = entry.element.querySelector(
     ".cgpt-helper-chatlog-timestamp-wrapper"
   );
+  const rawTimestamp = entry && entry.timestamp ? String(entry.timestamp).trim() : "";
+  if (!rawTimestamp) {
+    if (container) {
+      container.remove();
+    }
+    return;
+  }
   const labelText =
     typeof cgptFormatChatLogTimestamp === "function"
-      ? cgptFormatChatLogTimestamp(entry.timestamp)
-      : entry.timestamp;
+      ? cgptFormatChatLogTimestamp(rawTimestamp)
+      : rawTimestamp;
 
   if (container) {
     const label = container.querySelector(".cgpt-helper-chatlog-timestamp-label");
@@ -476,5 +785,10 @@ if (typeof module !== "undefined" && module.exports) {
     cgptShouldDelayChatMessageFolding,
     cgptIsHelperManagedNode,
     cgptCanContainChatMessages,
+    cgptHashChatMessageText,
+    cgptFindCachedChatTimestampEntry,
+    cgptResolveCachedChatTimestamp,
+    cgptUpsertConversationTimestampEntry,
+    extractChatMessageTimestamp,
   };
 }

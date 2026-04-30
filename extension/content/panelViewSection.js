@@ -2,6 +2,7 @@ function createViewSection() {
   const viewSection = createPanelSection("View Controls");
   viewSection.appendChild(createDisplayActionsSubLabel("Code Blocks"));
   viewSection.appendChild(createViewModeButtonsRow());
+  viewSection.appendChild(createCodeBlockReapplyButton());
   viewSection.appendChild(createHeadingViewSection());
   return viewSection;
 }
@@ -57,6 +58,26 @@ function applyViewModeToAll(mode) {
   }
 }
 
+function createCodeBlockReapplyButton() {
+  const button = createPanelButton("Reapply", "secondary");
+  button.title = "Rebuild code block decorations after temporary layout shifts";
+  button.addEventListener("click", () => {
+    requestCodeSaverReapply();
+  });
+  return button;
+}
+
+function requestCodeSaverReapply() {
+  if (typeof cgptReapplyCodeSaverDecorations === "function") {
+    cgptReapplyCodeSaverDecorations(document);
+  } else if (typeof decorateCodeBlocks === "function") {
+    decorateCodeBlocks(document);
+  }
+  if (typeof showToast === "function") {
+    showToast("Reapplied code block decorations.", "success");
+  }
+}
+
 function createHeadingViewSection() {
   const headingSection = document.createElement("div");
   headingSection.style.display = "flex";
@@ -97,4 +118,10 @@ function requestAllHeadingFoldChanges(shouldExpand) {
   [1, 2, 3, 4, 5, 6].forEach((level) => {
     requestHeadingFoldChange(level, shouldExpand);
   });
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    requestCodeSaverReapply,
+  };
 }

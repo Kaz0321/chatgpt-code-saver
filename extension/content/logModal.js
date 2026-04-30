@@ -180,7 +180,7 @@ function createLogEntryCard(entry) {
   header.style.columnGap = "12px";
 
   const timestamp = document.createElement("div");
-  timestamp.textContent = formatLogTimestamp(entry && entry.time);
+  timestamp.textContent = formatLogTimestamp(resolveLogEntryDisplayTime(entry));
   if (typeof cgptApplyTextScale === "function") {
     cgptApplyTextScale(timestamp, "sectionLabel");
   } else {
@@ -401,9 +401,20 @@ function formatLogTimestamp(time) {
   return String(time);
 }
 
+function resolveLogEntryDisplayTime(entry) {
+  if (entry && entry.sourceTimestamp) {
+    return entry.sourceTimestamp;
+  }
+  if (entry && entry.time) {
+    return entry.time;
+  }
+  return "";
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     buildLogEntryMetaInfo,
     getLogEntrySourceLabel,
+    resolveLogEntryDisplayTime,
   };
 }

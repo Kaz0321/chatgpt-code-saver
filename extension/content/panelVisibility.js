@@ -52,9 +52,32 @@ function cgptUpdatePanelVisibility(nextState, callback) {
     callback?.(cgptGetPanelVisibility());
     return;
   }
-  chrome.storage.sync.set({ cgptPanelVisibility: cgptPanelVisibilityState }, () => {
+  const onComplete = () => {
     callback?.(cgptGetPanelVisibility());
-  });
+  };
+  if (typeof cgptInvokeExtensionApi === "function") {
+    cgptInvokeExtensionApi(
+      () => {
+        chrome.storage.sync.set({ cgptPanelVisibility: cgptPanelVisibilityState }, () => {
+          onComplete();
+        });
+      },
+      onComplete
+    );
+    return;
+  }
+  try {
+    chrome.storage.sync.set({ cgptPanelVisibility: cgptPanelVisibilityState }, () => {
+      onComplete();
+    });
+  } catch (error) {
+    if (typeof cgptIsExtensionContextInvalidatedError === "function" &&
+      cgptIsExtensionContextInvalidatedError(error)) {
+      onComplete();
+      return;
+    }
+    throw error;
+  }
 }
 
 function cgptCreatePanelHeader({ onHide }) {
@@ -129,4 +152,12 @@ function cgptApplyPanelVisibility(panel, { hidden, toggleButton }) {
   };
   applyHiddenState(hidden);
   return applyHiddenState;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    cgptGetPanelVisibility,
+    cgptLoadPanelVisibility,
+    cgptUpdatePanelVisibility,
+  };
 }
