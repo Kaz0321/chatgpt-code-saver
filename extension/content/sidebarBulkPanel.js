@@ -83,6 +83,70 @@ function cgptCreateSidebarBulkPanel() {
   });
   header.appendChild(refreshButton);
 
+  const debugButton = createPanelButton("API Debug", "secondary");
+  debugButton.id = "cgpt-helper-sidebar-bulk-api-debug";
+  debugButton.addEventListener("click", async () => {
+    const snapshot =
+      typeof cgptGetSidebarConversationSnapshot === "function"
+        ? cgptGetSidebarConversationSnapshot()
+        : { sidebarFound: false, conversations: [], projects: [], diagnostics: null };
+    const diagnostics =
+      snapshot.diagnostics ||
+      (typeof cgptGetSidebarApiDiagnostics === "function" ? cgptGetSidebarApiDiagnostics() : null);
+    const payload = diagnostics || {
+      timestamp: new Date().toISOString(),
+      phase: "snapshot",
+      authMode: "unknown",
+      status: 0,
+      endpoint: "",
+      message: snapshot.sidebarFound
+        ? ((Array.isArray(snapshot.projects) && snapshot.projects.length > 0)
+            ? "snapshot_available_without_diagnostics"
+            : "api_projects_missing_from_snapshot")
+        : "no_api_diagnostics_yet",
+      endpointTried: [],
+      snapshotSummary: {
+        sidebarFound: snapshot.sidebarFound,
+        conversationCount: Array.isArray(snapshot.conversations) ? snapshot.conversations.length : 0,
+        projectCount: Array.isArray(snapshot.projects) ? snapshot.projects.length : 0,
+        source: snapshot.source || "",
+        updatedAt: snapshot.updatedAt || 0,
+      },
+      projects: Array.isArray(snapshot.projects)
+        ? snapshot.projects.map((project) => ({
+            id: project && project.id ? String(project.id) : "",
+            name: project && project.name ? String(project.name) : "",
+            isCurrent: Boolean(project && project.isCurrent),
+            raw: project && project.raw ? project.raw : null,
+          }))
+        : [],
+      conversations: Array.isArray(snapshot.conversations)
+        ? snapshot.conversations.map((conversation) => ({
+            id: conversation && conversation.id ? String(conversation.id) : "",
+            title: conversation && conversation.title ? String(conversation.title) : "",
+            projectId: conversation && conversation.projectId ? String(conversation.projectId) : "",
+            projectName: conversation && conversation.projectName ? String(conversation.projectName) : "",
+            isProjectItem: Boolean(conversation && conversation.isProjectItem),
+          }))
+        : [],
+    };
+    const copied =
+      typeof cgptCopySidebarApiDebugJson === "function" &&
+      await cgptCopySidebarApiDebugJson(payload);
+    if (copied) {
+      showToast("API debug copied to clipboard.", "success");
+      return;
+    }
+    const exported =
+      typeof cgptDownloadSidebarApiDebugJson === "function" &&
+      cgptDownloadSidebarApiDebugJson(payload);
+    showToast(
+      exported ? "API debug downloaded." : "API debug export failed.",
+      exported ? "success" : "error"
+    );
+  });
+  header.appendChild(debugButton);
+
   const hideButton = createPanelButton("Hide", "ghost");
   hideButton.addEventListener("click", () => cgptCloseSidebarBulkPanel());
   header.appendChild(hideButton);
@@ -221,7 +285,7 @@ function cgptSyncSidebarProjectSelectEnabled(panel, snapshot, state) {
   if (!panel) return;
   const select = panel.querySelector("#cgpt-helper-sidebar-bulk-project-select");
   if (!select) return;
-  select.disabled = !snapshot.projects.length || state.runningAction !== "";
+  select.disabled = !snapshot.sidebarFound || !snapshot.projects.length || state.runningAction !== "";
 }
 
 function cgptWatchSidebarProjectCreationDialog(panel) {
@@ -321,10 +385,18 @@ function cgptSyncSidebarBulkSelectionSummary(panel, snapshot, state) {
     state.selectedConversationIds
   );
   const summary = panel.querySelector("#cgpt-helper-sidebar-bulk-summary");
+  const isLoading =
+    typeof cgptIsSidebarConversationRefreshPending === "function" &&
+    cgptIsSidebarConversationRefreshPending();
+  const diagnostics =
+    snapshot.diagnostics ||
+    (typeof cgptGetSidebarApiDiagnostics === "function" ? cgptGetSidebarApiDiagnostics() : null);
   if (summary) {
-    summary.textContent = snapshot.sidebarFound
+    summary.textContent = isLoading
+      ? "Loading ChatGPT internal API..."
+      : snapshot.sidebarFound
       ? `Visible ${snapshot.conversations.length} / Filtered ${visibleConversations.length} / Selected ${selectionSummary.selectedCount} / Excluded ${excludedCount}`
-      : "Sidebar structure could not be detected.";
+      : `Internal API unavailable${diagnostics ? ` / ${diagnostics.phase} / ${diagnostics.message}` : ""}`;
   }
 }
 
@@ -534,8 +606,12 @@ function cgptRenderSidebarBulkControls(panel, visibleConversations, state) {
       cgptHandleSidebarBulkAction("project");
     })
   );
+  const snapshot =
+    typeof cgptGetSidebarConversationSnapshot === "function"
+      ? cgptGetSidebarConversationSnapshot()
+      : { sidebarFound: false };
   Array.from(panel.querySelectorAll("#cgpt-helper-sidebar-bulk-selection-controls button, #cgpt-helper-sidebar-bulk-action-controls button")).forEach((button) => {
-    button.disabled = state.runningAction !== "";
+    button.disabled = state.runningAction !== "" || !snapshot.sidebarFound;
   });
 }
 
@@ -674,6 +750,33 @@ function cgptRenderSidebarBulkResults(panel, state) {
   const host = panel.querySelector("#cgpt-helper-sidebar-bulk-results");
   if (!host) return;
   host.replaceChildren();
+  const snapshot =
+    typeof cgptGetSidebarConversationSnapshot === "function"
+      ? cgptGetSidebarConversationSnapshot()
+      : { diagnostics: null };
+  const diagnostics =
+    snapshot.diagnostics ||
+    (typeof cgptGetSidebarApiDiagnostics === "function" ? cgptGetSidebarApiDiagnostics() : null);
+  if (diagnostics) {
+    const errorLine = document.createElement("div");
+    errorLine.textContent = `Internal API unavailable: ${diagnostics.phase} / ${diagnostics.status || 0} / ${diagnostics.message}`;
+    errorLine.style.fontSize = "11px";
+    errorLine.style.fontWeight = "600";
+    if (typeof cgptApplyPanelTextTone === "function") {
+      cgptApplyPanelTextTone(errorLine, "danger");
+    }
+    host.appendChild(errorLine);
+
+    const endpointLine = document.createElement("div");
+    endpointLine.textContent = diagnostics.endpoint || "No endpoint resolved";
+    endpointLine.style.fontSize = "11px";
+    endpointLine.style.wordBreak = "break-all";
+    if (typeof cgptApplyPanelTextTone === "function") {
+      cgptApplyPanelTextTone(endpointLine, "muted");
+    }
+    host.appendChild(endpointLine);
+
+  }
   if (!state.lastResult) return;
   const summary = document.createElement("div");
   summary.textContent = `Result: ${state.lastResult.counts.success} success / ${state.lastResult.counts.failed} failed / ${state.lastResult.counts.skipped} skipped`;

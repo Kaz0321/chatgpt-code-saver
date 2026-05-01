@@ -12,7 +12,7 @@ ChatGPT 上のコードブロックやチャット内容を、ローカルの pr
 - `Templates` パネルからのテンプレート挿入、追加、編集
 - `Chat Log` モーダルで発話、見出し、コードブロック、リンクを一覧表示
 - `Download Log` モーダルで保存結果、保存先、action、source を確認
-- `Bulk Chats` パネルで左ペイン表示中の会話一覧を検索・選択し、一括アーカイブ、削除、Project 登録
+- `Bulk Chats` パネルで ChatGPT internal API から会話一覧と Project 一覧を取得し、検索・選択・一括アーカイブ、削除、Project 登録
 - `Lightweight Mode`、`Preview lines`、`Compact All` / `Expand All` による表示量の調整
 
 ## 画面イメージ
@@ -79,7 +79,7 @@ project folder、保存オプション、表示設定、ログ導線をまとめ
 
 ### 5. 左ペインの会話をまとめて操作する
 
-1. 右下の `Bulk Chats` を開くと、左ペインに現在表示されている会話一覧を読み込みます。
+1. 右下の `Bulk Chats` を開くと、ChatGPT internal API から会話一覧と Project 一覧を読み込みます。
 2. タイトル検索で絞り込みながらチェックを付けられます。検索を切り替えても選択は保持されます。
 3. `Select Visible` は現在の検索結果だけを追加選択し、`Clear` は全選択を解除します。
 4. 選択した会話に対して `Archive Selected`、`Delete Selected`、`Add to Project` を実行できます。
@@ -87,8 +87,8 @@ project folder、保存オプション、表示設定、ログ導線をまとめ
 
 制約:
 
-- 初期版では左ペインに現在描画されている会話のみが対象です。
-- Project 一覧も左ペインから取得できたものだけを対象にします。
+- 会話一覧と Project 一覧の取得は internal API 依存です。取得に失敗した場合は hard fail します。
+- 一括操作自体は引き続き UI 操作ベースです。API で一覧取得できても DOM に無い会話は `skipped_missing_dom` になることがあります。
 
 ## 権限とプライバシー
 

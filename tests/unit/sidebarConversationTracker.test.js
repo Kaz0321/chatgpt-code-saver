@@ -59,3 +59,149 @@ test("cgptCollectSidebarConversations marks project items based on row metadata"
   assert.equal(result[1].isProjectItem, true);
   assert.equal(result[1].projectName, "Project Alpha");
 });
+
+test("cgptMergeSidebarApiSnapshotWithDom prefers visible sidebar titles over API titles", () => {
+  const { cgptMergeSidebarApiSnapshotWithDom } = loadModule();
+  const anchors = [
+    createAnchor({ href: "/c/alpha", title: "Visible Alpha Title", active: true }),
+    createAnchor({ href: "/c/beta", title: "Visible Beta Title" }),
+  ];
+  const root = {
+    querySelector: (selector) => (selector === "[data-cgpt-sidebar-root='1']" ? root : null),
+    querySelectorAll: (selector) => (selector === "a[href*='/c/']" ? anchors : []),
+  };
+  const snapshot = {
+    sidebarFound: true,
+    conversations: [
+      { id: "alpha", conversationId: "alpha", title: "API Alpha Title", isActive: false, isProjectItem: false, projectName: "" },
+      { id: "gamma", conversationId: "gamma", title: "API Gamma Title", isActive: false, isProjectItem: false, projectName: "" },
+    ],
+    projects: [{ id: "proj-1", name: "Project Alpha" }],
+  };
+
+  const merged = cgptMergeSidebarApiSnapshotWithDom(snapshot, root);
+  assert.equal(merged.conversations[0].title, "Visible Alpha Title");
+  assert.equal(merged.conversations[0].isActive, true);
+  assert.equal(merged.conversations[1].title, "API Gamma Title");
+});
+
+test("cgptMergeSidebarApiProjectsWithDom prefers visible sidebar project names", () => {
+  const { cgptMergeSidebarApiProjectsWithDom } = loadModule();
+  const snapshot = {
+    projects: [
+      { id: "api-1", name: "g-p-693c77dbfe881918a99ba92717701f5-pcguan-li", isCurrent: false },
+      { id: "api-2", name: "g-p-69391d8aa50c8191a08b1059db926432-surface-pro", isCurrent: false },
+      { id: "api-3", name: "g-p-6918056b91988191834393b16852c030-jian-korehuan-jing", isCurrent: false },
+      { id: "api-4", name: "iPhone", isCurrent: false },
+    ],
+  };
+  const domProjects = [
+    { id: "dom-1", name: "PC管理", isCurrent: false },
+    { id: "dom-2", name: "surface pro", isCurrent: true },
+    { id: "dom-3", name: "艦これ環境", isCurrent: false },
+    { id: "dom-4", name: "iPhone", isCurrent: false },
+  ];
+
+  const merged = cgptMergeSidebarApiProjectsWithDom(snapshot, domProjects);
+  assert.equal(merged.projects[0].name, "PC管理");
+  assert.equal(merged.projects[1].name, "surface pro");
+  assert.equal(merged.projects[2].name, "艦これ環境");
+  assert.equal(merged.projects[3].name, "iPhone");
+  assert.equal(merged.projects[1].isCurrent, true);
+});
+
+test("cgptMergeSidebarApiProjectsWithDom prefers exact project id matches from hidden menu entries", () => {
+  const { cgptMergeSidebarApiProjectsWithDom } = loadModule();
+  const snapshot = {
+    projects: [
+      { id: "g-p-69717146c5b88191867de1dedc35cc5e", name: "g-p-69717146c5b88191867de1dedc35cc5e-chu-zhang", isCurrent: false },
+      { id: "g-p-69391c9321d881918607edfff58499ba", name: "g-p-69391c9321d881918607edfff58499ba-chromekuo-zhang-kai-fa", isCurrent: false },
+    ],
+  };
+  const domProjects = [
+    { id: "g-p-69717146c5b88191867de1dedc35cc5e", name: "出張", isCurrent: false, raw: { displayNameSource: "dom_more_menu" } },
+    { id: "g-p-69391c9321d881918607edfff58499ba", name: "chrome拡張開発", isCurrent: false, raw: { displayNameSource: "dom_more_menu" } },
+  ];
+
+  const merged = cgptMergeSidebarApiProjectsWithDom(snapshot, domProjects);
+  assert.equal(merged.projects[0].name, "出張");
+  assert.equal(merged.projects[0].raw.displayNameSource, "dom_more_menu");
+  assert.equal(merged.projects[1].name, "chrome拡張開発");
+  assert.equal(merged.projects[1].raw.displayNameSource, "dom_more_menu");
+});
+
+test("cgptCollectSidebarProjects excludes the create-project entry", () => {
+  const { cgptCollectSidebarProjects } = loadModule();
+  const projectSection = {
+    dataset: { cgptSectionLabel: "プロジェクト" },
+    querySelector: () => null,
+    querySelectorAll: (selector) => {
+      if (selector !== "button, a") return [];
+      return [
+        {
+          dataset: {},
+          textContent: "プロジェクトを新規作成",
+          getAttribute: () => "",
+          closest: () => null,
+        },
+        {
+          dataset: {},
+          textContent: "PC管理",
+          getAttribute: () => "",
+          closest: () => null,
+        },
+      ];
+    },
+  };
+  const root = {
+    querySelector: (selector) => (selector === "[data-cgpt-sidebar-root='1']" ? root : null),
+    querySelectorAll: (selector) => {
+      if (selector === "[data-cgpt-project='1'], [data-cgpt-project-option='1']") return [];
+      if (selector === "[data-cgpt-project-list='1'], [data-cgpt-section-label], section, nav, aside, div") {
+        return [projectSection];
+      }
+      return [];
+    },
+  };
+
+  const projects = cgptCollectSidebarProjects(root);
+  assert.equal(projects.length, 1);
+  assert.equal(projects[0].name, "PC管理");
+});
+
+test("cgptCollectSidebarProjectsFromOpenProjectMenus reads hidden project names from the more menu", () => {
+  const { cgptCollectSidebarProjectsFromOpenProjectMenus } = loadModule();
+  const menuLinks = [
+    {
+      dataset: {},
+      textContent: "出張",
+      getAttribute: (name) => {
+        if (name === "href") return "/g/g-p-69717146c5b88191867de1dedc35cc5e-chu-zhang/project";
+        if (name === "aria-current") return "";
+        return "";
+      },
+    },
+    {
+      dataset: {},
+      textContent: "chrome拡張開発",
+      getAttribute: (name) => {
+        if (name === "href") return "/g/g-p-69391c9321d881918607edfff58499ba-chromekuo-zhang-kai-fa/project";
+        if (name === "aria-current") return "";
+        return "";
+      },
+    },
+  ];
+  const root = {
+    querySelectorAll: (selector) => {
+      if (selector === "a[href*='/g/'][href*='/project'], [role='menu'] a, [role='dialog'] a, [data-radix-popper-content-wrapper] a") {
+        return menuLinks;
+      }
+      return [];
+    },
+  };
+
+  const projects = cgptCollectSidebarProjectsFromOpenProjectMenus(root);
+  assert.equal(projects.length, 2);
+  assert.equal(projects[0].name, "出張");
+  assert.equal(projects[1].name, "chrome拡張開発");
+});

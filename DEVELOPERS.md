@@ -46,6 +46,8 @@ extension/
     chatToolsFeature.js
     sidebarBulkFeature.js
     sidebarBulkState.js
+    sidebarApiDiagnostics.js
+    sidebarApiDataSource.js
     sidebarConversationTracker.js
     sidebarBulkActions.js
     sidebarBulkPanel.js
@@ -163,8 +165,12 @@ Chat Log モーダルは、`file:` 行ありのコードブロックと、通常
   - Bulk Chats 機能の初期化
 - `sidebarBulkState.js`
   - 検索文字列、選択 Set、実行状態の保持
+- `sidebarApiDiagnostics.js`
+  - internal API 失敗時の phase / endpoint / status と debug export
+- `sidebarApiDataSource.js`
+  - ChatGPT internal API から会話一覧と Project 一覧を取得
 - `sidebarConversationTracker.js`
-  - 左ペイン DOM から会話一覧と Project 一覧を収集
+  - API snapshot の保持と refresh orchestration
 - `sidebarBulkActions.js`
   - 左ペイン会話メニューを順に操作して archive / delete / project move を実行
 - `sidebarBulkPanel.js`
@@ -193,6 +199,8 @@ Chat Log モーダルは、`file:` 行ありのコードブロックと、通常
 
 - 新しいボタンは `extension/shared/uiStyles.js` の共通 API を使う
 - Bulk Chats の検索選択 state は DOM 表示状態に持たせず、会話 id ベースで保持する
+- Bulk Chats の一覧取得は internal API を優先し、取得失敗時は DOM fallback せず hard fail とする
+- internal API で取得できても、実操作は UI ベースのため DOM に row が無い会話は `skipped_missing_dom` になる
 - content 側で色、角丸、余白、フォントサイズを直書きしすぎない
 - variant は既存の `primary`, `secondary`, `ghost`, `danger` を優先する
 - disabled 状態は `button.disabled = true` を基本にし、見た目だけで表現しない

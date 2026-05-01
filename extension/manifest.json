@@ -56,6 +56,8 @@
         "content/panelSaveOptions.js",
         "content/panelTemplates.js",
         "content/sidebarBulkState.js",
+        "content/sidebarApiDiagnostics.js",
+        "content/sidebarApiDataSource.js",
         "content/sidebarConversationTracker.js",
         "content/sidebarBulkActions.js",
         "content/sidebarBulkPanel.js",
